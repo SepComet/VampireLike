@@ -1,0 +1,8 @@
+#	道具表				
+#	Id		Title	IconAssetName	Modifiers
+#	int		string	string	StatModifier[]
+#	道具编号	策划备注	道具名	图标资源名	道具属性
+	101	测试道具	药	Almighty_Icon	[{"StatType":"MovementSpeed","Value":0.5,"IsPercent":false},{"StatType":"MaxHealth","Value":0.2,"IsPercent":true}]
+	102		小药	Almighty_Icon	[{"StatType":"MovementSpeed","Value":0.5,"IsPercent":false},{"StatType":"MaxHealth","Value":0.2,"IsPercent":true}]
+	103		中药	Almighty_Icon	[{"StatType":"Critical","Value":20,"IsPercent":false},{"StatType":"Defense","Value":1,"IsPercent":false}]
+	104		大药	Almighty_Icon	[{"StatType":"Attack","Value":2,"IsPercent":false},{"StatType":"AttackSpeed","Value":0.1,"IsPercent":true}]
