@@ -56,5 +56,6 @@
         "temp/": true,
         "Temp/": true
     },
-    "dotnet.defaultSolution": "VampireLike.sln"
+    "dotnet.defaultSolution": "VampireLike.sln",
+    "dotnet.preferCSharpExtension": true
 }

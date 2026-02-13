@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace UI
 {
-    public class GoodsItemViewData
+    public class GoodsItemContext
     {
         public string Title;
         public string Type;

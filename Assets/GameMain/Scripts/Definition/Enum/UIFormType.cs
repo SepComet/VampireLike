@@ -53,5 +53,10 @@ namespace Definition.Enum
         /// 游戏HUD。
         /// </summary>
         HudForm = 203,
+
+        /// <summary>
+        /// 升级选择。
+        /// </summary>
+        LevelUpForm = 204,
     }
 }

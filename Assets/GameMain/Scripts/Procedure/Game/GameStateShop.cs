@@ -1,126 +1,161 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using CustomEvent;
 using DataTable;
 using Definition.Enum;
 using Entity;
 using GameFramework.DataTable;
-using GameFramework.Event;
 using GameFramework.Fsm;
 using GameFramework.Procedure;
 using UI;
+using UnityEngine;
 using UnityGameFramework.Runtime;
 using Random = UnityEngine.Random;
 
 namespace Procedure
 {
-    public struct ShopFormContext
-    {
-        public GameStateShop GameStateShop;
-        public int CurrentLevel;
-        public int RefreshPrice;
-        public int PlayerCoin;
-        public List<GoodsItemViewData> GoodsItems;
-    }
-
     public class GameStateShop : GameStateBase
     {
+        #region Property
+
         public override GameStateType GameStateType => GameStateType.Shop;
 
-        private ProcedureGame _procedureGame = null;
-        private bool _shopOver = false;
-        private ShopForm _shopForm = null;
+        private ProcedureGame _procedureGame;
 
-        private DRGoods[] _drGoods = null;
-        private IDataTable<DRProp> _propDataTable = null;
-        private IDataTable<DRWeapon> _weaponDataTable = null;
+        private DRGoods[] _drGoods;
 
-        private Player _player = null;
+        private DRProp[] _drProps;
+        private IDataTable<DRProp> _propDataTable;
 
+        private IDataTable<DRWeapon> _weaponDataTable;
+
+        private ShopFormController _shopFormController;
         private ShopFormContext _shopFormContext;
 
-        public void ShopOver()
-        {
-            if (_shopOver) return;
-            _shopOver = true;
-        }
+        private LevelUpFormController _levelUpFormController;
+        private LevelUpFormContext _levelUpFormContext;
 
-        public void PurchaseGoods(int index)
-        {
-            if (_player.Coin < _shopFormContext.GoodsItems[index].Price) return;
-            _player.Coin -= _shopFormContext.GoodsItems[index].Price;
-            //TODO:OnGoodsPurchased
-        }
+        private int _shopRefreshTime = 0;
 
-        public void RefreshGoods()
+        private Player _player => _procedureGame.Player;
+
+        private bool _shopOver = false;
+
+        #endregion
+
+        #region Methods
+
+        #region LevelUp
+
+        private LevelUpFormContext BuildLevelUpFormContext(int count = 4)
         {
-            if (_player.Coin < _shopFormContext.RefreshPrice) return;
-            _player.Coin -= _shopFormContext.RefreshPrice;
-            _shopFormContext = new ShopFormContext()
+            List<LevelUpPropContext> props = new List<LevelUpPropContext>();
+            int total = _drProps.Length;
+            if (total <= 0)
             {
-                GameStateShop = this,
-                CurrentLevel = _procedureGame.CurrentLevel,
-                RefreshPrice = _shopFormContext.RefreshPrice + _procedureGame.CurrentLevel,
+                Log.Error("GameStateShop::BuildLevelUpFormContext(): _drProps == null");
+                return null;
+            }
+
+            count = Mathf.Min(count, total);
+
+            for (int i = 0; i < count; i++)
+            {
+                int index = Random.Range(0, total);
+                DRProp drProp = _drProps[index];
+                props.Add(new LevelUpPropContext
+                {
+                    PropId = drProp.Id,
+                    Title = drProp.Title,
+                    Type = "Prop",
+                    Icon = null,
+                    Description = GoodsItemContext.CreatePropDescription(drProp.Modifiers),
+                    IconAssetName = drProp.IconAssetName
+                });
+            }
+
+            return new LevelUpFormContext
+            {
+                Level = _player.CurrentLevel,
+                Props = props
+            };
+        }
+
+        #endregion
+
+        #region Shop
+
+        private void RefreshGoodsItems()
+        {
+            _shopFormContext = BuildShopFormContext();
+            _shopFormContext.RefreshPrice = (_shopRefreshTime + 1) * _procedureGame.CurrentLevel;
+            _shopRefreshTime++;
+            _shopFormController.OpenUI(_shopFormContext);
+        }
+
+        private ShopFormContext BuildShopFormContext()
+        {
+            int currentLevel = _procedureGame.CurrentLevel;
+            var context = new ShopFormContext
+            {
+                CurrentLevel = currentLevel,
+                RefreshPrice = currentLevel,
                 PlayerCoin = _player.Coin,
                 GoodsItems = InitRandomGoodsItems()
             };
-            _shopForm.UpdateForm(_shopFormContext);
+            return context;
         }
 
-        private List<GoodsItemViewData> InitRandomGoodsItems()
+        private List<GoodsItemContext> InitRandomGoodsItems(int count = -1)
         {
-            // 1. 随机生成商店商品数量
-            int count = Random.Range(4, 6);
+            if (_drGoods == null || _drGoods.Length == 0)
+            {
+                Log.Error("GameStateShop::InitRandomGoodsItems(): _drGoods == null");
+                return null;
+            }
 
-            // 2. 获取数据表中配置的商品总数
+            count = Mathf.Max(count, Random.Range(4, 6));
             int totalCount = _drGoods.Length;
+            List<GoodsItemContext> items = new List<GoodsItemContext>(count);
+            if (totalCount <= 0) return items;
+            count = Mathf.Min(count, totalCount);
 
-            // 3. 创建要返回的商品列表
-            List<GoodsItemViewData> items = new List<GoodsItemViewData>(count);
-
-            // 4. 填充商品列表
             for (int i = 0; i < count; i++)
             {
-                // 4.1 获取要添加的商品Id 
                 int index = Random.Range(0, totalCount);
-
-                // 4.2 从数据表中获取商品数据
-                var drGoods = _drGoods[index];
-
-                // 4.3 构建商品数据类
-                var goodsItem = new GoodsItemViewData();
-
-                // 4.4 填充商品数据（价格、名字、类型、图标、描述）
-                goodsItem.Price = Random.Range(drGoods.MinPrice, drGoods.MaxPrice);
+                DRGoods drGoods = _drGoods[index];
+                GoodsItemContext goodsItem = new GoodsItemContext
+                {
+                    Price = Random.Range(drGoods.MinPrice, drGoods.MaxPrice)
+                };
 
                 if (drGoods.GoodsType == GoodsType.Prop)
                 {
                     DRProp drProp = _propDataTable.GetDataRow(drGoods.GoodsTypeId);
-
                     goodsItem.Title = drProp.Title;
-                    goodsItem.Type = "道具";
+                    goodsItem.Type = "Prop";
                     GameEntry.SpriteCache.GetSprite(drProp.IconAssetName, sprite => goodsItem.Icon = sprite);
-                    goodsItem.Description = GoodsItemViewData.CreatePropDescription(drProp.Modifiers);
+                    goodsItem.Description = GoodsItemContext.CreatePropDescription(drProp.Modifiers);
                 }
-                else if (drGoods.GoodsType is GoodsType.Weapon)
+                else if (drGoods.GoodsType == GoodsType.Weapon)
                 {
                     DRWeapon drWeapon = _weaponDataTable.GetDataRow(drGoods.GoodsTypeId);
-
                     goodsItem.Title = drWeapon.Title;
-                    goodsItem.Type = "武器";
+                    goodsItem.Type = "Weapon";
                     GameEntry.SpriteCache.GetSprite(drWeapon.IconAssetName, sprite => goodsItem.Icon = sprite);
-                    goodsItem.Description = GoodsItemViewData.CreateWeaponDescription(drWeapon);
-                }
-                else
-                {
-                    Log.Warning("Goods type not supported.");
+                    goodsItem.Description = GoodsItemContext.CreateWeaponDescription(drWeapon);
                 }
 
-                // 4.5 添加到商品列表
                 items.Add(goodsItem);
             }
 
             return items;
         }
+
+        #endregion
+
+        #endregion
 
         #region FSM
 
@@ -128,40 +163,47 @@ namespace Procedure
         {
             Log.Debug("GameStateShop::OnInit");
             _procedureGame = master;
-            _shopOver = false;
+
+            _levelUpFormController = new LevelUpFormController();
+            _shopFormController = new ShopFormController();
+
             _drGoods = GameEntry.DataTable.GetDataTable<DRGoods>().ToArray();
             _propDataTable = GameEntry.DataTable.GetDataTable<DRProp>();
+            _drProps = _propDataTable.ToArray();
             _weaponDataTable = GameEntry.DataTable.GetDataTable<DRWeapon>();
+
+            _shopOver = false;
         }
 
         public override void OnEnter(IFsm<IProcedureManager> procedureOwner)
         {
             Log.Debug("GameStateShop::OnEnter");
 
-            GameEntry.Event.Subscribe(OpenUIFormSuccessEventArgs.EventId, OpenUIFormSuccess);
+            GameEntry.Event.Subscribe(ShopRefreshEventArgs.EventId, ShopRefresh);
+            GameEntry.Event.Subscribe(ShopPurchaseEventArgs.EventId, ShopPurchase);
+            GameEntry.Event.Subscribe(ShopContinueEventArgs.EventId, ShopContinue);
+            GameEntry.Event.Subscribe(CloseUIFormCompleteEventArgs.EventId, CloseUIFormComplete);
 
-            _shopOver = false;
-            _player = _procedureGame.Player;
-
-            _shopFormContext = new ShopFormContext()
+            if (_procedureGame.PlayerPendingLevel != 0)
             {
-                GameStateShop = this,
-                CurrentLevel = _procedureGame.CurrentLevel,
-                RefreshPrice = _procedureGame.CurrentLevel,
-                PlayerCoin = _player.Coin,
-                GoodsItems = InitRandomGoodsItems()
-            };
-            GameEntry.UI.OpenUIForm(UIFormType.ShopForm, _shopFormContext);
+                _levelUpFormContext = BuildLevelUpFormContext();
+                _levelUpFormController.OpenUI(_levelUpFormContext);
+            }
+            else
+            {
+                _shopFormContext = BuildShopFormContext();
+                _shopFormController.OpenUI(_shopFormContext);
+            }
+            
+            _shopOver = false;
         }
 
         public override void OnUpdate(IFsm<IProcedureManager> procedureOwner, float elapseSeconds,
             float realElapseSeconds)
         {
-            Log.Debug("GameStateShop::OnUpdate");
-
             if (_shopOver)
             {
-                _shopForm.Close();
+                _shopFormController?.CloseUI();
                 _procedureGame.ShopToBattle();
             }
         }
@@ -170,14 +212,29 @@ namespace Procedure
         {
             Log.Debug("GameStateShop::OnLeave");
 
-            _shopForm = null;
+            _shopFormContext = null;
+            _shopFormController.CloseUI();
+            _shopFormController = null;
 
-            GameEntry.Event.Unsubscribe(OpenUIFormSuccessEventArgs.EventId, OpenUIFormSuccess);
+            _levelUpFormContext = null;
+            _levelUpFormController.CloseUI();
+            _levelUpFormController = null;
+
+            GameEntry.Event.Unsubscribe(CloseUIFormCompleteEventArgs.EventId, CloseUIFormComplete);
+            GameEntry.Event.Unsubscribe(ShopRefreshEventArgs.EventId, ShopRefresh);
+            GameEntry.Event.Unsubscribe(ShopPurchaseEventArgs.EventId, ShopPurchase);
+            GameEntry.Event.Unsubscribe(ShopContinueEventArgs.EventId, ShopContinue);
         }
 
         public override void OnDestroy(IFsm<IProcedureManager> procedureOwner)
         {
             _procedureGame = null;
+            _shopFormController = null;
+            _shopFormContext = null;
+
+            _levelUpFormController = null;
+            _levelUpFormContext = null;
+
             _drGoods = null;
             _propDataTable = null;
             _weaponDataTable = null;
@@ -189,16 +246,62 @@ namespace Procedure
 
         #region Event Handlers
 
-        private void OpenUIFormSuccess(object sender, GameEventArgs e)
+        private void ShopRefresh(object sender, EventArgs e)
         {
-            if (!(e is OpenUIFormSuccessEventArgs args)) return;
-            if (!(args.UserData is ShopFormContext data)) return;
-            if (data.GameStateShop == this)
-            {
-                _shopForm = args.UIForm.Logic as ShopForm;
-            }
+            if (!(e is ShopRefreshEventArgs args)) return;
+
+            if (_player.Coin < args.Cost) return;
+            _player.Coin -= args.Cost;
+            RefreshGoodsItems();
         }
 
+
+        private void ShopPurchase(object sender, EventArgs e)
+        {
+            if (!(e is ShopPurchaseEventArgs args)) return;
+
+            int index = args.GoodsIndex;
+
+            if (index < 0 && index >= _shopFormContext.GoodsItems.Count)
+            {
+                Log.Warning("GameStateShop::ShopPurchase: Invalid index");
+                return;
+            }
+
+            if (_player.Coin < _shopFormContext.GoodsItems[index].Price) return;
+            _player.Coin -= _shopFormContext.GoodsItems[index].Price;
+            _shopFormContext.GoodsItems.RemoveAt(index);
+            _shopFormController.OpenUI(_shopFormContext);
+            // TODO: OnGoodsPurchased
+        }
+
+        private void ShopContinue(object sender, EventArgs e)
+        {
+            if (!(e is ShopContinueEventArgs)) return;
+
+            _shopOver = true;
+        }
+
+        private void CloseUIFormComplete(object sender, EventArgs e)
+        {
+            if (!(e is CloseUIFormCompleteEventArgs args)) return;
+
+            if (args.UIFormAssetName == nameof(UIFormType.LevelUpForm))
+            {
+
+                if (--_procedureGame.PlayerPendingLevel != 0)
+                {
+                    _levelUpFormContext = BuildLevelUpFormContext();
+                    _levelUpFormController.OpenUI(_levelUpFormContext);
+                }
+                else
+                {
+                    _levelUpFormContext = BuildLevelUpFormContext();
+                    _levelUpFormController.OpenUI(_levelUpFormContext);
+                }
+            }
+        }
+        
         #endregion
     }
 }

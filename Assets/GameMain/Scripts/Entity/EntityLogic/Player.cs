@@ -70,6 +70,8 @@ namespace Entity
             }
         }
 
+        public int CurrentLevel => _currentLevel;
+        
         public bool Enable
         {
             get => _enable;

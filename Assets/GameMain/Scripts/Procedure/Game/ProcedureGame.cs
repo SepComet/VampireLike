@@ -36,6 +36,11 @@ namespace Procedure
         private Dictionary<GameStateType, GameStateBase> _gameStates;
         public Player Player;
 
+        /// <summary>
+        /// 玩家升级可分配点数
+        /// </summary>
+        public int PlayerPendingLevel = 0;
+
         private void InitGameState()
         {
             _gameStates = new Dictionary<GameStateType, GameStateBase>
@@ -76,8 +81,9 @@ namespace Procedure
 
             _procedureOwner = procedureOwner;
 
-            GameEntry.Event.Subscribe(OpenUIFormSuccessEventArgs.EventId, OnOpenUIFormSuccess);
-            GameEntry.Event.Subscribe(ShowEntitySuccessEventArgs.EventId, OnShowEntitySuccess);
+            GameEntry.Event.Subscribe(OpenUIFormSuccessEventArgs.EventId, OpenUIFormSuccess);
+            GameEntry.Event.Subscribe(ShowEntitySuccessEventArgs.EventId, ShowEntitySuccess);
+            GameEntry.Event.Subscribe(PlayerLevelUpEventArgs.EventId, PlayerLevelUp);
             
             CurrentLevel = 1;
             _currentPlayerData = new PlayerData(-1, 1001);
@@ -120,8 +126,9 @@ namespace Procedure
             Player = null;
             _procedureOwner = null;
 
-            GameEntry.Event.Unsubscribe(OpenUIFormSuccessEventArgs.EventId, OnOpenUIFormSuccess);
-            GameEntry.Event.Unsubscribe(ShowEntitySuccessEventArgs.EventId, OnShowEntitySuccess);
+            GameEntry.Event.Unsubscribe(PlayerLevelUpEventArgs.EventId, PlayerLevelUp);
+            GameEntry.Event.Unsubscribe(OpenUIFormSuccessEventArgs.EventId, OpenUIFormSuccess);
+            GameEntry.Event.Unsubscribe(ShowEntitySuccessEventArgs.EventId, ShowEntitySuccess);
 
             base.OnLeave(procedureOwner, isShutdown);
         }
@@ -130,7 +137,7 @@ namespace Procedure
 
         #region Event Handler
 
-        private void OnOpenUIFormSuccess(object sender, GameEventArgs e)
+        private void OpenUIFormSuccess(object sender, GameEventArgs e)
         {
             if (!(e is OpenUIFormSuccessEventArgs args)) return;
 
@@ -140,7 +147,7 @@ namespace Procedure
             }
         }
 
-        private void OnShowEntitySuccess(object sender, GameEventArgs e)
+        private void ShowEntitySuccess(object sender, GameEventArgs e)
         {
             if (!(e is ShowEntitySuccessEventArgs args)) return;
 
@@ -150,6 +157,13 @@ namespace Procedure
             }
         }
 
+        private void PlayerLevelUp(object sender, GameEventArgs e)
+        {
+            if (!(e is PlayerLevelUpEventArgs)) return;
+
+            //PlayerPendingLevel++;
+        }
+        
         #endregion
     }
 }
