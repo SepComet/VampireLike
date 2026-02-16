@@ -857,11 +857,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a5079836f95c2a44b96fa331487ebb70, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_OnHover:
+  _onPointerEnterAction:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 11461274}
-        m_TargetAssemblyTypeName: 
+        m_TargetAssemblyTypeName: UI.UGuiForm, Assembly-CSharp
         m_MethodName: PlayUISound
         m_Mode: 3
         m_Arguments:
@@ -872,11 +872,11 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-  m_OnClick:
+  _onClickAction:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 11461274}
-        m_TargetAssemblyTypeName: 
+        m_TargetAssemblyTypeName: UI.UGuiForm, Assembly-CSharp
         m_MethodName: PlayUISound
         m_Mode: 3
         m_Arguments:
@@ -888,7 +888,7 @@ MonoBehaviour:
           m_BoolArgument: 0
         m_CallState: 2
       - m_Target: {fileID: 11461274}
-        m_TargetAssemblyTypeName: 
+        m_TargetAssemblyTypeName: UI.DialogForm, Assembly-CSharp
         m_MethodName: OnConfirmButtonClick
         m_Mode: 1
         m_Arguments:
@@ -1205,11 +1205,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a5079836f95c2a44b96fa331487ebb70, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_OnHover:
+  _onPointerEnterAction:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 11461274}
-        m_TargetAssemblyTypeName: 
+        m_TargetAssemblyTypeName: UI.UGuiForm, Assembly-CSharp
         m_MethodName: PlayUISound
         m_Mode: 3
         m_Arguments:
@@ -1220,11 +1220,11 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-  m_OnClick:
+  _onClickAction:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 11461274}
-        m_TargetAssemblyTypeName: 
+        m_TargetAssemblyTypeName: UI.UGuiForm, Assembly-CSharp
         m_MethodName: PlayUISound
         m_Mode: 3
         m_Arguments:
@@ -1236,7 +1236,7 @@ MonoBehaviour:
           m_BoolArgument: 0
         m_CallState: 2
       - m_Target: {fileID: 11461274}
-        m_TargetAssemblyTypeName: 
+        m_TargetAssemblyTypeName: UI.DialogForm, Assembly-CSharp
         m_MethodName: OnCancelButtonClick
         m_Mode: 1
         m_Arguments:
@@ -1306,11 +1306,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a5079836f95c2a44b96fa331487ebb70, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_OnHover:
+  _onPointerEnterAction:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 11461274}
-        m_TargetAssemblyTypeName: 
+        m_TargetAssemblyTypeName: UI.UGuiForm, Assembly-CSharp
         m_MethodName: PlayUISound
         m_Mode: 3
         m_Arguments:
@@ -1321,11 +1321,11 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-  m_OnClick:
+  _onClickAction:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 11461274}
-        m_TargetAssemblyTypeName: 
+        m_TargetAssemblyTypeName: UI.UGuiForm, Assembly-CSharp
         m_MethodName: PlayUISound
         m_Mode: 3
         m_Arguments:
@@ -1337,7 +1337,7 @@ MonoBehaviour:
           m_BoolArgument: 0
         m_CallState: 2
       - m_Target: {fileID: 11461274}
-        m_TargetAssemblyTypeName: 
+        m_TargetAssemblyTypeName: UI.DialogForm, Assembly-CSharp
         m_MethodName: OnOtherButtonClick
         m_Mode: 1
         m_Arguments:
@@ -1804,11 +1804,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a5079836f95c2a44b96fa331487ebb70, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_OnHover:
+  _onPointerEnterAction:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 11461274}
-        m_TargetAssemblyTypeName: 
+        m_TargetAssemblyTypeName: UI.UGuiForm, Assembly-CSharp
         m_MethodName: PlayUISound
         m_Mode: 3
         m_Arguments:
@@ -1819,11 +1819,11 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-  m_OnClick:
+  _onClickAction:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 11461274}
-        m_TargetAssemblyTypeName: 
+        m_TargetAssemblyTypeName: UI.UGuiForm, Assembly-CSharp
         m_MethodName: PlayUISound
         m_Mode: 3
         m_Arguments:
@@ -1835,7 +1835,7 @@ MonoBehaviour:
           m_BoolArgument: 0
         m_CallState: 2
       - m_Target: {fileID: 11461274}
-        m_TargetAssemblyTypeName: 
+        m_TargetAssemblyTypeName: UI.DialogForm, Assembly-CSharp
         m_MethodName: OnConfirmButtonClick
         m_Mode: 1
         m_Arguments:
@@ -2039,11 +2039,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a5079836f95c2a44b96fa331487ebb70, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_OnHover:
+  _onPointerEnterAction:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 11461274}
-        m_TargetAssemblyTypeName: 
+        m_TargetAssemblyTypeName: UI.UGuiForm, Assembly-CSharp
         m_MethodName: PlayUISound
         m_Mode: 3
         m_Arguments:
@@ -2054,11 +2054,11 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-  m_OnClick:
+  _onClickAction:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 11461274}
-        m_TargetAssemblyTypeName: 
+        m_TargetAssemblyTypeName: UI.UGuiForm, Assembly-CSharp
         m_MethodName: PlayUISound
         m_Mode: 3
         m_Arguments:
@@ -2070,7 +2070,7 @@ MonoBehaviour:
           m_BoolArgument: 0
         m_CallState: 2
       - m_Target: {fileID: 11461274}
-        m_TargetAssemblyTypeName: 
+        m_TargetAssemblyTypeName: UI.DialogForm, Assembly-CSharp
         m_MethodName: OnCancelButtonClick
         m_Mode: 1
         m_Arguments:
@@ -2392,11 +2392,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a5079836f95c2a44b96fa331487ebb70, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_OnHover:
+  _onPointerEnterAction:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 11461274}
-        m_TargetAssemblyTypeName: 
+        m_TargetAssemblyTypeName: UI.UGuiForm, Assembly-CSharp
         m_MethodName: PlayUISound
         m_Mode: 3
         m_Arguments:
@@ -2407,11 +2407,11 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-  m_OnClick:
+  _onClickAction:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 11461274}
-        m_TargetAssemblyTypeName: 
+        m_TargetAssemblyTypeName: UI.UGuiForm, Assembly-CSharp
         m_MethodName: PlayUISound
         m_Mode: 3
         m_Arguments:
@@ -2423,7 +2423,7 @@ MonoBehaviour:
           m_BoolArgument: 0
         m_CallState: 2
       - m_Target: {fileID: 11461274}
-        m_TargetAssemblyTypeName: 
+        m_TargetAssemblyTypeName: UI.DialogForm, Assembly-CSharp
         m_MethodName: OnConfirmButtonClick
         m_Mode: 1
         m_Arguments:

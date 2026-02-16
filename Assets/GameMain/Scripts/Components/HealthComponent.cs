@@ -51,7 +51,10 @@ namespace Components
             {
                 _maxHealthStat = _statComponent.GetStat(StatType.MaxHealth);
                 _maxHealthStatCallback = (modifier, isApply) =>
+                {
                     _statComponent.UpdateStat(_maxHealthStat, modifier, isApply);
+                    GameEntry.Event.Fire(this, PlayerHealthChangeEventArgs.Create(0, CurrentHealth, MaxHealth));
+                };
                 _statComponent.Subscribe(StatType.MaxHealth, _maxHealthStatCallback);
 
                 _defenseStat = _statComponent.GetStat(StatType.Defense);

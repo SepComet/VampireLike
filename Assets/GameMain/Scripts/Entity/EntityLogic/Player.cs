@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Components;
 using CustomEvent;
 using DataTable;
@@ -63,6 +64,8 @@ namespace Entity
                 {
                     value -= _expRequires[_currentLevel + 1];
                     _currentLevel++;
+                    PendingLevelPoints++;
+                    GameEntry.Event.Fire(this, PlayerLevelUpEventArgs.Create());
                 }
 
                 GameEntry.Event.Fire(this, PlayerExpChangeEventArgs.Create(value, _expRequires[_currentLevel + 1]));
@@ -71,7 +74,19 @@ namespace Entity
         }
 
         public int CurrentLevel => _currentLevel;
-        
+
+        public int PendingLevelPoints { get; set; }
+
+        public IReadOnlyList<WeaponBase> Weapons => _backpackComponent != null ? _backpackComponent.Weapons : null;
+        public IReadOnlyList<PropItem> Props => _backpackComponent != null ? _backpackComponent.Props : null;
+        public int WeaponCapacity => _backpackComponent != null ? _backpackComponent.WeaponCapacity : 0;
+
+        public bool AddProp(PropItem prop)
+        {
+            if (prop == null || _backpackComponent == null) return false;
+            return _backpackComponent.AttachProp(prop);
+        }
+
         public bool Enable
         {
             get => _enable;

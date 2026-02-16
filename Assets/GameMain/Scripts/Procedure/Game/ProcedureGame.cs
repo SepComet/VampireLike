@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using CustomComponent;
 using CustomEvent;
 using DataTable;
 using Definition.Enum;
@@ -8,7 +7,6 @@ using Entity.EntityData;
 using GameFramework.Event;
 using GameFramework.Fsm;
 using GameFramework.Procedure;
-using StarForce;
 using UnityGameFramework.Runtime;
 using UI;
 
@@ -19,6 +17,7 @@ namespace Procedure
         None = 0,
         Battle = 1,
         Shop = 2,
+        LevelUp = 3,
     }
 
     public class ProcedureGame : ProcedureBase
@@ -36,31 +35,28 @@ namespace Procedure
         private Dictionary<GameStateType, GameStateBase> _gameStates;
         public Player Player;
 
-        /// <summary>
-        /// 玩家升级可分配点数
-        /// </summary>
-        public int PlayerPendingLevel = 0;
-
         private void InitGameState()
         {
             _gameStates = new Dictionary<GameStateType, GameStateBase>
             {
                 { GameStateType.Battle, new GameStateBattle() },
+                { GameStateType.LevelUp, new GameStateLevelUp() },
                 { GameStateType.Shop, new GameStateShop() },
             };
             _gameStates[GameStateType.Battle].OnInit(this);
+            _gameStates[GameStateType.LevelUp].OnInit(this);
             _gameStates[GameStateType.Shop].OnInit(this);
 
             _currentGameState = GameStateType.Battle;
             _gameStates[_currentGameState].OnEnter(_procedureOwner);
         }
 
-        public void BattleToShop()
+        public void BattleToShopOrLevelUp()
         {
-            if (_currentGameState == GameStateType.Shop) return;
+            if (_currentGameState == GameStateType.Shop || _currentGameState == GameStateType.LevelUp) return;
 
             _gameStates[_currentGameState].OnLeave(_procedureOwner);
-            _currentGameState = GameStateType.Shop;
+            _currentGameState = Player.PendingLevelPoints > 0 ? GameStateType.LevelUp : GameStateType.Shop;
             _gameStates[_currentGameState].OnEnter(_procedureOwner);
         }
 
@@ -70,6 +66,15 @@ namespace Procedure
 
             _gameStates[_currentGameState].OnLeave(_procedureOwner);
             _currentGameState = GameStateType.Battle;
+            _gameStates[_currentGameState].OnEnter(_procedureOwner);
+        }
+
+        public void LevelUpToShop()
+        {
+            if (_currentGameState == GameStateType.Shop) return;
+
+            _gameStates[_currentGameState].OnLeave(_procedureOwner);
+            _currentGameState = GameStateType.Shop;
             _gameStates[_currentGameState].OnEnter(_procedureOwner);
         }
 
@@ -83,14 +88,13 @@ namespace Procedure
 
             GameEntry.Event.Subscribe(OpenUIFormSuccessEventArgs.EventId, OpenUIFormSuccess);
             GameEntry.Event.Subscribe(ShowEntitySuccessEventArgs.EventId, ShowEntitySuccess);
-            GameEntry.Event.Subscribe(PlayerLevelUpEventArgs.EventId, PlayerLevelUp);
-            
+
             CurrentLevel = 1;
             _currentPlayerData = new PlayerData(-1, 1001);
             GameEntry.Entity.ShowPlayer(_currentPlayerData);
-
-            GameEntry.UI.OpenUIForm(UIFormType.HudForm, this);
-
+            
+            GameEntry.UIRouter.OpenUI(UIFormType.HudForm);
+            
             InitGameState();
         }
 
@@ -107,9 +111,11 @@ namespace Procedure
                 var role = GameEntry.DataTable.GetDataTableRow<DRRole>(selectedRoleId);
                 Player.InitRole(role);
                 _hudInitialized = true;
+                InitGameState();
             }
 
-            _gameStates[_currentGameState].OnUpdate(procedureOwner, elapseSeconds, realElapseSeconds);
+            if (_hudInitialized)
+                _gameStates[_currentGameState].OnUpdate(procedureOwner, elapseSeconds, realElapseSeconds);
         }
 
         protected override void OnLeave(IFsm<IProcedureManager> procedureOwner, bool isShutdown)
@@ -121,12 +127,14 @@ namespace Procedure
 
             _gameStates.Clear();
 
-            _hudForm.Close();
+            GameEntry.UIRouter.CloseUI(UIFormType.HudForm);
+            
             _hudForm = null;
+            
             Player = null;
+            
             _procedureOwner = null;
 
-            GameEntry.Event.Unsubscribe(PlayerLevelUpEventArgs.EventId, PlayerLevelUp);
             GameEntry.Event.Unsubscribe(OpenUIFormSuccessEventArgs.EventId, OpenUIFormSuccess);
             GameEntry.Event.Unsubscribe(ShowEntitySuccessEventArgs.EventId, ShowEntitySuccess);
 
@@ -141,9 +149,9 @@ namespace Procedure
         {
             if (!(e is OpenUIFormSuccessEventArgs args)) return;
 
-            if (args.UserData == this)
+            if (args.UIForm.Logic is HudForm hudForm)
             {
-                _hudForm = args.UIForm.Logic as HudForm;
+                _hudForm = hudForm;
             }
         }
 
@@ -151,19 +159,12 @@ namespace Procedure
         {
             if (!(e is ShowEntitySuccessEventArgs args)) return;
 
-            if (args.EntityLogicType == typeof(Player))
+            if (args.Entity.Logic is Player player)
             {
-                Player = args.Entity.Logic as Player;
+                Player = player;
             }
         }
 
-        private void PlayerLevelUp(object sender, GameEventArgs e)
-        {
-            if (!(e is PlayerLevelUpEventArgs)) return;
-
-            //PlayerPendingLevel++;
-        }
-        
         #endregion
     }
 }

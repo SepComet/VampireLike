@@ -38,6 +38,10 @@ namespace Components
         /// </summary>
         [SerializeField] private Transform[] _weaponSlots;
 
+        public IReadOnlyList<WeaponBase> Weapons => _weapons;
+        public IReadOnlyList<PropItem> Props => _props;
+        public int WeaponCapacity => _weaponCapacity;
+
         public void OnInit(Player player, int weaponCapacity)
         {
             _weaponCapacity = weaponCapacity;

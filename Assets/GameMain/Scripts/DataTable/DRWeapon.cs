@@ -26,11 +26,15 @@ namespace DataTable
         /// 获取武器名称。
         /// </summary>
         public string Title { get; private set; }
-        
+
         /// <summary>
         /// 获取图标资源名称。
         /// </summary>
         public string IconAssetName { get; private set; }
+
+        public ItemRarity Rarity { get; private set; }
+        public int Price { get; private set; }
+        public float PriceRandomPercent { get; private set; }
 
         /// <summary>
         /// 获取武器伤害。
@@ -51,7 +55,7 @@ namespace DataTable
         /// 获取武器攻击音效。
         /// </summary>
         public int AttackSoundId { get; private set; }
-        
+
         /// <summary>
         /// 获取武器额外参数。
         /// </summary>
@@ -72,6 +76,9 @@ namespace DataTable
             index++;
             Title = columnStrings[index++];
             IconAssetName = columnStrings[index++];
+            Rarity = EnumUtility<ItemRarity>.Get(columnStrings[index++]);
+            Price = int.Parse(columnStrings[index++]);
+            PriceRandomPercent = float.Parse(columnStrings[index++]);
             Attack = int.Parse(columnStrings[index++]);
             Cooldown = float.Parse(columnStrings[index++]);
             AttackRange = float.Parse(columnStrings[index++]);
@@ -80,7 +87,7 @@ namespace DataTable
             Modifiers = Utility.Json.ToObject<StatModifier[]>(columnStrings[index++]);
 
             GeneratePropertyArray();
-            
+
             return true;
         }
 

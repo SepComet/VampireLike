@@ -2,9 +2,9 @@ using System.Collections.Generic;
 
 namespace UI
 {
-    public class LevelUpFormContext
+    public class LevelUpFormContext : UIContext
     {
-        public int Level;
-        public List<LevelUpPropContext> Props;
+        public List<LevelUpRewardItemContext> Props;
+        public int RefreshPrice;
     }
 }

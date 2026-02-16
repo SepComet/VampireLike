@@ -1,7 +1,9 @@
+using System.Collections.Generic;
 using CustomEvent;
 using GameFramework.Event;
 using TMPro;
 using UnityEngine;
+using UnityGameFramework.Runtime;
 
 namespace UI
 {
@@ -18,7 +20,11 @@ namespace UI
         [SerializeField] private TMP_Text _playerCoinText;
         private int _currentCoin;
 
-        [SerializeField] private GoodsItem[] _goodsItems;
+        [SerializeField] private ShopGoodsItem[] _goodsItems;
+
+        [SerializeField] private DisplayListArea _propListArea;
+
+        [SerializeField] private DisplayListArea _weaponListArea;
 
         private ShopFormContext _context;
 
@@ -31,20 +37,87 @@ namespace UI
 
             _titleText.text = $"商店 (Lv.{context.CurrentLevel})";
             _continueButtonText.text = $"继续 (Lv.{context.CurrentLevel + 1})";
-            _refreshPriceText.text = $"-{context.RefreshPrice}";
-            _playerCoinText.text = context.PlayerCoin.ToString();
+            RefreshRefreshPrice(context.RefreshPrice);
+            _playerCoinText.text = $"<sprite name=\"coin\" index=0> {context.PlayerCoin}";
 
+            RefreshGoodsItems(context.GoodsItems);
+
+            if (_propListArea != null && context.PropListContext != null)
+            {
+                _propListArea.OnInit(context.PropListContext);
+            }
+
+            if (_weaponListArea != null && context.WeaponListContext != null)
+            {
+                _weaponListArea.OnInit(context.WeaponListContext);
+            }
+        }
+
+        internal void RefreshGoodsItems(List<GoodsItemContext> goodsItems)
+        {
             foreach (var item in _goodsItems)
             {
                 item.gameObject.SetActive(false);
             }
 
-            if (_context.GoodsItems == null) return;
-            for (int i = 0; i < _context.GoodsItems.Count; i++)
+            if (goodsItems == null)
             {
-                _goodsItems[i].Init(context.GoodsItems[i]);
+                return;
+            }
+
+            int count = Mathf.Min(_goodsItems.Length, goodsItems.Count);
+            for (int i = 0; i < count; i++)
+            {
+                _goodsItems[i].Init(goodsItems[i]);
                 _goodsItems[i].gameObject.SetActive(true);
             }
+        }
+
+        internal void RefreshRefreshPrice(int refreshPrice)
+        {
+            _refreshPriceText.text = $"刷新 -{refreshPrice} <sprite name=\"coin\" index=0>";
+        }
+
+        internal void ApplyGoodsPurchased(int goodsIndex, DisplayItemContext displayItem)
+        {
+            SetGoodsItemVisible(goodsIndex, false);
+
+            if (displayItem == null)
+            {
+                return;
+            }
+
+            if (displayItem.IsWeapon)
+            {
+                AddWeaponDisplayItem(displayItem);
+            }
+            else
+            {
+                AddPropDisplayItem(displayItem);
+            }
+        }
+
+        private void SetGoodsItemVisible(int index, bool visible)
+        {
+            if (_goodsItems == null || index < 0 || index >= _goodsItems.Length)
+            {
+                Log.Warning("ShopForm.SetGoodsItemVisible: Invalid index.");
+                return;
+            }
+
+            _goodsItems[index].gameObject.SetActive(visible);
+        }
+
+        private void AddPropDisplayItem(DisplayItemContext context)
+        {
+            if (_propListArea == null || context == null) return;
+            _propListArea.AddItem(context);
+        }
+
+        private void AddWeaponDisplayItem(DisplayItemContext context)
+        {
+            if (_weaponListArea == null || context == null) return;
+            _weaponListArea.AddItem(context);
         }
 
         #region ButtonClick
@@ -61,7 +134,7 @@ namespace UI
 
         public void OnRefreshButtonClick()
         {
-            GameEntry.Event.Fire(this, ShopRefreshEventArgs.Create(_context.RefreshPrice));
+            GameEntry.Event.Fire(this, RefreshEventArgs.Create(_context.RefreshPrice));
         }
 
         #endregion
@@ -80,7 +153,7 @@ namespace UI
                 return;
             }
 
-            UnityGameFramework.Runtime.Log.Warning("ShopForm requires ShopFormContext as userData.");
+            Log.Warning("ShopForm requires ShopFormContext as userData.");
         }
 
         protected override void OnClose(bool isShutdown, object userData)
@@ -88,6 +161,9 @@ namespace UI
             _context = null;
 
             GameEntry.Event.Unsubscribe(PlayerCoinChangeEventArgs.EventId, OnPlayerCoinChange);
+
+            _propListArea?.OnReset();
+            _weaponListArea?.OnReset();
 
             base.OnClose(isShutdown, userData);
         }
@@ -102,7 +178,7 @@ namespace UI
             if (args.CoinCount == _currentCoin) return;
 
             _currentCoin = args.CoinCount;
-            _playerCoinText.text = _currentCoin.ToString();
+            _playerCoinText.text = $"<sprite name=\"coin\" index=0> {_currentCoin}";
         }
 
         #endregion

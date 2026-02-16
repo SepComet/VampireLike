@@ -1,4 +1,4 @@
-import pandas as pd
+﻿import pandas as pd
 import os
 import shutil
 import csv
@@ -6,15 +6,21 @@ import csv
 def convert_excel_to_txt(folder_path='.'):
     # 计数器，用于最后汇总
     count = 0
+    # 固定从脚本所在目录读取，避免受运行时工作目录影响
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    scan_dir = script_dir if folder_path in ('.', '') else os.path.abspath(folder_path)
     target_dir = os.path.join(os.path.dirname(__file__), '../Assets/GameMain/DataTables')
     target_dir = os.path.abspath(target_dir)
     
     # 确保目标目录存在
     os.makedirs(target_dir, exist_ok=True)
     
-    for file_name in os.listdir(folder_path):
+    for file_name in os.listdir(scan_dir):
+        # 跳过 Excel 打开时生成的临时锁文件
+        if file_name.startswith('~$'):
+            continue
         if file_name.endswith(('.xlsx', '.xls')):
-            file_path = os.path.join(folder_path, file_name)
+            file_path = os.path.join(scan_dir, file_name)
             base_name = os.path.splitext(file_path)[0]
             output_file = base_name.replace(os.path.basename(base_name), os.path.basename(base_name)) + '.txt'
             

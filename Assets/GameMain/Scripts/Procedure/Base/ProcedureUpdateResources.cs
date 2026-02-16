@@ -1,6 +1,7 @@
-﻿using GameFramework;
+using GameFramework;
 using GameFramework.Event;
 using System.Collections.Generic;
+using Definition.Enum;
 using StarForce;
 using UI;
 using UnityEngine;
@@ -46,7 +47,7 @@ namespace Procedure
 
             if (Application.internetReachability == NetworkReachability.ReachableViaCarrierDataNetwork)
             {
-                GameEntry.UI.OpenDialog(new DialogParams
+                GameEntry.UIRouter.OpenUI(UIFormType.DialogForm, new DialogFormRawData
                 {
                     Mode = 2,
                     Title = GameEntry.Localization.GetString("UpdateResourceViaCarrierDataNetwork.Title"),

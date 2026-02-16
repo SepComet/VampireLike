@@ -7,21 +7,16 @@ namespace UI
 {
     public class LevelUpForm : UGuiForm
     {
-        [SerializeField] private TMP_Text _titleText;
+        [SerializeField] private LevelUpRewardItem[] _propItems;
 
-        [SerializeField] private LevelUpPropItem[] _propItems;
+        [SerializeField] private TMP_Text _refreshButtonText;
 
         private LevelUpFormContext _context;
 
         public void RefreshUI(LevelUpFormContext context)
         {
             _context = context;
-
-            if (_titleText != null)
-            {
-                _titleText.text = $"Level Up (Lv.{_context.Level})";
-            }
-
+            
             foreach (var propItem in _propItems)
             {
                 propItem.gameObject.SetActive(false);
@@ -33,6 +28,9 @@ namespace UI
                 _propItems[i].gameObject.SetActive(true);
                 _propItems[i].Init(_context.Props[i]);
             }
+            
+            //刷新 -20 <sprite name="coin" index=0>
+            _refreshButtonText.text = $"刷新 -{context.RefreshPrice} <sprite name=\"coin\" index=0>";
         }
 
         #region FSM
@@ -58,9 +56,14 @@ namespace UI
 
         #endregion
 
-        private void OnSelectProp(int index)
+        public void OnSelectButtonClick(int index)
         {
             GameEntry.Event.Fire(this, LevelUpPropSelectedEventArgs.Create(index));
+        }
+
+        public void OnRefreshButtonClick()
+        {
+            GameEntry.Event.Fire(this, RefreshEventArgs.Create(_context.RefreshPrice));
         }
     }
 }

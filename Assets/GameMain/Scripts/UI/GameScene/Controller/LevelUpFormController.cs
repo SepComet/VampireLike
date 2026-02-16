@@ -1,44 +1,81 @@
 using System.Collections.Generic;
 using CustomEvent;
-using DataTable;
 using Definition.Enum;
-using GameFramework.DataTable;
+using Game.Utility;
 using GameFramework.Event;
-using UnityEngine;
+using Procedure;
 using UnityGameFramework.Runtime;
 
 namespace UI
 {
-    public class LevelUpFormController : IFormController<LevelUpFormContext>
+    public class LevelUpFormController : UIFormControllerBase<LevelUpFormContext>
     {
-        private int _currentLevel = 1;
-        private int _buildCount = 4;
+        private LevelUpFormUseCase _useCase;
 
         private bool _pendingRefresh;
 
         private int? _levelUpFormSerialId;
+
         private LevelUpForm _levelUpForm;
+
         private LevelUpFormContext _context;
 
-        public LevelUpFormController()
+        private bool _isBindEvent;
+
+        private void SubscribeEvents()
         {
+            if (_isBindEvent) return;
+
             GameEntry.Event.Subscribe(OpenUIFormSuccessEventArgs.EventId, OpenUIFormSuccess);
             GameEntry.Event.Subscribe(CloseUIFormCompleteEventArgs.EventId, CloseUIFormComplete);
+            GameEntry.Event.Subscribe(RefreshEventArgs.EventId, OnRefresh);
+            GameEntry.Event.Subscribe(LevelUpPropSelectedEventArgs.EventId, OnLevelUpPropSelected);
+
+            _isBindEvent = true;
         }
 
-        ~LevelUpFormController()
+        private void UnsubscribeEvents()
         {
+            if (!_isBindEvent) return;
+
             GameEntry.Event.Unsubscribe(OpenUIFormSuccessEventArgs.EventId, OpenUIFormSuccess);
             GameEntry.Event.Unsubscribe(CloseUIFormCompleteEventArgs.EventId, CloseUIFormComplete);
+            GameEntry.Event.Unsubscribe(RefreshEventArgs.EventId, OnRefresh);
+            GameEntry.Event.Unsubscribe(LevelUpPropSelectedEventArgs.EventId, OnLevelUpPropSelected);
+
+            _isBindEvent = false;
         }
 
-        public void ConfigureBuild(int level, int count = 4)
+        private static LevelUpFormContext BuildContext(LevelUpFormRawData rawData)
         {
-            _currentLevel = Mathf.Max(1, level);
-            _buildCount = Mathf.Max(0, count);
+            List<LevelUpRewardItemContext> props = new List<LevelUpRewardItemContext>(rawData.Rewards.Count);
+            foreach (var reward in rawData.Rewards)
+            {
+                if (reward == null)
+                {
+                    continue;
+                }
+
+                props.Add(new LevelUpRewardItemContext
+                {
+                    Title = reward.Title,
+                    Icon = null,
+                    Description = ItemDescUtility.CreatePropDescription(reward.Modifiers),
+                    IconAssetName = reward.IconAssetName
+                });
+            }
+
+            return new LevelUpFormContext
+            {
+                RefreshPrice = rawData.RefreshPrice,
+                Props = props
+            };
         }
 
-        public int? OpenUI(LevelUpFormContext context)
+
+        #region UI Methods
+
+        protected override int? OpenUIInternal(LevelUpFormContext context)
         {
             if (context == null)
             {
@@ -48,7 +85,8 @@ namespace UI
 
             _context = context;
 
-            if (_levelUpForm != null)
+            if (_levelUpForm != null && _levelUpFormSerialId.HasValue &&
+                GameEntry.UI.HasUIForm(_levelUpFormSerialId.Value))
             {
                 _levelUpForm.RefreshUI(_context);
                 return _levelUpFormSerialId;
@@ -56,37 +94,43 @@ namespace UI
 
             CloseUI();
             _pendingRefresh = true;
+            SubscribeEvents();
             _levelUpFormSerialId = GameEntry.UI.OpenUIForm(UIFormType.LevelUpForm, context);
             return _levelUpFormSerialId;
         }
 
-        public void CloseUI()
+        public override int? OpenUI(object userData = null)
         {
-            _pendingRefresh = false;
-
-            if (_levelUpFormSerialId.HasValue)
+            if (userData is LevelUpFormContext context)
             {
-                GameEntry.UI.CloseUIForm(_levelUpFormSerialId.Value);
-                return;
+                return OpenUIInternal(context);
             }
 
-            if (_levelUpForm != null)
+            if (userData is LevelUpFormRawData rawDataFromUserData)
             {
-                _levelUpForm.Close();
+                return OpenUI(rawDataFromUserData);
             }
+
+            if (userData != null)
+            {
+                Log.Warning("LevelUpFormController.OpenUI() userData type is invalid.");
+                return null;
+            }
+
+            if (_useCase == null)
+            {
+                Log.Error("LevelUpFormController.OpenUI() useCase is null.");
+                return null;
+            }
+
+            LevelUpFormRawData rawData = _useCase.CreateInitialModel();
+            return OpenUI(rawData);
         }
 
-        public void Reset()
+        public int? OpenUI(LevelUpFormRawData rawData)
         {
-            _context = null;
-            _levelUpForm = null;
-            _levelUpFormSerialId = null;
-            _pendingRefresh = false;
-        }
-
-        public void OnSelectProp(int propId)
-        {
-            
+            LevelUpFormContext context = BuildContext(rawData);
+            return OpenUIInternal(context);
         }
 
         private void TryRefreshUI()
@@ -105,6 +149,82 @@ namespace UI
             _levelUpForm.RefreshUI(_context);
             _pendingRefresh = false;
         }
+
+        public override void CloseUI()
+        {
+            _pendingRefresh = false;
+            UnsubscribeEvents();
+
+            if (_levelUpFormSerialId.HasValue)
+            {
+                if (GameEntry.UI.HasUIForm(_levelUpFormSerialId.Value))
+                {
+                    GameEntry.UI.CloseUIForm(_levelUpFormSerialId.Value);
+                }
+
+                _levelUpForm = null;
+                _levelUpFormSerialId = null;
+                return;
+            }
+
+            if (_levelUpForm != null)
+            {
+                _levelUpForm.Close();
+                _levelUpForm = null;
+            }
+        }
+
+        public override void BindUseCase(IUIUseCase useCase)
+        {
+            if (!(useCase is LevelUpFormUseCase levelUpFormUseCase))
+            {
+                Log.Error("LevelUpForm.BindUseCase() useCase is invalid.");
+                return;
+            }
+
+            _useCase = levelUpFormUseCase;
+        }
+
+        #endregion
+
+        #region Service
+
+        private void SelectReward(int selectedIndex)
+        {
+            if (_useCase == null)
+            {
+                Log.Error("LevelUpFormController.OpenUI() useCase is null.");
+                return;
+            }
+
+            LevelUpFormRawData rawData = _useCase.SelectReward(selectedIndex);
+
+            if (rawData == null)
+            {
+                return;
+            }
+
+            OpenUI(rawData);
+        }
+
+        private void RefreshRewardList(int refreshCost)
+        {
+            if (_useCase == null)
+            {
+                Log.Error("LevelUpFormController.OpenUI() useCase is null.");
+                return;
+            }
+
+            LevelUpFormRawData rawData = _useCase.TryRefresh(refreshCost);
+            if (rawData == null)
+            {
+                return;
+            }
+
+            OpenUI(rawData);
+        }
+
+        #endregion
 
         #region Event Handlers
 
@@ -147,6 +267,31 @@ namespace UI
 
             _levelUpForm = null;
             _levelUpFormSerialId = null;
+        }
+
+        private void OnRefresh(object sender, GameEventArgs e)
+        {
+            if (!(sender is LevelUpForm))
+            {
+                return;
+            }
+
+            if (!(e is RefreshEventArgs args))
+            {
+                return;
+            }
+
+            RefreshRewardList(args.Cost);
+        }
+
+        private void OnLevelUpPropSelected(object sender, GameEventArgs e)
+        {
+            if (!(e is LevelUpPropSelectedEventArgs args))
+            {
+                return;
+            }
+
+            SelectReward(args.SelectedId);
         }
 
         #endregion

@@ -24,10 +24,15 @@ namespace Entity
     public abstract class WeaponBase : EntityBase
     {
         protected const string AttachPoint = "Weapon Point";
+        
         protected bool _isAttacking = false;
+        
         protected bool _isEnabled = false;
+        
         public WeaponData WeaponData;
+        
         public bool IsAttacking => _isAttacking;
+        
         protected WeaponStateBase _currentState;
 
         #region FSM

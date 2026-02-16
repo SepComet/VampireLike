@@ -19,16 +19,6 @@ namespace DataTable
         public GoodsType GoodsType { get; private set; }
 
         /// <summary>
-        /// 获取最低价格
-        /// </summary>
-        public int MinPrice { get; private set; }
-
-        /// <summary>
-        /// 获取最高价格
-        /// </summary>
-        public int MaxPrice { get; private set; }
-
-        /// <summary>
         /// 获取商品对应具体类型的表Id
         /// </summary>
         public int GoodsTypeId { get; set; }
@@ -43,8 +33,6 @@ namespace DataTable
             m_Id = int.Parse(fields[index++]);
             index++;
             GoodsType = EnumUtility<GoodsType>.Get(fields[index++]);
-            MinPrice = int.Parse(fields[index++]);
-            MaxPrice = int.Parse(fields[index++]);
             GoodsTypeId = int.Parse(fields[index++]);
 
             return true;

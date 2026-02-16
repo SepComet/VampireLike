@@ -134,6 +134,7 @@ namespace Entity
                 Log.Error("WeaponKnife data is invalid.");
                 return;
             }
+            WeaponData = _weaponData;
 
             _collider = GetComponent<Collider>();
             _rigidbody = GetComponent<Rigidbody>();

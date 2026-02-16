@@ -12,7 +12,7 @@ namespace Definition.Enum
     /// </summary>
     public enum UIFormType : byte
     {
-        Undefined = 0,
+        TUIForm = 0,
 
         /// <summary>
         /// 弹出框。
@@ -58,5 +58,10 @@ namespace Definition.Enum
         /// 升级选择。
         /// </summary>
         LevelUpForm = 204,
+        
+        /// <summary>
+        /// 物品信息展示页
+        /// </summary>
+        DisplayItemInfoForm = 205,
     }
 }

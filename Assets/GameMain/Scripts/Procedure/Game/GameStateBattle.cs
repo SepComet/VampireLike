@@ -11,9 +11,13 @@ namespace Procedure
         public override GameStateType GameStateType => GameStateType.Battle;
 
         private EnemyManagerComponent _enemyManager = null;
+        
         private int _currentLevel = 0;
+        
         private bool _levelOver;
 
+        private Player Player => _procedureGame.Player;
+        
         private ProcedureGame _procedureGame = null;
 
         public void LevelOver()
@@ -35,8 +39,8 @@ namespace Procedure
             _currentLevel = _procedureGame.CurrentLevel;
             _levelOver = false;
             _enemyManager.OnInit(_currentLevel, this);
-            Player player = _procedureGame.Player;
-            if (player != null) player.Enable = false;
+            
+            if (Player != null) Player.Enable = true;
         }
 
         public override void OnUpdate(IFsm<IProcedureManager> procedureOwner, float elapseSeconds,
@@ -47,7 +51,7 @@ namespace Procedure
             if (_levelOver)
             {
                 procedureOwner.SetData<VarByte>("CurrentLevel", (byte)(_currentLevel + 1));
-                _procedureGame.BattleToShop();
+                _procedureGame.BattleToShopOrLevelUp();
             }
         }
 
@@ -57,8 +61,7 @@ namespace Procedure
             _enemyManager.OnReset();
 
             // 停止玩家逻辑
-            Player player = _procedureGame.Player;
-            player.Enable = false;
+            Player.Enable = false;
 
             // 隐藏所有掉落物实体
             var entities = GameEntry.Entity.GetEntityGroup("Drop").GetAllEntities();

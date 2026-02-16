@@ -1,0 +1,8 @@
+#	道具表				
+#	Id		Title	IconAssetName	Modifiers
+#	int		string	string	StatModifier[]
+#	奖励编号	策划备注	奖励名	图标资源名	道具属性
+	101	测试道具	肌肉	Almighty_Icon	[{"StatType":"Attack","Value":0.05,"IsPercent":true}]
+	102		牙齿	Almighty_Icon	[{"StatType":"Attack","Value":0.05,"IsPercent":true}]
+	103		脑	Almighty_Icon	[{"StatType":"Attack","Value":0.05,"IsPercent":true}]
+	104		鼻子	Almighty_Icon	[{"StatType":"Attack","Value":0.05,"IsPercent":true}]

@@ -9,4 +9,6 @@
 	200	开始菜单	StartMenuForm	Default	False	True
 	201	角色选择页	SelectRoleForm	Default	False	True
 	202	游戏商店页	ShopForm	Default	False	True
-	203	游戏HUD	HudForm	Default	False	True
+	203	游戏HUD	HudForm	HUD	False	True
+	204	角色升级奖励页	LevelUpForm	Default	False	True
+	205	物品信息展示	DisplayItemInfoForm	Default	False	False

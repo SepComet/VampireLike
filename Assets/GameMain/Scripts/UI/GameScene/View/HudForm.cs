@@ -13,32 +13,47 @@ namespace UI
         [SerializeField] private float _sliderFadeDuration = 0.5f;
 
         [SerializeField] private Slider _hpSlider;
+        
+        [SerializeField] private TMP_Text _hpText;
+        
         private float _currentHpPercent = 0;
         private Coroutine _hpSliderFadeCoroutine;
 
         [SerializeField] private Slider _expSlider;
+        
         private float _currentExpPercent = 0;
         private Coroutine _expSliderFadeCoroutine;
+        
+        [SerializeField] private TMP_Text _expText;
+
+        private int _playerCurrentLevel = 1;
 
         [SerializeField] private TMP_Text _coinText;
         private int _currentCoin = 0;
 
+        public void RefreshUI(HudFormContext hudFormContext)
+        {
+            
+        }
+        
         #region FSM
 
         protected override void OnInit(object userData)
         {
             base.OnInit(userData);
 
-            GameEntry.Event.Subscribe(PlayerHealthChangeEventArgs.EventId, OnPlayerHpChange);
-            GameEntry.Event.Subscribe(PlayerExpChangeEventArgs.EventId, OnPlayerExpChange);
-            GameEntry.Event.Subscribe(PlayerCoinChangeEventArgs.EventId, OnPlayerCoinChange);
+            GameEntry.Event.Subscribe(PlayerHealthChangeEventArgs.EventId, PlayerHpChange);
+            GameEntry.Event.Subscribe(PlayerExpChangeEventArgs.EventId, PlayerExpChange);
+            GameEntry.Event.Subscribe(PlayerCoinChangeEventArgs.EventId, PlayerCoinChange);
+            GameEntry.Event.Subscribe(PlayerLevelUpEventArgs.EventId, PlayerLevelUp);
         }
 
         protected override void OnClose(bool isShutdown, object userData)
         {
-            GameEntry.Event.Unsubscribe(PlayerHealthChangeEventArgs.EventId, OnPlayerHpChange);
-            GameEntry.Event.Unsubscribe(PlayerExpChangeEventArgs.EventId, OnPlayerExpChange);
-            GameEntry.Event.Unsubscribe(PlayerCoinChangeEventArgs.EventId, OnPlayerCoinChange);
+            GameEntry.Event.Unsubscribe(PlayerLevelUpEventArgs.EventId, PlayerLevelUp);
+            GameEntry.Event.Unsubscribe(PlayerHealthChangeEventArgs.EventId, PlayerHpChange);
+            GameEntry.Event.Unsubscribe(PlayerExpChangeEventArgs.EventId, PlayerExpChange);
+            GameEntry.Event.Unsubscribe(PlayerCoinChangeEventArgs.EventId, PlayerCoinChange);
 
             base.OnClose(isShutdown, userData);
         }
@@ -47,9 +62,12 @@ namespace UI
 
         #region Event Handlers
 
-        private void OnPlayerHpChange(object sender, GameEventArgs e)
+        private void PlayerHpChange(object sender, GameEventArgs e)
         {
             if (!(e is PlayerHealthChangeEventArgs args)) return;
+
+            _hpText.text = $"{args.CurrentHealth}/{args.MaxHealth}";
+            
             float percent = (float)args.CurrentHealth / args.MaxHealth;
             if (Mathf.Approximately(_currentHpPercent, percent)) return;
 
@@ -59,7 +77,7 @@ namespace UI
             _hpSliderFadeCoroutine = StartCoroutine(_hpSlider.SmoothValue(percent, _sliderFadeDuration));
         }
 
-        private void OnPlayerExpChange(object sender, GameEventArgs e)
+        private void PlayerExpChange(object sender, GameEventArgs e)
         {
             if (!(e is PlayerExpChangeEventArgs args)) return;
             float percent = (float)args.CurrentExp / args.MaxExp;
@@ -71,12 +89,20 @@ namespace UI
             _expSliderFadeCoroutine = StartCoroutine(_expSlider.SmoothValue(percent, _sliderFadeDuration));
         }
 
-        private void OnPlayerCoinChange(object sender, GameEventArgs e)
+        private void PlayerLevelUp(object sender, GameEventArgs e)
+        {
+            if (!(e is PlayerLevelUpEventArgs)) return;
+
+            _playerCurrentLevel++;
+            _expText.text = $"LV.{_playerCurrentLevel}";
+        }
+        
+        private void PlayerCoinChange(object sender, GameEventArgs e)
         {
             if (!(e is PlayerCoinChangeEventArgs args)) return;
             if (_currentCoin == args.CoinCount) return;
 
-            _coinText.text = args.CoinCount.ToString();
+            _coinText.text = $"<sprite name=\"coin\" index=0> {args.CoinCount}";
             _currentCoin = args.CoinCount;
         }
 

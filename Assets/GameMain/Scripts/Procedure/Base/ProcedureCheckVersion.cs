@@ -6,6 +6,7 @@
 //------------------------------------------------------------
 
 using Definition.DataStruct;
+using Definition.Enum;
 using GameFramework;
 using GameFramework.Event;
 using GameFramework.Resource;
@@ -112,7 +113,7 @@ namespace Procedure
             if (m_VersionInfo.ForceUpdateGame)
             {
                 // 需要强制更新游戏应用
-                GameEntry.UI.OpenDialog(new DialogParams
+                GameEntry.UIRouter.OpenUI(UIFormType.DialogForm, new DialogFormRawData
                 {
                     Mode = 2,
                     Title = GameEntry.Localization.GetString("ForceUpdate.Title"),

@@ -1,8 +1,24 @@
-#	道具表				
-#	Id		Title	IconAssetName	Modifiers
-#	int		string	string	StatModifier[]
-#	道具编号	策划备注	道具名	图标资源名	道具属性
-	101	测试道具	药	Almighty_Icon	[{"StatType":"MovementSpeed","Value":0.5,"IsPercent":false},{"StatType":"MaxHealth","Value":0.2,"IsPercent":true}]
-	102		小药	Almighty_Icon	[{"StatType":"MovementSpeed","Value":0.5,"IsPercent":false},{"StatType":"MaxHealth","Value":0.2,"IsPercent":true}]
-	103		中药	Almighty_Icon	[{"StatType":"Critical","Value":20,"IsPercent":false},{"StatType":"Defense","Value":1,"IsPercent":false}]
-	104		大药	Almighty_Icon	[{"StatType":"Attack","Value":2,"IsPercent":false},{"StatType":"AttackSpeed","Value":0.1,"IsPercent":true}]
+#	道具表							
+#	Id		Title	IconAssetName	Rarity	Price	PriceRandomPercent	Modifiers
+#	int		string	string	RarityType	int	float	StatModifier[]
+#	道具编号	策划备注	道具名	图标资源名	道具品质	道具价格	价格浮动	道具属性
+	101		道具_1	Almighty_Icon	White	119	0.0500000007450581	[{"StatType":"Attack","Value":10,"IsPercent":false},{"StatType":"Defense","Value":12,"IsPercent":false}]
+	102		道具_2	Almighty_Icon	Green	225	0.0799999982118607	[{"StatType":"MaxHealth","Value":53,"IsPercent":false},{"StatType":"AttackSpeed","Value":0.09,"IsPercent":true},{"StatType":"Attack","Value":11,"IsPercent":false}]
+	103		道具_3	Almighty_Icon	Blue	329	0.100000001490116	[{"StatType":"Critical","Value":15,"IsPercent":false},{"StatType":"CriticalDamage","Value":21,"IsPercent":false},{"StatType":"Defense","Value":23,"IsPercent":false}]
+	104		道具_4	Almighty_Icon	Red	423	0.119999997317791	[{"StatType":"Defense","Value":79,"IsPercent":false}]
+	105		道具_5	Almighty_Icon	White	120	0.0500000007450581	[{"StatType":"MovementSpeed","Value":0.8,"IsPercent":false},{"StatType":"Attack","Value":10,"IsPercent":false}]
+	106		道具_6	Almighty_Icon	Green	195	0.0799999982118607	[{"StatType":"Dodge","Value":10,"IsPercent":false},{"StatType":"Attack","Value":12,"IsPercent":false},{"StatType":"MaxHealth","Value":44,"IsPercent":false}]
+	107		道具_7	Almighty_Icon	Blue	335	0.100000001490116	[{"StatType":"Defense","Value":62,"IsPercent":false}]
+	108		道具_8	Almighty_Icon	Red	433	0.119999997317791	[{"StatType":"Attack","Value":44,"IsPercent":false},{"StatType":"Dodge","Value":27,"IsPercent":false}]
+	109		道具_9	Almighty_Icon	White	121	0.0500000007450581	[{"StatType":"MaxHealth","Value":32,"IsPercent":false},{"StatType":"Attack","Value":7,"IsPercent":false},{"StatType":"Defense","Value":8,"IsPercent":false}]
+	110		道具_10	Almighty_Icon	Green	198	0.0799999982118607	[{"StatType":"AttackSpeed","Value":0.19,"IsPercent":true}]
+	111		道具_11	Almighty_Icon	Blue	341	0.100000001490116	[{"StatType":"Attack","Value":57,"IsPercent":false}]
+	112		道具_12	Almighty_Icon	Red	443	0.119999997317791	[{"StatType":"MaxHealth","Value":139,"IsPercent":false},{"StatType":"Critical","Value":27,"IsPercent":false}]
+	113		道具_13	Almighty_Icon	White	122	0.0500000007450581	[{"StatType":"Critical","Value":5,"IsPercent":false},{"StatType":"Dodge","Value":7,"IsPercent":false},{"StatType":"MovementSpeed","Value":0.6,"IsPercent":false}]
+	114		道具_14	Almighty_Icon	Green	201	0.0799999982118607	[{"StatType":"Defense","Value":38,"IsPercent":false}]
+	115		道具_15	Almighty_Icon	Blue	346	0.100000001490116	[{"StatType":"MovementSpeed","Value":1.6,"IsPercent":false},{"StatType":"Defense","Value":32,"IsPercent":false}]
+	116		道具_16	Almighty_Icon	Red	454	0.119999997317791	[{"StatType":"Dodge","Value":28,"IsPercent":false},{"StatType":"Defense","Value":24,"IsPercent":false},{"StatType":"Attack","Value":24,"IsPercent":false}]
+	117		道具_17	Almighty_Icon	White	124	0.0500000007450581	[{"StatType":"Defense","Value":23,"IsPercent":false}]
+	118		道具_18	Almighty_Icon	Green	204	0.0799999982118607	[{"StatType":"Attack","Value":17,"IsPercent":false},{"StatType":"MaxHealth","Value":69,"IsPercent":false}]
+	119		道具_19	Almighty_Icon	Blue	352	0.100000001490116	[{"StatType":"MaxHealth","Value":74,"IsPercent":false},{"StatType":"Attack","Value":19,"IsPercent":false},{"StatType":"Dodge","Value":20,"IsPercent":false}]
+	120		道具_20	Almighty_Icon	Red	464	0.119999997317791	[{"StatType":"AttackSpeed","Value":0.15,"IsPercent":true},{"StatType":"Attack","Value":29,"IsPercent":false},{"StatType":"Defense","Value":27,"IsPercent":false}]

@@ -22,6 +22,20 @@ namespace Entity.EntityData
         public int Attack => _drWeapon.Attack;
 
         /// <summary>
+        /// 武器名称。
+        /// </summary>
+        public string Title => _drWeapon.Title;
+
+        /// <summary>
+        /// 图标资源名称。
+        /// </summary>
+        public string IconAssetName => _drWeapon.IconAssetName;
+
+        public ItemRarity Rarity => _drWeapon.Rarity;
+
+        public int Price => _drWeapon.Price;
+
+        /// <summary>
         /// 攻击间隔。
         /// </summary>
         public float Cooldown => _drWeapon.Cooldown;
