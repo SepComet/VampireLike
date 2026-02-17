@@ -15,18 +15,16 @@ using UnityEngine;
 using UnityGameFramework.Runtime;
 using Random = UnityEngine.Random;
 
-namespace StarForce
+namespace Game.Utility
 {
     /// <summary>
     /// AI 工具类。
     /// </summary>
     public static class AIUtility
     {
-        private static Dictionary<CampPair, RelationType> s_CampPairToRelation =
-            new Dictionary<CampPair, RelationType>();
+        private static Dictionary<CampPair, RelationType> s_CampPairToRelation = new();
 
-        private static Dictionary<KeyValuePair<CampType, RelationType>, CampType[]> s_CampAndRelationToCamps =
-            new Dictionary<KeyValuePair<CampType, RelationType>, CampType[]>();
+        private static Dictionary<KeyValuePair<CampType, RelationType>, CampType[]> s_CampAndRelationToCamps = new();
 
         static AIUtility()
         {
@@ -68,9 +66,7 @@ namespace StarForce
         {
             if (first > second)
             {
-                CampType temp = first;
-                first = second;
-                second = temp;
+                (first, second) = (second, first);
             }
 
             RelationType relationType;
@@ -92,8 +88,7 @@ namespace StarForce
         public static CampType[] GetCamps(CampType camp, RelationType relation)
         {
             KeyValuePair<CampType, RelationType> key = new KeyValuePair<CampType, RelationType>(camp, relation);
-            CampType[] result = null;
-            if (s_CampAndRelationToCamps.TryGetValue(key, out result))
+            if (s_CampAndRelationToCamps.TryGetValue(key, out var result))
             {
                 return result;
             }
@@ -194,7 +189,7 @@ namespace StarForce
                 }
 
                 int entityDamageHP = CalcDamageHP(weaponImpactData.AttackBase, weaponImpactData.AttackStat,
-                    entityImpactData.DefenseStat, entityImpactData.DefenseStat);
+                    entityImpactData.DefenseStat, entityImpactData.DodgeStat);
 
                 entity.ApplyDamage(weapon, entityDamageHP);
                 return;

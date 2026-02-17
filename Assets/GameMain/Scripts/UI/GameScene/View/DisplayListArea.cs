@@ -8,6 +8,13 @@ using UnityGameFramework.Runtime;
 
 namespace UI
 {
+    public enum DisplayListAreaType : byte
+    {
+        None = 0,
+        Prop = 1,
+        Weapon = 2
+    }
+    
     public class DisplayListArea : MonoBehaviour
     {
         [SerializeField] private TMP_Text _titleText;
@@ -72,7 +79,7 @@ namespace UI
 
         public void OnDestroy()
         {
-            _displayItemObjectPool.ReleaseAllUnused();
+            _displayItemObjectPool?.ReleaseAllUnused();
         }
 
         public DisplayItem AddItem(DisplayItemContext itemContext)

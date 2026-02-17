@@ -100,7 +100,7 @@ namespace UI
         /// <summary>
         /// 用户自定义数据。
         /// </summary>
-        public string UserData
+        public object UserData
         {
             get;
             set;

@@ -242,6 +242,14 @@ namespace UI
                 };
             }
 
+            if (goods.GoodsType == GoodsType.Weapon)
+            {
+                // TODO: Weapon purchase apply flow depends on the upcoming weapon system integration.
+                // Implement weapon creation/equip/add-to-inventory here when weapon runtime model is ready.
+                Log.Warning("ShopFormUseCase::ApplyGoodsPurchase: Weapon purchase flow is not implemented yet.");
+                return null;
+            }
+
             return null;
         }
     }

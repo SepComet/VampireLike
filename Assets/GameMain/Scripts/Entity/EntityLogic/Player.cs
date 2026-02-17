@@ -93,6 +93,7 @@ namespace Entity
             set
             {
                 if (value == _enable) return;
+                _enable = value;
                 _movementComponent.SetMove(value);
                 _backpackComponent.SetWeaponState(value);
                 _inputComponent.SetListening(value);

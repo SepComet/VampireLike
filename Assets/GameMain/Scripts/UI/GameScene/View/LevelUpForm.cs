@@ -23,7 +23,8 @@ namespace UI
             }
 
             if (_context.Props == null) return;
-            for (int i = 0; i < _propItems.Length; i++)
+            int count = Mathf.Min(_propItems.Length, _context.Props.Count);
+            for (int i = 0; i < count; i++)
             {
                 _propItems[i].gameObject.SetActive(true);
                 _propItems[i].Init(_context.Props[i]);

@@ -94,8 +94,6 @@ namespace Procedure
             GameEntry.Entity.ShowPlayer(_currentPlayerData);
             
             GameEntry.UIRouter.OpenUI(UIFormType.HudForm);
-            
-            InitGameState();
         }
 
         protected override void OnUpdate(IFsm<IProcedureManager> procedureOwner, float elapseSeconds,

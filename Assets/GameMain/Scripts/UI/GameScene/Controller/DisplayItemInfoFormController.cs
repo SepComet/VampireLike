@@ -1,39 +1,20 @@
 using Definition.Enum;
-using GameFramework.Event;
 using UnityGameFramework.Runtime;
 
 namespace UI
 {
-    public class DisplayItemInfoFormController : UIFormControllerBase<DisplayItemInfoFormContext>
+    public class DisplayItemInfoFormController : UIFormControllerCommonBase<DisplayItemInfoFormContext, DisplayItemInfoForm>
     {
-        private DisplayItemInfoFormContext _context;
+        protected override UIFormType UIFormTypeId => UIFormType.DisplayItemInfoForm;
 
-        private DisplayItemInfoForm _itemInfoForm;
-
-        private int? _itemInfoFormSerialId;
-
-        private bool _pendingRefresh;
-
-        private bool _isBindEvent = false;
-
-        private void SubscribeEvents()
+        protected override void RefreshUI(DisplayItemInfoForm form, DisplayItemInfoFormContext context)
         {
-            if (_isBindEvent) return;
-
-            GameEntry.Event.Subscribe(OpenUIFormSuccessEventArgs.EventId, OpenUIFormSuccess);
-            GameEntry.Event.Subscribe(CloseUIFormCompleteEventArgs.EventId, CloseUIFormComplete);
-
-            _isBindEvent = true;
+            form.RefreshUI(context);
         }
 
-        private void UnsubscribeEvents()
+        protected override void CloseLoadedFormDirect(DisplayItemInfoForm form)
         {
-            if (!_isBindEvent) return;
-
-            GameEntry.Event.Unsubscribe(OpenUIFormSuccessEventArgs.EventId, OpenUIFormSuccess);
-            GameEntry.Event.Unsubscribe(CloseUIFormCompleteEventArgs.EventId, CloseUIFormComplete);
-
-            _isBindEvent = false;
+            GameEntry.UI.CloseUIForm(form);
         }
 
         private static DisplayItemInfoFormContext BuildContext(DisplayItemInfoFormRawData rawData)
@@ -54,32 +35,6 @@ namespace UI
                 IsWeapon = rawData.IsWeapon,
                 TargetPos = rawData.TargetPos
             };
-        }
-
-        #region UI Methods
-
-        protected override int? OpenUIInternal(DisplayItemInfoFormContext context)
-        {
-            if (context == null)
-            {
-                Log.Warning("ItemInfoFormController open failed. context is null.");
-                return null;
-            }
-
-            _context = context;
-
-            if (_itemInfoForm != null && _itemInfoFormSerialId.HasValue &&
-                GameEntry.UI.HasUIForm(_itemInfoFormSerialId.Value))
-            {
-                _itemInfoForm.RefreshUI(_context);
-                return _itemInfoFormSerialId;
-            }
-
-            CloseUI();
-            _pendingRefresh = true;
-            SubscribeEvents();
-            _itemInfoFormSerialId = GameEntry.UI.OpenUIForm(UIFormType.DisplayItemInfoForm, context);
-            return _itemInfoFormSerialId;
         }
 
         public int? OpenUI(DisplayItemInfoFormRawData rawData)
@@ -105,33 +60,8 @@ namespace UI
                 Log.Warning("DisplayItemInfoFormController.OpenUI() userData type is invalid.");
                 return null;
             }
-            
-            return OpenUIInternal(_context);
-        }
 
-        public override void CloseUI()
-        {
-            _pendingRefresh = false;
-
-            UnsubscribeEvents();
-
-            if (_itemInfoFormSerialId.HasValue)
-            {
-                if (GameEntry.UI.HasUIForm(_itemInfoFormSerialId.Value))
-                {
-                    GameEntry.UI.CloseUIForm(_itemInfoFormSerialId.Value);
-                }
-
-                _itemInfoForm = null;
-                _itemInfoFormSerialId = null;
-                return;
-            }
-
-            if (_itemInfoForm != null)
-            {
-                GameEntry.UI.CloseUIForm(_itemInfoForm);
-                _itemInfoForm = null;
-            }
+            return OpenUIInternal(Context);
         }
 
         public override void BindUseCase(IUIUseCase useCase)
@@ -139,78 +69,7 @@ namespace UI
             if (!(useCase is DisplayItemInfoFormUseCase))
             {
                 Log.Error("DisplayItemInfoForm.BindUseCase() useCase is invalid.");
-                return;
             }
         }
-
-        private void TryRefreshUI()
-        {
-            if (_context == null)
-            {
-                return;
-            }
-
-            if (_itemInfoForm == null)
-            {
-                _pendingRefresh = true;
-                return;
-            }
-
-            _itemInfoForm.RefreshUI(_context);
-            _pendingRefresh = false;
-        }
-
-        #endregion
-
-        #region EventHanlders
-
-        private void OpenUIFormSuccess(object sender, GameEventArgs e)
-        {
-            if (!(e is OpenUIFormSuccessEventArgs args))
-            {
-                return;
-            }
-
-            if (!_itemInfoFormSerialId.HasValue)
-            {
-                return;
-            }
-
-            if (args.UIForm == null || args.UIForm.SerialId != _itemInfoFormSerialId.Value || args.UserData != _context)
-            {
-                return;
-            }
-
-            _itemInfoForm = args.UIForm.Logic as DisplayItemInfoForm;
-
-            if (_itemInfoForm == null)
-            {
-                Log.Warning("DisplayItemInfoFormController open success but form logic is invalid.");
-                return;
-            }
-
-            if (_pendingRefresh)
-            {
-                TryRefreshUI();
-            }
-        }
-
-        private void CloseUIFormComplete(object sender, GameEventArgs e)
-        {
-            if (!(e is CloseUIFormCompleteEventArgs args))
-            {
-                return;
-            }
-
-            if (args.SerialId != _itemInfoFormSerialId)
-            {
-                return;
-            }
-
-            _itemInfoForm = null;
-            _itemInfoFormSerialId = null;
-        }
-
-        #endregion
     }
 }

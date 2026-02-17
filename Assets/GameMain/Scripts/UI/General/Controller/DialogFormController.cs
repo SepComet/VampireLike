@@ -1,39 +1,20 @@
 using Definition.Enum;
-using GameFramework.Event;
 using UnityGameFramework.Runtime;
 
 namespace UI
 {
-    public class DialogFormController : UIFormControllerBase<DialogFormContext>
+    public class DialogFormController : UIFormControllerCommonBase<DialogFormContext, DialogForm>
     {
-        private DialogFormContext _context;
-        
-        private DialogForm _dialogForm;
-        
-        private int? _dialogFormSerialId;
-        
-        private bool _pendingRefresh;
-        
-        private bool _isBindEvent;
+        protected override UIFormType UIFormTypeId => UIFormType.DialogForm;
 
-        private void SubscribeEvents()
+        protected override void RefreshUI(DialogForm form, DialogFormContext context)
         {
-            if (_isBindEvent) return;
-
-            GameEntry.Event.Subscribe(OpenUIFormSuccessEventArgs.EventId, OpenUIFormSuccess);
-            GameEntry.Event.Subscribe(CloseUIFormCompleteEventArgs.EventId, CloseUIFormComplete);
-
-            _isBindEvent = true;
+            form.RefreshUI(context);
         }
 
-        private void UnsubscribeEvents()
+        protected override void CloseLoadedFormDirect(DialogForm form)
         {
-            if (!_isBindEvent) return;
-
-            GameEntry.Event.Unsubscribe(OpenUIFormSuccessEventArgs.EventId, OpenUIFormSuccess);
-            GameEntry.Event.Unsubscribe(CloseUIFormCompleteEventArgs.EventId, CloseUIFormComplete);
-
-            _isBindEvent = false;
+            GameEntry.UI.CloseUIForm(form);
         }
 
         private static DialogFormContext BuildContext(DialogFormRawData rawData)
@@ -59,30 +40,6 @@ namespace UI
             };
         }
 
-        protected override int? OpenUIInternal(DialogFormContext context)
-        {
-            if (context == null)
-            {
-                Log.Warning("DialogFormController.OpenUI() context is null.");
-                return null;
-            }
-
-            _context = context;
-
-            if (_dialogForm != null && _dialogFormSerialId.HasValue &&
-                GameEntry.UI.HasUIForm(_dialogFormSerialId.Value))
-            {
-                _dialogForm.RefreshUI(_context);
-                return _dialogFormSerialId;
-            }
-
-            CloseUI();
-            _pendingRefresh = true;
-            SubscribeEvents();
-            _dialogFormSerialId = GameEntry.UI.OpenUIForm(UIFormType.DialogForm, context);
-            return _dialogFormSerialId;
-        }
-
         public int? OpenUI(DialogFormRawData rawData)
         {
             DialogFormContext context = BuildContext(rawData);
@@ -101,42 +58,13 @@ namespace UI
                 return OpenUI(rawData);
             }
 
-            if (userData is DialogFormRawData dialogParams)
-            {
-                return OpenUIInternal(BuildContext(dialogParams));
-            }
-
             if (userData != null)
             {
                 Log.Warning("DialogFormController.OpenUI() userData type is invalid.");
                 return null;
             }
 
-            return OpenUIInternal(_context);
-        }
-
-        public override void CloseUI()
-        {
-            _pendingRefresh = false;
-            UnsubscribeEvents();
-
-            if (_dialogFormSerialId.HasValue)
-            {
-                if (GameEntry.UI.HasUIForm(_dialogFormSerialId.Value))
-                {
-                    GameEntry.UI.CloseUIForm(_dialogFormSerialId.Value);
-                }
-
-                _dialogForm = null;
-                _dialogFormSerialId = null;
-                return;
-            }
-
-            if (_dialogForm != null)
-            {
-                GameEntry.UI.CloseUIForm(_dialogForm);
-                _dialogForm = null;
-            }
+            return OpenUIInternal(Context);
         }
 
         public override void BindUseCase(IUIUseCase useCase)
@@ -145,71 +73,6 @@ namespace UI
             {
                 Log.Warning("DialogFormController does not use a use case.");
             }
-        }
-
-        private void TryRefreshUI()
-        {
-            if (_context == null)
-            {
-                return;
-            }
-
-            if (_dialogForm == null)
-            {
-                _pendingRefresh = true;
-                return;
-            }
-
-            _dialogForm.RefreshUI(_context);
-            _pendingRefresh = false;
-        }
-
-        private void OpenUIFormSuccess(object sender, GameEventArgs e)
-        {
-            if (!(e is OpenUIFormSuccessEventArgs args))
-            {
-                return;
-            }
-
-            if (!_dialogFormSerialId.HasValue)
-            {
-                return;
-            }
-
-            if (args.UIForm == null || args.UIForm.SerialId != _dialogFormSerialId.Value ||
-                args.UserData != _context)
-            {
-                return;
-            }
-
-            _dialogForm = args.UIForm.Logic as DialogForm;
-
-            if (_dialogForm == null)
-            {
-                Log.Warning("DialogFormController open success but form logic is invalid.");
-                return;
-            }
-
-            if (_pendingRefresh)
-            {
-                TryRefreshUI();
-            }
-        }
-
-        private void CloseUIFormComplete(object sender, GameEventArgs e)
-        {
-            if (!(e is CloseUIFormCompleteEventArgs args))
-            {
-                return;
-            }
-
-            if (args.SerialId != _dialogFormSerialId)
-            {
-                return;
-            }
-
-            _dialogForm = null;
-            _dialogFormSerialId = null;
         }
     }
 }

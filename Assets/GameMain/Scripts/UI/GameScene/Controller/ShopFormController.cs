@@ -9,50 +9,34 @@ using UnityGameFramework.Runtime;
 
 namespace UI
 {
-    public class ShopFormController : UIFormControllerBase<ShopFormContext>
+    public class ShopFormController : UIFormControllerCommonBase<ShopFormContext, ShopForm>
     {
         private ShopFormUseCase _useCase;
-
-        private bool _pendingRefresh;
-
-        private int? _shopFormSerialId;
-
-        private ShopForm _shopForm;
-
         private ShopFormRawData _rawData;
 
-        private ShopFormContext _context;
+        protected override UIFormType UIFormTypeId => UIFormType.ShopForm;
 
-        private bool _isBindEvent;
-
-        private void SubscribeEvents()
+        protected override void RefreshUI(ShopForm form, ShopFormContext context)
         {
-            if (_isBindEvent) return;
+            form.RefreshUI(context);
+        }
 
-            GameEntry.Event.Subscribe(OpenUIFormSuccessEventArgs.EventId, OpenUIFormSuccess);
-            GameEntry.Event.Subscribe(CloseUIFormCompleteEventArgs.EventId, CloseUIFormComplete);
+        protected override void SubscribeCustomEvents()
+        {
             GameEntry.Event.Subscribe(RefreshEventArgs.EventId, Refresh);
             GameEntry.Event.Subscribe(ShopPurchaseEventArgs.EventId, ShopPurchase);
             GameEntry.Event.Subscribe(ShopContinueEventArgs.EventId, ShopContinue);
             GameEntry.Event.Subscribe(DisplayItemShowEventArgs.EventId, DisplayItemShow);
             GameEntry.Event.Subscribe(DisplayItemHideEventArgs.EventId, DisplayItemHide);
-
-            _isBindEvent = true;
         }
 
-        private void UnsubscribeEvents()
+        protected override void UnsubscribeCustomEvents()
         {
-            if (!_isBindEvent) return;
-
-            GameEntry.Event.Unsubscribe(OpenUIFormSuccessEventArgs.EventId, OpenUIFormSuccess);
-            GameEntry.Event.Unsubscribe(CloseUIFormCompleteEventArgs.EventId, CloseUIFormComplete);
             GameEntry.Event.Unsubscribe(RefreshEventArgs.EventId, Refresh);
             GameEntry.Event.Unsubscribe(ShopPurchaseEventArgs.EventId, ShopPurchase);
             GameEntry.Event.Unsubscribe(ShopContinueEventArgs.EventId, ShopContinue);
             GameEntry.Event.Unsubscribe(DisplayItemShowEventArgs.EventId, DisplayItemShow);
             GameEntry.Event.Unsubscribe(DisplayItemHideEventArgs.EventId, DisplayItemHide);
-
-            _isBindEvent = false;
         }
 
         #region BuildContext
@@ -72,38 +56,52 @@ namespace UI
                 RefreshPrice = rawData.RefreshPrice,
                 PlayerCoin = rawData.PlayerCoin,
                 GoodsItems = rawData.GoodsItems,
-                PropListContext = BuildDisplayListAreaContext("道具", rawData.PropItems, rawData.PropMaxCount),
-                WeaponListContext = BuildDisplayListAreaContext("武器", rawData.WeaponItems, rawData.WeaponMaxCount)
+                PropListContext = BuildDisplayListAreaContext(DisplayListAreaType.Prop, rawData.PropItems, rawData.PropMaxCount),
+                WeaponListContext = BuildDisplayListAreaContext(DisplayListAreaType.Weapon, rawData.WeaponItems, rawData.WeaponMaxCount)
             };
         }
 
-        private static DisplayListAreaContext BuildDisplayListAreaContext(string title, IReadOnlyList<object> items,
+        private static DisplayListAreaContext BuildDisplayListAreaContext(DisplayListAreaType listType, IReadOnlyList<object> items,
             int maxCount)
         {
-            DisplayItemContext[] itemContexts = new DisplayItemContext[items.Count];
-            if (title == "武器")
+            string title = GetDisplayListTitle(listType);
+            if (items == null)
             {
-                if (items is IReadOnlyList<WeaponBase> weapons)
+                return new DisplayListAreaContext
                 {
-                    for (int i = 0; i < weapons.Count; i++)
-                    {
-                        WeaponBase weapon = weapons[i];
-                        if (weapon == null) break;
-                        itemContexts[i] = BuildWeaponItem(weapon);
-                    }
-                }
+                    Title = title,
+                    CurrentCount = 0,
+                    MaxCount = maxCount,
+                    ItemContexts = System.Array.Empty<DisplayItemContext>()
+                };
             }
-            else if (title == "道具")
+
+            DisplayItemContext[] itemContexts = new DisplayItemContext[items.Count];
+            switch (listType)
             {
-                if (items is IReadOnlyList<PropItem> propItems)
-                {
-                    for (int i = 0; i < propItems.Count; i++)
+                case DisplayListAreaType.Weapon:
+                    if (items is IReadOnlyList<WeaponBase> weapons)
                     {
-                        PropItem propItem = propItems[i];
-                        if (propItem == null) break;
-                        itemContexts[i] = BuildPropItem(propItem);
+                        for (int i = 0; i < weapons.Count; i++)
+                        {
+                            WeaponBase weapon = weapons[i];
+                            if (weapon == null) break;
+                            itemContexts[i] = BuildWeaponItem(weapon);
+                        }
                     }
-                }
+                    break;
+
+                case DisplayListAreaType.Prop:
+                    if (items is IReadOnlyList<PropItem> propItems)
+                    {
+                        for (int i = 0; i < propItems.Count; i++)
+                        {
+                            PropItem propItem = propItems[i];
+                            if (propItem == null) break;
+                            itemContexts[i] = BuildPropItem(propItem);
+                        }
+                    }
+                    break;
             }
 
             int currentCount = itemContexts.Length;
@@ -113,6 +111,16 @@ namespace UI
                 CurrentCount = currentCount,
                 MaxCount = maxCount,
                 ItemContexts = itemContexts
+            };
+        }
+
+        private static string GetDisplayListTitle(DisplayListAreaType listType)
+        {
+            return listType switch
+            {
+                DisplayListAreaType.Weapon => "武器",
+                DisplayListAreaType.Prop => "道具",
+                _ => string.Empty
             };
         }
 
@@ -134,7 +142,6 @@ namespace UI
                 IsWeapon = false
             };
         }
-
 
         private static DisplayItemContext BuildWeaponItem(WeaponBase weaponBase)
         {
@@ -176,32 +183,7 @@ namespace UI
 
         #endregion
 
-
         #region UI Methods
-
-        protected override int? OpenUIInternal(ShopFormContext context)
-        {
-            if (context == null)
-            {
-                Log.Warning("ShopFormController.OpenUI() context is null.");
-                return null;
-            }
-
-            _context = context;
-
-            if (_shopForm != null && _shopFormSerialId.HasValue &&
-                GameEntry.UI.HasUIForm(_shopFormSerialId.Value))
-            {
-                _shopForm.RefreshUI(_context);
-                return _shopFormSerialId;
-            }
-
-            CloseUI();
-            _pendingRefresh = true;
-            SubscribeEvents();
-            _shopFormSerialId = GameEntry.UI.OpenUIForm(UIFormType.ShopForm, context);
-            return _shopFormSerialId;
-        }
 
         public int? OpenUI(ShopFormRawData rawData)
         {
@@ -237,29 +219,6 @@ namespace UI
             return OpenUI(rawData);
         }
 
-        public override void CloseUI()
-        {
-            _pendingRefresh = false;
-            UnsubscribeEvents();
-            if (_shopFormSerialId.HasValue)
-            {
-                if (GameEntry.UI.HasUIForm(_shopFormSerialId.Value))
-                {
-                    GameEntry.UI.CloseUIForm(_shopFormSerialId.Value);
-                }
-
-                _shopForm = null;
-                _shopFormSerialId = null;
-                return;
-            }
-
-            if (_shopForm != null)
-            {
-                _shopForm.Close();
-                _shopForm = null;
-            }
-        }
-
         public override void BindUseCase(IUIUseCase useCase)
         {
             if (!(useCase is ShopFormUseCase shopFormUseCase))
@@ -271,117 +230,59 @@ namespace UI
             _useCase = shopFormUseCase;
         }
 
-        private void TryRefreshUI()
-        {
-            if (_context == null)
-            {
-                return;
-            }
-
-            if (_shopForm == null)
-            {
-                _pendingRefresh = true;
-                return;
-            }
-
-            _shopForm.RefreshUI(_context);
-            _pendingRefresh = false;
-        }
-
         #endregion
 
         #region Service
 
         private void RefreshGoodsItems(ShopRefreshResult result)
         {
-            if (_context == null || result == null)
+            if (Context == null || result == null)
             {
                 return;
             }
 
-            _context.GoodsItems = result.GoodsItems;
-            _context.RefreshPrice = result.RefreshPrice;
+            Context.GoodsItems = result.GoodsItems;
+            Context.RefreshPrice = result.RefreshPrice;
 
-            if (_shopForm == null)
+            if (Form == null)
             {
                 return;
             }
 
-            _shopForm.RefreshGoodsItems(result.GoodsItems);
-            _shopForm.RefreshRefreshPrice(result.RefreshPrice);
+            Form.RefreshGoodsItems(result.GoodsItems);
+            Form.RefreshRefreshPrice(result.RefreshPrice);
         }
 
         private void ApplyGoodsPurchased(ShopPurchaseResult result)
         {
-            if (_context == null || result == null)
+            if (Context == null || result == null)
             {
                 return;
             }
 
-            if (_context.GoodsItems != null && result.GoodsIndex >= 0 && result.GoodsIndex < _context.GoodsItems.Count)
+            if (Context.GoodsItems != null && result.GoodsIndex >= 0 && result.GoodsIndex < Context.GoodsItems.Count)
             {
-                _context.GoodsItems[result.GoodsIndex] = null;
+                Context.GoodsItems[result.GoodsIndex] = null;
             }
 
             if (result.DisplayItem != null)
             {
                 if (result.DisplayItem.IsWeapon)
                 {
-                    AppendDisplayItemContext(_context.WeaponListContext, result.DisplayItem);
+                    AppendDisplayItemContext(Context.WeaponListContext, result.DisplayItem);
                 }
                 else
                 {
-                    AppendDisplayItemContext(_context.PropListContext, result.DisplayItem);
+                    AppendDisplayItemContext(Context.PropListContext, result.DisplayItem);
                 }
             }
 
-            _shopForm?.ApplyGoodsPurchased(result.GoodsIndex, result.DisplayItem);
+            Form?.ApplyGoodsPurchased(result.GoodsIndex, result.DisplayItem);
         }
 
         #endregion
 
         #region Event Handlers
-
-        private void OpenUIFormSuccess(object sender, GameEventArgs e)
-        {
-            if (!(e is OpenUIFormSuccessEventArgs args)) return;
-
-            if (!_shopFormSerialId.HasValue) return;
-
-            if (args.UIForm == null || args.UIForm.SerialId != _shopFormSerialId.Value || args.UserData != _context)
-            {
-                return;
-            }
-
-            _shopForm = args.UIForm.Logic as ShopForm;
-
-            if (_shopForm == null)
-            {
-                Log.Warning("ShopFormController open success but form logic is invalid.");
-                return;
-            }
-
-            if (_pendingRefresh)
-            {
-                TryRefreshUI();
-            }
-        }
-
-        private void CloseUIFormComplete(object sender, GameEventArgs e)
-        {
-            if (!(e is CloseUIFormCompleteEventArgs args))
-            {
-                return;
-            }
-
-            if (args.SerialId != _shopFormSerialId)
-            {
-                return;
-            }
-
-            _shopForm = null;
-            _shopFormSerialId = null;
-        }
 
         private void Refresh(object sender, GameEventArgs e)
         {
@@ -442,7 +343,7 @@ namespace UI
 
         private void DisplayItemShow(object sender, GameEventArgs e)
         {
-            if (!(e is DisplayItemShowEventArgs args)) return;
+            if (!(e is DisplayItemShowEventArgs args) || _rawData == null) return;
 
             DisplayItemInfoFormRawData rawData = new();
             rawData.TargetPos = args.TargetPos;
@@ -471,7 +372,6 @@ namespace UI
 
             GameEntry.UIRouter.OpenUI(UIFormType.DisplayItemInfoForm, rawData);
         }
-
 
         private void DisplayItemHide(object sender, GameEventArgs e)
         {

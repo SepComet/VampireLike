@@ -18,11 +18,11 @@ namespace UI
         private const float OnHoverAlpha = 0.7f;
         private const float OnClickAlpha = 0.6f;
 
-        [SerializeField] private UnityEvent _onPointerEnterAction = null;
+        [SerializeField] private UnityEvent _onPointerEnterAction = new();
 
-        [SerializeField] private UnityEvent _onClickAction = null;
+        [SerializeField] private UnityEvent _onClickAction = new();
 
-        [SerializeField] private UnityEvent _onPointerExitAction = null;
+        [SerializeField] private UnityEvent _onPointerExitAction = new();
 
         [SerializeField] private bool _enableFade = true;
 

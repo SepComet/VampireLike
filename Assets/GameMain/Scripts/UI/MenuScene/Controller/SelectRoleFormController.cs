@@ -5,44 +5,29 @@ using UnityGameFramework.Runtime;
 
 namespace UI
 {
-    public class SelectRoleFormController : UIFormControllerBase<SelectRoleFormContext>
+    public class SelectRoleFormController : UIFormControllerCommonBase<SelectRoleFormContext, SelectRoleForm>
     {
         private SelectRoleFormUseCase _useCase;
 
-        private SelectRoleFormContext _context;
+        protected override UIFormType UIFormTypeId => UIFormType.SelectRoleForm;
 
-        private SelectRoleForm _selectRoleForm;
-
-        private int? _selectRoleFormSerialId;
-
-        private bool _pendingRefresh;
-
-        private bool _isBindEvent;
-
-        private void SubscribeEvents()
+        protected override void RefreshUI(SelectRoleForm form, SelectRoleFormContext context)
         {
-            if (_isBindEvent) return;
+            form.RefreshUI(context);
+        }
 
-            GameEntry.Event.Subscribe(OpenUIFormSuccessEventArgs.EventId, OpenUIFormSuccess);
-            GameEntry.Event.Subscribe(CloseUIFormCompleteEventArgs.EventId, CloseUIFormComplete);
+        protected override void SubscribeCustomEvents()
+        {
             GameEntry.Event.Subscribe(MenuSelectRoleReturnEventArgs.EventId, OnMenuSelectRoleReturn);
             GameEntry.Event.Subscribe(MenuSelectRoleSelectedEventArgs.EventId, OnMenuSelectRoleSelected);
             GameEntry.Event.Subscribe(MenuSelectRoleConfirmEventArgs.EventId, OnMenuSelectRoleConfirm);
-
-            _isBindEvent = true;
         }
 
-        private void UnsubscribeEvents()
+        protected override void UnsubscribeCustomEvents()
         {
-            if (!_isBindEvent) return;
-
-            GameEntry.Event.Unsubscribe(OpenUIFormSuccessEventArgs.EventId, OpenUIFormSuccess);
-            GameEntry.Event.Unsubscribe(CloseUIFormCompleteEventArgs.EventId, CloseUIFormComplete);
             GameEntry.Event.Unsubscribe(MenuSelectRoleReturnEventArgs.EventId, OnMenuSelectRoleReturn);
             GameEntry.Event.Unsubscribe(MenuSelectRoleSelectedEventArgs.EventId, OnMenuSelectRoleSelected);
             GameEntry.Event.Unsubscribe(MenuSelectRoleConfirmEventArgs.EventId, OnMenuSelectRoleConfirm);
-
-            _isBindEvent = false;
         }
 
         private static SelectRoleFormContext BuildContext(SelectRoleFormRawData rawData)
@@ -85,32 +70,6 @@ namespace UI
             };
         }
 
-        #region UI Methods
-
-        protected override int? OpenUIInternal(SelectRoleFormContext context)
-        {
-            if (context == null)
-            {
-                Log.Warning("SelectRoleFormController.OpenUI() context is null.");
-                return null;
-            }
-
-            _context = context;
-
-            if (_selectRoleForm != null && _selectRoleFormSerialId.HasValue &&
-                GameEntry.UI.HasUIForm(_selectRoleFormSerialId.Value))
-            {
-                _selectRoleForm.RefreshUI(_context);
-                return _selectRoleFormSerialId;
-            }
-
-            CloseUI();
-            _pendingRefresh = true;
-            SubscribeEvents();
-            _selectRoleFormSerialId = GameEntry.UI.OpenUIForm(UIFormType.SelectRoleForm, context);
-            return _selectRoleFormSerialId;
-        }
-
         public override int? OpenUI(object userData = null)
         {
             if (userData is SelectRoleFormContext selectRoleFormContext)
@@ -124,33 +83,15 @@ namespace UI
                 return null;
             }
 
+            if (_useCase == null)
+            {
+                Log.Error("SelectRoleFormController.OpenUI() useCase is null.");
+                return null;
+            }
+
             SelectRoleFormRawData rawData = _useCase.CreateModel();
             SelectRoleFormContext context = BuildContext(rawData);
             return OpenUIInternal(context);
-        }
-
-        public override void CloseUI()
-        {
-            _pendingRefresh = false;
-            UnsubscribeEvents();
-
-            if (_selectRoleFormSerialId.HasValue)
-            {
-                if (GameEntry.UI.HasUIForm(_selectRoleFormSerialId.Value))
-                {
-                    GameEntry.UI.CloseUIForm(_selectRoleFormSerialId.Value);
-                }
-
-                _selectRoleForm = null;
-                _selectRoleFormSerialId = null;
-                return;
-            }
-
-            if (_selectRoleForm != null)
-            {
-                _selectRoleForm.Close();
-                _selectRoleForm = null;
-            }
         }
 
         public override void BindUseCase(IUIUseCase useCase)
@@ -164,90 +105,14 @@ namespace UI
             _useCase = selectRoleUseCase;
         }
 
-        private void TryRefreshUI()
-        {
-            if (_context == null)
-            {
-                return;
-            }
-
-            if (_selectRoleForm == null)
-            {
-                _pendingRefresh = true;
-                return;
-            }
-
-            _selectRoleForm.RefreshUI(_context);
-            _pendingRefresh = false;
-        }
-
-        #endregion
-
-        #region Service
-
         public void UpdateShowRole(RolePropertyAreaContext rolePropertyAreaContext)
         {
-            if (_context != null)
+            if (Context != null)
             {
-                _context.RolePropertyAreaContext = rolePropertyAreaContext;
+                Context.RolePropertyAreaContext = rolePropertyAreaContext;
             }
 
-            if (_selectRoleForm != null)
-            {
-                _selectRoleForm.UpdateShowRole(rolePropertyAreaContext);
-            }
-        }
-
-        #endregion
-
-        #region Event Handlers
-
-        private void OpenUIFormSuccess(object sender, GameEventArgs e)
-        {
-            if (!(e is OpenUIFormSuccessEventArgs args))
-            {
-                return;
-            }
-
-            if (!_selectRoleFormSerialId.HasValue)
-            {
-                return;
-            }
-
-            if (args.UIForm == null || args.UIForm.SerialId != _selectRoleFormSerialId.Value ||
-                args.UserData != _context)
-            {
-                return;
-            }
-
-            _selectRoleForm = args.UIForm.Logic as SelectRoleForm;
-
-            if (_selectRoleForm == null)
-            {
-                Log.Warning("SelectRoleFormController open success but form logic is invalid.");
-                return;
-            }
-
-            if (_pendingRefresh)
-            {
-                TryRefreshUI();
-            }
-        }
-
-        private void CloseUIFormComplete(object sender, GameEventArgs e)
-        {
-            if (!(e is CloseUIFormCompleteEventArgs args))
-            {
-                return;
-            }
-
-            if (args.SerialId != _selectRoleFormSerialId)
-            {
-                return;
-            }
-
-            _selectRoleForm = null;
-            _selectRoleFormSerialId = null;
+            Form?.UpdateShowRole(rolePropertyAreaContext);
         }
 
         private void OnMenuSelectRoleReturn(object sender, GameEventArgs e)
@@ -274,8 +139,8 @@ namespace UI
                 return;
             }
 
-            _context = context;
-            UpdateShowRole(_context.RolePropertyAreaContext);
+            SetContext(context);
+            UpdateShowRole(context.RolePropertyAreaContext);
         }
 
         private void OnMenuSelectRoleConfirm(object sender, GameEventArgs e)
@@ -285,9 +150,7 @@ namespace UI
                 return;
             }
 
-            _useCase.ConfirmSelectedRole();
+            _useCase?.ConfirmSelectedRole();
         }
-
-        #endregion
     }
 }

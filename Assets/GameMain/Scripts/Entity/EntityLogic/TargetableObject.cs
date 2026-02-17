@@ -6,12 +6,10 @@
 //------------------------------------------------------------
 
 using Components;
-using Definition;
 using Definition.DataStruct;
 using Entity.EntityData;
-using StarForce;
+using Game.Utility;
 using UnityEngine;
-using UnityGameFramework.Runtime;
 
 namespace Entity
 {

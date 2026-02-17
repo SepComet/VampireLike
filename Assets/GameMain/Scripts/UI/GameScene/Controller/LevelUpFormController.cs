@@ -3,51 +3,40 @@ using CustomEvent;
 using Definition.Enum;
 using Game.Utility;
 using GameFramework.Event;
-using Procedure;
 using UnityGameFramework.Runtime;
 
 namespace UI
 {
-    public class LevelUpFormController : UIFormControllerBase<LevelUpFormContext>
+    public class LevelUpFormController : UIFormControllerCommonBase<LevelUpFormContext, LevelUpForm>
     {
         private LevelUpFormUseCase _useCase;
 
-        private bool _pendingRefresh;
+        protected override UIFormType UIFormTypeId => UIFormType.LevelUpForm;
 
-        private int? _levelUpFormSerialId;
-
-        private LevelUpForm _levelUpForm;
-
-        private LevelUpFormContext _context;
-
-        private bool _isBindEvent;
-
-        private void SubscribeEvents()
+        protected override void RefreshUI(LevelUpForm form, LevelUpFormContext context)
         {
-            if (_isBindEvent) return;
-
-            GameEntry.Event.Subscribe(OpenUIFormSuccessEventArgs.EventId, OpenUIFormSuccess);
-            GameEntry.Event.Subscribe(CloseUIFormCompleteEventArgs.EventId, CloseUIFormComplete);
-            GameEntry.Event.Subscribe(RefreshEventArgs.EventId, OnRefresh);
-            GameEntry.Event.Subscribe(LevelUpPropSelectedEventArgs.EventId, OnLevelUpPropSelected);
-
-            _isBindEvent = true;
+            form.RefreshUI(context);
         }
 
-        private void UnsubscribeEvents()
+        protected override void SubscribeCustomEvents()
         {
-            if (!_isBindEvent) return;
+            GameEntry.Event.Subscribe(RefreshEventArgs.EventId, OnRefresh);
+            GameEntry.Event.Subscribe(LevelUpPropSelectedEventArgs.EventId, OnLevelUpPropSelected);
+        }
 
-            GameEntry.Event.Unsubscribe(OpenUIFormSuccessEventArgs.EventId, OpenUIFormSuccess);
-            GameEntry.Event.Unsubscribe(CloseUIFormCompleteEventArgs.EventId, CloseUIFormComplete);
+        protected override void UnsubscribeCustomEvents()
+        {
             GameEntry.Event.Unsubscribe(RefreshEventArgs.EventId, OnRefresh);
             GameEntry.Event.Unsubscribe(LevelUpPropSelectedEventArgs.EventId, OnLevelUpPropSelected);
-
-            _isBindEvent = false;
         }
 
         private static LevelUpFormContext BuildContext(LevelUpFormRawData rawData)
         {
+            if (rawData == null || rawData.Rewards == null)
+            {
+                return null;
+            }
+
             List<LevelUpRewardItemContext> props = new List<LevelUpRewardItemContext>(rawData.Rewards.Count);
             foreach (var reward in rawData.Rewards)
             {
@@ -70,33 +59,6 @@ namespace UI
                 RefreshPrice = rawData.RefreshPrice,
                 Props = props
             };
-        }
-
-
-        #region UI Methods
-
-        protected override int? OpenUIInternal(LevelUpFormContext context)
-        {
-            if (context == null)
-            {
-                Log.Warning("LevelUpFormController.OpenUI() context is null.");
-                return null;
-            }
-
-            _context = context;
-
-            if (_levelUpForm != null && _levelUpFormSerialId.HasValue &&
-                GameEntry.UI.HasUIForm(_levelUpFormSerialId.Value))
-            {
-                _levelUpForm.RefreshUI(_context);
-                return _levelUpFormSerialId;
-            }
-
-            CloseUI();
-            _pendingRefresh = true;
-            SubscribeEvents();
-            _levelUpFormSerialId = GameEntry.UI.OpenUIForm(UIFormType.LevelUpForm, context);
-            return _levelUpFormSerialId;
         }
 
         public override int? OpenUI(object userData = null)
@@ -133,47 +95,6 @@ namespace UI
             return OpenUIInternal(context);
         }
 
-        private void TryRefreshUI()
-        {
-            if (_context == null)
-            {
-                return;
-            }
-
-            if (_levelUpForm == null)
-            {
-                _pendingRefresh = true;
-                return;
-            }
-
-            _levelUpForm.RefreshUI(_context);
-            _pendingRefresh = false;
-        }
-
-        public override void CloseUI()
-        {
-            _pendingRefresh = false;
-            UnsubscribeEvents();
-
-            if (_levelUpFormSerialId.HasValue)
-            {
-                if (GameEntry.UI.HasUIForm(_levelUpFormSerialId.Value))
-                {
-                    GameEntry.UI.CloseUIForm(_levelUpFormSerialId.Value);
-                }
-
-                _levelUpForm = null;
-                _levelUpFormSerialId = null;
-                return;
-            }
-
-            if (_levelUpForm != null)
-            {
-                _levelUpForm.Close();
-                _levelUpForm = null;
-            }
-        }
-
         public override void BindUseCase(IUIUseCase useCase)
         {
             if (!(useCase is LevelUpFormUseCase levelUpFormUseCase))
@@ -185,10 +106,6 @@ namespace UI
             _useCase = levelUpFormUseCase;
         }
 
-        #endregion
-
-        #region Service
-
         private void SelectReward(int selectedIndex)
         {
             if (_useCase == null)
@@ -198,7 +115,6 @@ namespace UI
             }
 
             LevelUpFormRawData rawData = _useCase.SelectReward(selectedIndex);
-
             if (rawData == null)
             {
                 return;
@@ -222,51 +138,6 @@ namespace UI
             }
 
             OpenUI(rawData);
-        }
-
-        #endregion
-
-        #region Event Handlers
-
-        private void OpenUIFormSuccess(object sender, GameEventArgs e)
-        {
-            if (!(e is OpenUIFormSuccessEventArgs args)) return;
-
-            if (!_levelUpFormSerialId.HasValue) return;
-
-            if (args.UIForm == null || args.UIForm.SerialId != _levelUpFormSerialId.Value || args.UserData != _context)
-            {
-                return;
-            }
-
-            _levelUpForm = args.UIForm.Logic as LevelUpForm;
-
-            if (_levelUpForm == null)
-            {
-                Log.Warning("LevelUpFormController open success but form logic is invalid.");
-                return;
-            }
-
-            if (_pendingRefresh)
-            {
-                TryRefreshUI();
-            }
-        }
-
-        private void CloseUIFormComplete(object sender, GameEventArgs e)
-        {
-            if (!(e is CloseUIFormCompleteEventArgs args))
-            {
-                return;
-            }
-
-            if (args.SerialId != _levelUpFormSerialId)
-            {
-                return;
-            }
-
-            _levelUpForm = null;
-            _levelUpFormSerialId = null;
         }
 
         private void OnRefresh(object sender, GameEventArgs e)
@@ -293,7 +164,5 @@ namespace UI
 
             SelectReward(args.SelectedId);
         }
-
-        #endregion
     }
 }

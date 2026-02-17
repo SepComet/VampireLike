@@ -80,6 +80,4 @@ crashlytics-build.properties
 /[Aa]ssets/[Ss]treamingAssets/aa/*
 
 /UI参考
-
-/DisplayItemInfoForm_Summary.md
-/UI_Design_Summary.md
+/AGENTS.md
