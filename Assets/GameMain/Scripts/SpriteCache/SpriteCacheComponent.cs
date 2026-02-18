@@ -45,7 +45,7 @@ public class SpriteCacheComponent : GameFrameworkComponent
                                 new Rect(0, 0, texture.width, texture.height),
                                 _defaultPivot,
                                 _pixelsPerUnit);
-                            _spriteCache.Add(assetName, newSprite);
+                            _spriteCache.TryAdd(assetName, newSprite);
                             callback?.Invoke(newSprite);
                         }
                     },

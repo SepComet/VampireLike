@@ -7,6 +7,8 @@ using Entity;
 using Procedure;
 using UnityEngine;
 using UnityGameFramework.Runtime;
+using Game.Utility;
+using GameFramework.DataTable;
 
 namespace UI
 {
@@ -15,6 +17,9 @@ namespace UI
         private const int BaseRefreshPrice = 2;
         private readonly GameStateLevelUp _gameStateLevelUp;
         private readonly DRLevelUpReward[] _allRewards;
+        private readonly IDataTable<DRLevelRarity> _levelRarityTable;
+        private readonly Dictionary<ItemRarity, List<DRLevelUpReward>> _rewardsByRarity = new();
+        private readonly List<DRLevelUpReward> _validRewards = new();
 
         private int _refreshCount;
         private LevelUpFormRawData _currentModel;
@@ -26,6 +31,9 @@ namespace UI
             _player = player;
             _gameStateLevelUp = gameStateLevelUp;
             _allRewards = GameEntry.DataTable.GetDataTable<DRLevelUpReward>().ToArray();
+            _levelRarityTable = GameEntry.DataTable.GetDataTable<DRLevelRarity>();
+
+            BuildRewardRarityPools();
         }
 
         public LevelUpFormRawData CreateInitialModel(int count = 4)
@@ -99,10 +107,18 @@ namespace UI
             int finalCount = count > 0 ? System.Math.Min(count, _allRewards.Length) : _allRewards.Length;
             List<DRLevelUpReward> selections = new List<DRLevelUpReward>(finalCount);
 
+            int currentLevel = _player != null ? _player.CurrentLevel : 1;
             for (int i = 0; i < finalCount; i++)
             {
-                int index = Random.Range(0, _allRewards.Length);
-                selections.Add(_allRewards[index]);
+                ItemRarity rarity = RarityUtility.SelectRarityForLevel(_levelRarityTable, currentLevel);
+                DRLevelUpReward reward = PickRewardByRarity(rarity);
+                if (reward == null)
+                {
+                    Log.Warning("LevelUpFormUseCase::BuildModel(): No available reward for selection.");
+                    break;
+                }
+
+                selections.Add(reward);
             }
 
             return new LevelUpFormRawData
@@ -131,7 +147,49 @@ namespace UI
                 return;
             }
 
-            _player.AddProp(new PropItem(reward.Modifiers, ItemRarity.White, reward.Title, reward.IconAssetName));
+            _player.AddProp(new PropItem(reward.Modifiers, reward.Rarity, reward.Title, reward.IconAssetName));
+        }
+
+        private void BuildRewardRarityPools()
+        {
+            _rewardsByRarity.Clear();
+            _validRewards.Clear();
+
+            if (_allRewards == null) return;
+
+            foreach (DRLevelUpReward reward in _allRewards)
+            {
+                if (reward == null)
+                {
+                    continue;
+                }
+
+                ItemRarity rarity = reward.Rarity;
+                _validRewards.Add(reward);
+
+                if (!_rewardsByRarity.TryGetValue(rarity, out List<DRLevelUpReward> list))
+                {
+                    list = new List<DRLevelUpReward>();
+                    _rewardsByRarity.Add(rarity, list);
+                }
+
+                list.Add(reward);
+            }
+        }
+
+        private DRLevelUpReward PickRewardByRarity(ItemRarity rarity)
+        {
+            if (_rewardsByRarity.TryGetValue(rarity, out List<DRLevelUpReward> list) && list.Count > 0)
+            {
+                return list[Random.Range(0, list.Count)];
+            }
+
+            if (_validRewards.Count > 0)
+            {
+                return _validRewards[Random.Range(0, _validRewards.Count)];
+            }
+
+            return null;
         }
     }
 }

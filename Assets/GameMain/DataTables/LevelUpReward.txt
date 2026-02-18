@@ -1,8 +1,22 @@
-#	道具表				
-#	Id		Title	IconAssetName	Modifiers
-#	int		string	string	StatModifier[]
-#	奖励编号	策划备注	奖励名	图标资源名	道具属性
-	101	测试道具	肌肉	Almighty_Icon	[{"StatType":"Attack","Value":0.05,"IsPercent":true}]
-	102		牙齿	Almighty_Icon	[{"StatType":"Attack","Value":0.05,"IsPercent":true}]
-	103		脑	Almighty_Icon	[{"StatType":"Attack","Value":0.05,"IsPercent":true}]
-	104		鼻子	Almighty_Icon	[{"StatType":"Attack","Value":0.05,"IsPercent":true}]
+#	道具表					
+#	Id		Title	IconAssetName	Rarity	Modifiers
+#	int		string	string	RarityType	StatModifier[]
+#	奖励编号	策划备注	奖励名	图标资源名	道具品质	道具属性
+	101	测试道具	肌肉	Almighty_Icon	White	[{"StatType":"Attack","Value":0.05,"IsPercent":true}]
+	102		牙齿	Almighty_Icon	White	[{"StatType":"Attack","Value":0.05,"IsPercent":true}]
+	103		脑	Almighty_Icon	White	[{"StatType":"Critical","Value":0.05,"IsPercent":true}]
+	104		鼻子	Almighty_Icon	White	[{"StatType":"AbsorbRange","Value":0.05,"IsPercent":true}]
+	105		腿	Almighty_Icon	White	[{"StatType":"MovementSpeed","Value":0.05,"IsPercent":true}]
+	106		眼睛	Almighty_Icon	White	[{"StatType":"MaxHealth","Value":0.05,"IsPercent":true}]
+	107		肌肉	Almighty_Icon	Green	[{"StatType":"Attack","Value":0.15,"IsPercent":true}]
+	108		牙齿	Almighty_Icon	Green	[{"StatType":"Attack","Value":0.15,"IsPercent":true}]
+	109		脑	Almighty_Icon	Green	[{"StatType":"Critical","Value":0.15,"IsPercent":true}]
+	110		鼻子	Almighty_Icon	Green	[{"StatType":"AbsorbRange","Value":0.15,"IsPercent":true}]
+	111		腿	Almighty_Icon	Green	[{"StatType":"MovementSpeed","Value":0.15,"IsPercent":true}]
+	112		眼睛	Almighty_Icon	Green	[{"StatType":"MaxHealth","Value":0.15,"IsPercent":true}]
+	113		肌肉	Almighty_Icon	Blue	[{"StatType":"Attack","Value":0.3,"IsPercent":true}]
+	114		牙齿	Almighty_Icon	Blue	[{"StatType":"Attack","Value":0.3,"IsPercent":true}]
+	115		脑	Almighty_Icon	Blue	[{"StatType":"Critical","Value":0.3,"IsPercent":true}]
+	116		鼻子	Almighty_Icon	Blue	[{"StatType":"AbsorbRange","Value":0.3,"IsPercent":true}]
+	117		腿	Almighty_Icon	Blue	[{"StatType":"MovementSpeed","Value":0.3,"IsPercent":true}]
+	118		眼睛	Almighty_Icon	Blue	[{"StatType":"MaxHealth","Value":0.3,"IsPercent":true}]

@@ -33,6 +33,10 @@ namespace UI
         private readonly DRGoods[] _allGoods;
         private readonly IDataTable<DRProp> _propDataTable;
         private readonly IDataTable<DRWeapon> _weaponDataTable;
+        private readonly IDataTable<DRLevelRarity> _levelRarityTable;
+
+        private readonly List<DRGoods> _validGoods = new();
+        private readonly Dictionary<ItemRarity, List<DRGoods>> _goodsByRarity = new();
 
         private readonly List<ShopGoodsSelection> _selections = new();
         private int _refreshTime;
@@ -53,6 +57,9 @@ namespace UI
             _allGoods = GameEntry.DataTable.GetDataTable<DRGoods>().ToArray();
             _propDataTable = GameEntry.DataTable.GetDataTable<DRProp>();
             _weaponDataTable = GameEntry.DataTable.GetDataTable<DRWeapon>();
+            _levelRarityTable = GameEntry.DataTable.GetDataTable<DRLevelRarity>();
+
+            BuildGoodsRarityPools();
         }
 
         public ShopFormRawData CreateInitialModel()
@@ -148,10 +155,18 @@ namespace UI
             List<GoodsItemContext> goodsItems = new List<GoodsItemContext>(finalCount);
             _selections.Clear();
 
+            int currentLevel = _procedureGame != null ? _procedureGame.CurrentLevel : 1;
+
             for (int i = 0; i < finalCount; i++)
             {
-                int index = Random.Range(0, _allGoods.Length);
-                DRGoods drGoods = _allGoods[index];
+                ItemRarity rarity = RarityUtility.SelectRarityForLevel(_levelRarityTable, currentLevel);
+                DRGoods drGoods = PickGoodsByRarity(rarity);
+                if (drGoods == null)
+                {
+                    Log.Warning("ShopFormUseCase::BuildRandomGoodsItems: No available goods for selection.");
+                    break;
+                }
+
                 GoodsItemContext goodsItem = new GoodsItemContext();
                 int price;
 
@@ -206,6 +221,87 @@ namespace UI
             }
 
             return goodsItems;
+        }
+
+        private void BuildGoodsRarityPools()
+        {
+            _goodsByRarity.Clear();
+            _validGoods.Clear();
+
+            if (_allGoods == null) return;
+
+            foreach (DRGoods goods in _allGoods)
+            {
+                if (goods == null) continue;
+
+                if (!TryGetGoodsRarity(goods, out ItemRarity rarity))
+                {
+                    continue;
+                }
+
+                _validGoods.Add(goods);
+
+                if (!_goodsByRarity.TryGetValue(rarity, out List<DRGoods> list))
+                {
+                    list = new List<DRGoods>();
+                    _goodsByRarity.Add(rarity, list);
+                }
+
+                list.Add(goods);
+            }
+        }
+
+        private DRGoods PickGoodsByRarity(ItemRarity rarity)
+        {
+            if (_goodsByRarity.TryGetValue(rarity, out List<DRGoods> list) && list.Count > 0)
+            {
+                return list[Random.Range(0, list.Count)];
+            }
+
+            if (_validGoods.Count > 0)
+            {
+                return _validGoods[Random.Range(0, _validGoods.Count)];
+            }
+
+            return null;
+        }
+
+        private bool TryGetGoodsRarity(DRGoods goods, out ItemRarity rarity)
+        {
+            rarity = ItemRarity.None;
+            if (goods == null)
+            {
+                return false;
+            }
+
+            if (goods.GoodsType == GoodsType.Prop)
+            {
+                DRProp drProp = _propDataTable != null ? _propDataTable.GetDataRow(goods.GoodsTypeId) : null;
+                if (drProp == null)
+                {
+                    Log.Warning($"ShopFormUseCase::TryGetGoodsRarity: Missing DRProp, id = {goods.GoodsTypeId}");
+                    return false;
+                }
+
+                rarity = drProp.Rarity;
+                return true;
+            }
+
+            if (goods.GoodsType == GoodsType.Weapon)
+            {
+                DRWeapon drWeapon = _weaponDataTable != null ? _weaponDataTable.GetDataRow(goods.GoodsTypeId) : null;
+                if (drWeapon == null)
+                {
+                    Log.Warning($"ShopFormUseCase::TryGetGoodsRarity: Missing DRWeapon, id = {goods.GoodsTypeId}");
+                    return false;
+                }
+
+                rarity = drWeapon.Rarity;
+                return true;
+            }
+
+            Log.Warning($"ShopFormUseCase::TryGetGoodsRarity: Unsupported goods type = {goods.GoodsType}");
+            return false;
         }
 
         private static int CalculateRandomizedPrice(int basePrice, float priceRandomPercent)

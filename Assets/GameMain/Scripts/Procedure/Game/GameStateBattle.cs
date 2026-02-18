@@ -50,7 +50,6 @@ namespace Procedure
 
             if (_levelOver)
             {
-                procedureOwner.SetData<VarByte>("CurrentLevel", (byte)(_currentLevel + 1));
                 _procedureGame.BattleToShopOrLevelUp();
             }
         }

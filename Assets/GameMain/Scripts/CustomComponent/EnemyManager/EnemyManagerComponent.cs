@@ -13,6 +13,8 @@ namespace CustomComponent
 {
     public class EnemyManagerComponent : GameFrameworkComponent
     {
+        private const float MinSpawnRateScale = 0.1f;
+
         private EntityComponent _entity;
 
         private List<EntityBase> _enemies;
@@ -20,22 +22,34 @@ namespace CustomComponent
         public List<EntityBase> Enemies => _enemies;
 
         private float _spawnEnemyTimer;
+        
         private int _spawnEnemyMaxCount = 5000;
+        
         private int _currentEnemyCount;
+        
         private int _spawnDistanceFromPlayer = 20;
+        
         private int _currentSpawnEnemyId;
+        
         private int _currentLevel;
 
+        private float[] _baseSpawnEnemyIntervals;
         private float[] _spawnEnemyIntervals;
         private int[] _spawnEnemyIds;
         private int[] _spawnEnemyCounts;
         private float _duration;
+        private float _baseDuration;
 
         private float[] _nextSpawnTimes;
+        private float _spawnRateScale = 1f;
 
         private Transform _player;
 
         private GameStateBattle _battle;
+
+        public float SpawnRateScale => _spawnRateScale;
+        public float BattleDuration => _duration;
+        public float ElapsedBattleTime => _spawnEnemyTimer;
 
         #region FSM
 
@@ -64,12 +78,14 @@ namespace CustomComponent
             _currentLevel = level;
 
             DRLevel levelData = GameEntry.DataTable.GetDataTableRow<DRLevel>(_currentLevel);
-            _spawnEnemyIntervals = levelData.Intervals;
+            _baseSpawnEnemyIntervals = (float[])levelData.Intervals.Clone();
+            _spawnEnemyIntervals = (float[])_baseSpawnEnemyIntervals.Clone();
             _spawnEnemyIds = levelData.EntityIds;
             _spawnEnemyCounts = levelData.EntityCounts;
-            _duration = levelData.Duration;
+            _baseDuration = levelData.Duration;
+            _duration = _baseDuration;
 
-            _nextSpawnTimes = (float[])_spawnEnemyIntervals.Clone();
+            SetSpawnRateScale(_spawnRateScale);
 
             _currentSpawnEnemyId = 0;
         }
@@ -77,10 +93,7 @@ namespace CustomComponent
         public void OnUpdate(float elapseSeconds, float realElapseSeconds)
         {
             _spawnEnemyTimer += elapseSeconds;
-            // if (_spawnEnemyTimer < _spawnEnemyInterval) return;
-            // SpawnEnemy();
-            // _spawnEnemyTimer = 0;
-            // _spawnEnemyInterval = Mathf.Max(0.1f, _spawnEnemyInterval - _spawnEnemyAccelerate);
+
             if (_spawnEnemyTimer > _duration)
             {
                 _battle.LevelOver();
@@ -108,9 +121,11 @@ namespace CustomComponent
             _currentSpawnEnemyId = 0;
             _currentLevel = 0;
 
+            _baseSpawnEnemyIntervals = null;
             _spawnEnemyIntervals = null;
             _spawnEnemyIds = null;
             _spawnEnemyCounts = null;
+            _baseDuration = 0;
             _duration = 0;
 
             _nextSpawnTimes = null;
@@ -118,6 +133,57 @@ namespace CustomComponent
             _battle = null;
 
             ClearEnemies();
+        }
+
+        public void SetSpawnRateScale(float scale)
+        {
+            float newScale = Mathf.Max(MinSpawnRateScale, scale);
+            if (_baseSpawnEnemyIntervals == null || _baseSpawnEnemyIntervals.Length == 0)
+            {
+                _spawnRateScale = newScale;
+                return;
+            }
+
+            bool hasRuntimeState = _nextSpawnTimes != null && _spawnEnemyIntervals != null &&
+                                   _nextSpawnTimes.Length == _baseSpawnEnemyIntervals.Length &&
+                                   _spawnEnemyIntervals.Length == _baseSpawnEnemyIntervals.Length;
+            float oldScale = _spawnRateScale;
+            _spawnRateScale = newScale;
+
+            if (!hasRuntimeState)
+            {
+                for (int i = 0; i < _baseSpawnEnemyIntervals.Length; i++)
+                {
+                    _spawnEnemyIntervals[i] = GetScaledInterval(_baseSpawnEnemyIntervals[i], _spawnRateScale);
+                }
+
+                _nextSpawnTimes = (float[])_spawnEnemyIntervals.Clone();
+                return;
+            }
+
+            for (int i = 0; i < _baseSpawnEnemyIntervals.Length; i++)
+            {
+                float oldInterval = GetScaledInterval(_baseSpawnEnemyIntervals[i], oldScale);
+                float newInterval = GetScaledInterval(_baseSpawnEnemyIntervals[i], _spawnRateScale);
+
+                float remainTime = Mathf.Max(0f, _nextSpawnTimes[i] - _spawnEnemyTimer);
+                float remainRatio = oldInterval > Mathf.Epsilon ? Mathf.Clamp01(remainTime / oldInterval) : 0f;
+
+                _spawnEnemyIntervals[i] = newInterval;
+                _nextSpawnTimes[i] = _spawnEnemyTimer + newInterval * remainRatio;
+            }
+        }
+
+        public void AddBattleDuration(float seconds)
+        {
+            if (seconds <= 0f) return;
+            _duration += seconds;
+        }
+
+        private static float GetScaledInterval(float baseInterval, float scale)
+        {
+            float safeScale = Mathf.Max(MinSpawnRateScale, scale);
+            return baseInterval / safeScale;
         }
 
         #endregion
@@ -128,7 +194,7 @@ namespace CustomComponent
 
             if (_currentEnemyCount >= _spawnEnemyMaxCount) return;
             int entityPoolId = _currentSpawnEnemyId % _spawnEnemyMaxCount;
-            var enemyData = new EnemyData(entityPoolId, entityId)
+            var enemyData = new EnemyData(entityPoolId, entityId, _currentLevel)
             {
                 Position = GetRandomPosition()
             };

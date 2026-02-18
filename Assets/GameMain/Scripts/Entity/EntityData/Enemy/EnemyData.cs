@@ -16,11 +16,12 @@ namespace Entity.EntityData
         
         [SerializeField] private float _dropPercent = 0;
 
-        public EnemyData(int entityId, int typeId) : base(
+        public EnemyData(int entityId, int typeId, int level) : base(
             entityId, typeId, CampType.Enemy)
         {
             DREnemy enemyRow = GameEntry.DataTable.GetDataTableRow<DREnemy>(typeId);
-            MaxHealthBase = enemyRow.MaxHealth;
+            int effectiveLevel = Mathf.Max(1, level);
+            MaxHealthBase = enemyRow.MaxHealth + enemyRow.HpAddPerLevel * (effectiveLevel - 1);
             SpeedBase = enemyRow.Speed;
             DropCoin = enemyRow.DropCoin;
             DropExp = enemyRow.DropExp;

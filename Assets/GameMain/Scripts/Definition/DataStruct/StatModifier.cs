@@ -16,6 +16,7 @@ namespace Definition.DataStruct
         // Critical = 6,
         // CriticalDamage = 7,
         // Dodge = 8,
+        // AbsorbRange = 9
 
         private readonly string[] _statTypeNames =
         {
@@ -27,7 +28,8 @@ namespace Definition.DataStruct
             "冷却",
             "暴击率",
             "暴击伤害",
-            "闪避"
+            "闪避",
+            "金币/经验吸收范围"
         };
 
         public StatType StatType;

@@ -369,6 +369,7 @@ GameObject:
   - component: {fileID: 582203051508165858}
   - component: {fileID: 4988822728923805024}
   - component: {fileID: 4321355627424240428}
+  - component: {fileID: 7894423710682551789}
   m_Layer: 7
   m_Name: Player
   m_TagString: Player
@@ -421,7 +422,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  - {fileID: 2100000, guid: c4f37184fcb9306428d7d002f7dca96d, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -566,3 +567,22 @@ MonoBehaviour:
   - {fileID: 4149661712638700245}
   - {fileID: 5429551983429523606}
   - {fileID: 2395797268595685132}
+--- !u!114 &7894423710682551789
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8198962528757305497}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 46f46350fed64d8389ebb4ae72b65796, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _absorbRangeBase: 3
+  _absorbSpeed: 8
+  _collectDistance: 0.35
+  _maxDetectCount: 64
+  _detectLayerMask:
+    serializedVersion: 2
+    m_Bits: 8192

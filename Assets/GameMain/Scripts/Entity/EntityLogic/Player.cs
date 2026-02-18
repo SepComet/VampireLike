@@ -15,6 +15,7 @@ namespace Entity
 
         private InputComponent _inputComponent;
         private MovementComponent _movementComponent;
+        private AbsorbComponent _absorbComponent;
         private StatComponent _statComponent;
         private BackpackComponent _backpackComponent;
         private PlayerData _playerData;
@@ -44,6 +45,7 @@ namespace Entity
         /// 玩家是否启用。
         /// </summary>
         private bool _enable;
+        private bool _weaponEnabled = true;
 
         public int Coin
         {
@@ -95,9 +97,17 @@ namespace Entity
                 if (value == _enable) return;
                 _enable = value;
                 _movementComponent.SetMove(value);
-                _backpackComponent.SetWeaponState(value);
+                _backpackComponent.SetWeaponState(value && _weaponEnabled);
                 _inputComponent.SetListening(value);
             }
+        }
+
+        public bool WeaponEnabled => _weaponEnabled;
+
+        public void SetWeaponEnabled(bool enabled)
+        {
+            _weaponEnabled = enabled;
+            _backpackComponent?.SetWeaponState(_enable && _weaponEnabled);
         }
 
         public void InitRole(DRRole role)
@@ -146,9 +156,15 @@ namespace Entity
 
             _inputComponent = GetComponent<InputComponent>();
             _movementComponent = GetComponent<MovementComponent>();
+            _absorbComponent = GetComponent<AbsorbComponent>();
             _statComponent = GetComponent<StatComponent>();
             _healthComponent = GetComponent<HealthComponent>();
             _backpackComponent = GetComponent<BackpackComponent>();
+
+            if (_absorbComponent == null)
+            {
+                _absorbComponent = gameObject.AddComponent<AbsorbComponent>();
+            }
         }
 
         protected override void OnShow(object userData)
@@ -166,6 +182,8 @@ namespace Entity
 
             _inputComponent.OnInit();
             _inputComponent.SetListening(true);
+            _absorbComponent.OnInit(this, _statComponent);
+            _weaponEnabled = true;
 
             _currentLevel = 0;
         }
@@ -178,6 +196,7 @@ namespace Entity
 
             _movementComponent.SetDirection(_inputComponent.Direction);
             _movementComponent.OnUpdate(elapseSeconds, realElapseSeconds);
+            _absorbComponent.OnUpdate(elapseSeconds, realElapseSeconds);
         }
 
         protected override void OnHide(bool isShutdown, object userData)
@@ -187,6 +206,7 @@ namespace Entity
             _healthComponent.OnReset();
             _statComponent.OnReset();
             _backpackComponent.OnReset();
+            _absorbComponent.OnReset();
 
             base.OnHide(isShutdown, userData);
         }

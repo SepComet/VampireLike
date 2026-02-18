@@ -1,6 +1,0 @@
-#	武器表												
-#	Id		Title	IconAssetName	Rarity	Price	PriceRandomPercent	Attack	Cooldown	AttackRange	AttackSoundId	Pramas	Modifiers
-#	int		string	string	RarityType	int	float	int	float	float	int	string[]	StatModifier[]
-#	武器编号	策划备注	武器名	图标资源名	道具品质	武器价格	价格浮动	伤害	冷却	范围	攻击音效编号	额外参数	额外属性
-	201	玩家武器	小刀	Almighty_Icon	White	120	0.05	100	1.5	3	10000	[]	[]
-	202		手枪	Almighty_Icon	White	130	0.05	120	1	10	10000	[]	[]

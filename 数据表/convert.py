@@ -1,6 +1,5 @@
 ﻿import pandas as pd
 import os
-import shutil
 import csv
 
 def convert_excel_to_txt(folder_path='.'):
@@ -21,8 +20,8 @@ def convert_excel_to_txt(folder_path='.'):
             continue
         if file_name.endswith(('.xlsx', '.xls')):
             file_path = os.path.join(scan_dir, file_name)
-            base_name = os.path.splitext(file_path)[0]
-            output_file = base_name.replace(os.path.basename(base_name), os.path.basename(base_name)) + '.txt'
+            base_name = os.path.splitext(file_name)[0]
+            output_file = os.path.join(target_dir, f"{base_name}.txt")
             
             print(f"正在处理: {file_name}...")
             
@@ -47,12 +46,7 @@ def convert_excel_to_txt(folder_path='.'):
                     escapechar='\\' 
                 )
                 
-                # 复制文件到目标目录
-                target_file = os.path.join(target_dir, os.path.basename(output_file))
-                shutil.copy2(output_file, target_file)
-                
                 print(f"成功转换 -> {output_file}")
-                print(f"已复制到 -> {target_file}")
                 count += 1
             
             except Exception as e:

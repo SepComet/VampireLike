@@ -37,7 +37,8 @@ namespace Procedure
             "Prop",
             "Role",
             "Level",
-            "LevelUpReward"
+            "LevelUpReward",
+            "LevelRarity"
         };
 
         private Dictionary<string, bool> _loadedFlag = new Dictionary<string, bool>();

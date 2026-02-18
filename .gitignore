@@ -81,3 +81,6 @@ crashlytics-build.properties
 
 /UI参考
 /AGENTS.md
+/bin
+
+~$*.xlsx

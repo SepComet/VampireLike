@@ -1,5 +1,7 @@
 using Definition.DataStruct;
+using Definition.Enum;
 using Newtonsoft.Json;
+using StarForce;
 using UnityGameFramework.Runtime;
 
 namespace DataTable
@@ -13,6 +15,8 @@ namespace DataTable
         public string Title { get; private set; }
 
         public string IconAssetName { get; private set; }
+        
+        public ItemRarity Rarity { get; private set; }
 
         public StatModifier[] Modifiers { get; private set; }
 
@@ -26,6 +30,7 @@ namespace DataTable
             index++;
             Title = fields[index++];
             IconAssetName = fields[index++];
+            Rarity = EnumUtility<ItemRarity>.Get(fields[index++]);
             Modifiers = JsonConvert.DeserializeObject<StatModifier[]>(fields[index++]);
 
             return true;

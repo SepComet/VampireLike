@@ -17,14 +17,11 @@ namespace CustomComponent
 {
     public class HPBarComponent : GameFrameworkComponent
     {
-        [FormerlySerializedAs("m_HPBarItemTemplate")] [SerializeField]
-        private HPBarItem _hpBarItemTemplate = null;
+        [SerializeField] private HPBarItem _hpBarItemTemplate = null;
 
-        [FormerlySerializedAs("m_HPBarInstanceRoot")] [SerializeField]
-        private Transform _hpBarInstanceRoot = null;
+        [SerializeField] private Transform _hpBarInstanceRoot = null;
 
-        [FormerlySerializedAs("m_InstancePoolCapacity")] [SerializeField]
-        private int _instancePoolCapacity = 16;
+        [SerializeField] private int _instancePoolCapacity = 16;
 
         private IObjectPool<HPBarItemObject> _hpBarItemObjectPool = null;
         private List<HPBarItem> _activeHPBarItems = null;
@@ -39,7 +36,8 @@ namespace CustomComponent
             }
 
             _cachedCanvas = _hpBarInstanceRoot.GetComponent<Canvas>();
-            _hpBarItemObjectPool = GameEntry.ObjectPool.CreateSingleSpawnObjectPool<HPBarItemObject>("HPBarItem", _instancePoolCapacity);
+            _hpBarItemObjectPool =
+                GameEntry.ObjectPool.CreateSingleSpawnObjectPool<HPBarItemObject>("HPBarItem", _instancePoolCapacity);
             _activeHPBarItems = new List<HPBarItem>();
         }
 

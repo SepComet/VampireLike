@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using CustomEvent;
 using Definition.DataStruct;
 using Definition.Enum;
@@ -119,7 +119,9 @@ namespace Components
 
         private void CauseDamage(int damage)
         {
-            //TODO:受击效果：跳字、粒子
+            if (damage <= 0 || GameEntry.DamageText == null) return;
+            GameEntry.DamageText.ShowDamage(transform.position + Vector3.up * 1.1f, damage);
         }
     }
 }
+

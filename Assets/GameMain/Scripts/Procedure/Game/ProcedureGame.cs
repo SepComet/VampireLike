@@ -53,6 +53,7 @@ namespace Procedure
 
         public void BattleToShopOrLevelUp()
         {
+            CurrentLevel++;
             if (_currentGameState == GameStateType.Shop || _currentGameState == GameStateType.LevelUp) return;
 
             _gameStates[_currentGameState].OnLeave(_procedureOwner);

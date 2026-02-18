@@ -1,5 +1,0 @@
-#	敌人基础属性表						
-#	Id		MaxHealth	Speed	CoinDrop	ExpDrop	DropPercent
-#	int		int	float	int	int	float
-#	实体编号	策划备注	最大生命	移动速度	金币掉落	经验掉落	掉落概率
-	101	近战敌人	20	3	2	1	0.3
