@@ -1,12 +1,10 @@
 using System.Collections.Generic;
-using Components;
 using DataTable;
 using Definition.Enum;
 using Entity;
 using Entity.EntityData;
 using GameFramework.Event;
 using Procedure;
-using Simulation;
 using StarForce;
 using UnityEngine;
 using UnityGameFramework.Runtime;
@@ -17,6 +15,7 @@ namespace CustomComponent
     public class EnemyManagerComponent : GameFrameworkComponent
     {
         private const float MinSpawnRateScale = 0.1f;
+        private const string EnemyGroupName = "Enemy";
 
         private EntityComponent _entity;
 
@@ -211,21 +210,14 @@ namespace CustomComponent
         {
             if (!(e is ShowEntitySuccessEventArgs ne)) return;
 
-            if (ne.Entity.Logic is EnemyBase enemy)
+            string entityGroupName = ne.Entity?.EntityGroup?.Name;
+
+            if (entityGroupName == EnemyGroupName && ne.Entity.Logic is EnemyBase enemy)
             {
                 _currentEnemyCount++;
                 enemy.SetTarget(_player);
                 RemoveEnemyFromCache(enemy.Id);
                 _enemies.Add(enemy);
-
-                if (ne.UserData is EnemyData enemyData)
-                {
-                    GameEntry.SimulationWorld?.UpsertEnemy(CreateEnemySimData(enemy, enemyData));
-                }
-                else
-                {
-                    GameEntry.SimulationWorld?.UpsertEnemy(CreateEnemySimData(enemy, null));
-                }
             }
 
             if (ne.EntityLogicType == typeof(Player))
@@ -238,7 +230,8 @@ namespace CustomComponent
         {
             if (e is HideEntityCompleteEventArgs ne)
             {
-                if (ne.EntityGroup.Name == "Enemy")
+                string entityGroupName = ne.EntityGroup.Name;
+                if (entityGroupName == EnemyGroupName)
                 {
                     if (_currentEnemyCount > 0)
                     {
@@ -246,28 +239,8 @@ namespace CustomComponent
                     }
 
                     RemoveEnemyFromCache(ne.EntityId);
-                    GameEntry.SimulationWorld?.RemoveEnemyByEntityId(ne.EntityId);
                 }
             }
-        }
-
-        private static EnemySimData CreateEnemySimData(EnemyBase enemy, EnemyData enemyData)
-        {
-            MovementComponent movementComponent = enemy != null ? enemy.GetComponent<MovementComponent>() : null;
-
-            return new EnemySimData
-            {
-                EntityId = enemy.Id,
-                Position = enemy.CachedTransform.position,
-                Forward = enemy.CachedTransform.forward,
-                Speed = enemyData != null ? enemyData.SpeedBase : 0f,
-                AttackRange = 1f,
-                AvoidEnemyOverlap = movementComponent != null && movementComponent.AvoidEnemyOverlap,
-                EnemyBodyRadius = movementComponent != null ? movementComponent.EnemyBodyRadius : 0.45f,
-                SeparationIterations = movementComponent != null ? movementComponent.SeparationIterations : 2,
-                TargetType = 0,
-                State = 0
-            };
         }
 
         private void RemoveEnemyFromCache(int entityId)

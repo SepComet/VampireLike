@@ -1,4 +1,4 @@
-﻿//------------------------------------------------------------
+﻿﻿//------------------------------------------------------------
 // Game Framework
 // Copyright © 2013-2021 Jiang Yin. All rights reserved.
 // Homepage: https://gameframework.cn/
@@ -46,6 +46,10 @@ public partial class GameEntry : MonoBehaviour
 
         EnemyManager = UnityGameFramework.Runtime.GameEntry.GetComponent<EnemyManagerComponent>();
         SimulationWorld = UnityGameFramework.Runtime.GameEntry.GetComponent<SimulationWorld>();
+        if (SimulationWorld == null && Base != null)
+        {
+            SimulationWorld = Base.gameObject.AddComponent<SimulationWorld>();
+        }
         SpriteCache = UnityGameFramework.Runtime.GameEntry.GetComponent<SpriteCacheComponent>();
         UIRouter = UnityGameFramework.Runtime.GameEntry.GetComponent<UIRouterComponent>();
     }

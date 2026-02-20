@@ -49,13 +49,13 @@
   - `MeleeEnemy/RemoteEnemy.OnUpdate` 仅保留表现层或空实现（不再做核心移动计算）。
   - 完成标准：同等刷怪量下，敌人移动结果与旧逻辑视觉一致，无明显穿模/停滞回归。
 
-- [ ] Checkpoint 5：拆分“逻辑输出”与“表现层消费”
+- [x] Checkpoint 5：拆分“逻辑输出”与“表现层消费”
   - 逻辑层输出：`position/rotation/state`（必要时含 `isMoving`）。
   - 表现层仅消费并回写 `Transform`，动画/特效/UI 不参与逻辑计算。
   - 明确边界：HPBar、DamageText、Animator 继续由表现层驱动。
   - 完成标准：关闭/开启 Simulation 不影响 UI 事件链（血量、经验、金币、关卡流程）。
 
-- [ ] Checkpoint 6：补齐 Projectile/Pickup 的 Simulation 占位数据通道
+- [x] Checkpoint 6：补齐 Projectile/Pickup 的 Simulation 占位数据通道
   - 在 `SimulationWorld` 中接入 `ProjectileSimData / PickupSimData` 容器与绑定关系。
   - 先不迁移完整行为，只保证创建、回收、索引同步路径可用。
   - 完成标准：投射物/掉落物实体生命周期正常，无索引越界与回收遗漏。

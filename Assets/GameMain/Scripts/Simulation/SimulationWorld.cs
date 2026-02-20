@@ -1,12 +1,11 @@
 using System.Collections.Generic;
 using CustomUtility;
-using Entity;
 using UnityEngine;
 using UnityGameFramework.Runtime;
 
 namespace Simulation
 {
-    public sealed class SimulationWorld : GameFrameworkComponent
+    public sealed partial class SimulationWorld : GameFrameworkComponent
     {
         private const float DefaultAttackRange = 1f;
         private const int EnemyStateIdle = 0;
@@ -15,13 +14,17 @@ namespace Simulation
 
         [SerializeField] private bool _useSimulationMovement;
 
+        private EntitySync _entitySync;
+        private Presentation _presentation;
+
         private readonly List<EnemySimData> _enemies = new List<EnemySimData>();
         private readonly List<ProjectileSimData> _projectiles = new List<ProjectileSimData>();
         private readonly List<PickupSimData> _pickups = new List<PickupSimData>();
+        private readonly Dictionary<int, Transform> _enemyTransforms = new Dictionary<int, Transform>();
 
-        public EntityBinding EnemyBinding { get; } = new EntityBinding();
-        public EntityBinding ProjectileBinding { get; } = new EntityBinding();
-        public EntityBinding PickupBinding { get; } = new EntityBinding();
+        private EntityBinding EnemyBinding { get; } = new EntityBinding();
+        private EntityBinding ProjectileBinding { get; } = new EntityBinding();
+        private EntityBinding PickupBinding { get; } = new EntityBinding();
 
         public IReadOnlyList<EnemySimData> Enemies => _enemies;
         public IReadOnlyList<ProjectileSimData> Projectiles => _projectiles;
@@ -33,7 +36,31 @@ namespace Simulation
             _useSimulationMovement = enabled;
         }
 
-        public int AddEnemy(in EnemySimData simData)
+        protected override void Awake()
+        {
+            base.Awake();
+            _entitySync = new EntitySync(this);
+            _presentation = new Presentation(this);
+        }
+
+        private void Start()
+        {
+            _entitySync?.OnStart();
+        }
+
+        private void OnDestroy()
+        {
+            _entitySync?.OnDestroy();
+            _entitySync = null;
+            _presentation = null;
+        }
+
+        private void LateUpdate()
+        {
+            _presentation?.OnLateUpdate();
+        }
+
+        private int AddEnemy(in EnemySimData simData)
         {
             int simulationIndex = _enemies.Count;
             _enemies.Add(simData);
@@ -41,18 +68,18 @@ namespace Simulation
             return simulationIndex;
         }
 
-        public int UpsertEnemy(in EnemySimData simData)
+        private int UpsertEnemy(in EnemySimData simData)
         {
-            if (EnemyBinding.TryGetSimulationIndex(simData.EntityId, out int simulationIndex))
+            if (!EnemyBinding.TryGetSimulationIndex(simData.EntityId, out int simulationIndex))
             {
-                _enemies[simulationIndex] = simData;
-                return simulationIndex;
+                return AddEnemy(simData);
             }
 
-            return AddEnemy(simData);
+            _enemies[simulationIndex] = simData;
+            return simulationIndex;
         }
 
-        public bool RemoveEnemyByEntityId(int entityId)
+        private bool RemoveEnemyByEntityId(int entityId)
         {
             if (!EnemyBinding.TryGetSimulationIndex(entityId, out int simulationIndex))
             {
@@ -69,10 +96,40 @@ namespace Simulation
 
             _enemies.RemoveAt(lastIndex);
             EnemyBinding.UnbindByEntityId(entityId);
+            _enemyTransforms.Remove(entityId);
             return true;
         }
 
-        public int AddProjectile(in ProjectileSimData simData)
+        private void RegisterEnemyTransform(int entityId, Transform transform)
+        {
+            if (transform == null)
+            {
+                _enemyTransforms.Remove(entityId);
+                return;
+            }
+
+            _enemyTransforms[entityId] = transform;
+        }
+
+        private void UnregisterEnemyTransform(int entityId)
+        {
+            _enemyTransforms.Remove(entityId);
+        }
+
+        private bool TryGetEnemyData(int entityId, out EnemySimData enemyData)
+        {
+            if (!EnemyBinding.TryGetSimulationIndex(entityId, out int simulationIndex) || simulationIndex < 0 ||
+                simulationIndex >= _enemies.Count)
+            {
+                enemyData = default;
+                return false;
+            }
+
+            enemyData = _enemies[simulationIndex];
+            return true;
+        }
+
+        private int AddProjectile(in ProjectileSimData simData)
         {
             int simulationIndex = _projectiles.Count;
             _projectiles.Add(simData);
@@ -80,18 +137,18 @@ namespace Simulation
             return simulationIndex;
         }
 
-        public int UpsertProjectile(in ProjectileSimData simData)
+        private int UpsertProjectile(in ProjectileSimData simData)
         {
-            if (ProjectileBinding.TryGetSimulationIndex(simData.EntityId, out int simulationIndex))
+            if (!ProjectileBinding.TryGetSimulationIndex(simData.EntityId, out int simulationIndex))
             {
-                _projectiles[simulationIndex] = simData;
-                return simulationIndex;
+                return AddProjectile(simData);
             }
 
-            return AddProjectile(simData);
+            _projectiles[simulationIndex] = simData;
+            return simulationIndex;
         }
 
-        public bool RemoveProjectileByEntityId(int entityId)
+        private bool RemoveProjectileByEntityId(int entityId)
         {
             if (!ProjectileBinding.TryGetSimulationIndex(entityId, out int simulationIndex))
             {
@@ -111,7 +168,7 @@ namespace Simulation
             return true;
         }
 
-        public int AddPickup(in PickupSimData simData)
+        private int AddPickup(in PickupSimData simData)
         {
             int simulationIndex = _pickups.Count;
             _pickups.Add(simData);
@@ -119,18 +176,18 @@ namespace Simulation
             return simulationIndex;
         }
 
-        public int UpsertPickup(in PickupSimData simData)
+        private int UpsertPickup(in PickupSimData simData)
         {
-            if (PickupBinding.TryGetSimulationIndex(simData.EntityId, out int simulationIndex))
+            if (!PickupBinding.TryGetSimulationIndex(simData.EntityId, out int simulationIndex))
             {
-                _pickups[simulationIndex] = simData;
-                return simulationIndex;
+                return AddPickup(simData);
             }
 
-            return AddPickup(simData);
+            _pickups[simulationIndex] = simData;
+            return simulationIndex;
         }
 
-        public bool RemovePickupByEntityId(int entityId)
+        private bool RemovePickupByEntityId(int entityId)
         {
             if (!PickupBinding.TryGetSimulationIndex(entityId, out int simulationIndex))
             {
@@ -165,6 +222,7 @@ namespace Simulation
             _enemies.Clear();
             _projectiles.Clear();
             _pickups.Clear();
+            _enemyTransforms.Clear();
 
             EnemyBinding.Clear();
             ProjectileBinding.Clear();
@@ -180,21 +238,11 @@ namespace Simulation
 
             Vector3 playerPosition = context.PlayerPosition;
             playerPosition.y = 0f;
-            EntityComponent entityComponent = GameEntry.Entity;
 
             for (int i = 0; i < _enemies.Count; i++)
             {
                 EnemySimData enemy = _enemies[i];
-                EnemyBase enemyEntity = null;
-                Transform enemyTransform = null;
-
-                if (entityComponent != null &&
-                    entityComponent.GetGameEntity(enemy.EntityId) is EnemyBase runtimeEnemy &&
-                    runtimeEnemy.Available)
-                {
-                    enemyEntity = runtimeEnemy;
-                    enemyTransform = runtimeEnemy.CachedTransform;
-                }
+                _enemyTransforms.TryGetValue(enemy.EntityId, out Transform enemyTransform);
 
                 Vector3 currentPosition = enemy.Position;
                 currentPosition.y = 0f;
@@ -229,31 +277,13 @@ namespace Simulation
 
                     enemy.Position = desiredPosition;
                     enemy.State = EnemyStateChasing;
+                    if (forward.sqrMagnitude > float.Epsilon)
+                    {
+                        enemy.Rotation = Quaternion.LookRotation(forward, Vector3.up);
+                    }
                 }
 
                 _enemies[i] = enemy;
-
-                if (enemyEntity != null)
-                {
-                    ApplyEnemyPresentation(enemyEntity, enemy);
-                }
-            }
-        }
-
-        private static void ApplyEnemyPresentation(EnemyBase enemyEntity, in EnemySimData enemyData)
-        {
-            if (enemyEntity == null || !enemyEntity.Available)
-            {
-                return;
-            }
-
-            enemyEntity.CachedTransform.position = enemyData.Position;
-
-            Vector3 forward = enemyData.Forward;
-            forward.y = 0f;
-            if (forward.sqrMagnitude > float.Epsilon)
-            {
-                enemyEntity.CachedTransform.forward = forward.normalized;
             }
         }
     }

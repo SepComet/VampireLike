@@ -7,6 +7,7 @@ namespace Simulation
         public int EntityId;
         public Vector3 Position;
         public Vector3 Forward;
+        public Quaternion Rotation;
         public float Speed;
         public float AttackRange;
         public bool AvoidEnemyOverlap;
