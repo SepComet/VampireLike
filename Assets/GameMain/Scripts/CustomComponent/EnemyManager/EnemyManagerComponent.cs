@@ -15,6 +15,7 @@ namespace CustomComponent
     public class EnemyManagerComponent : GameFrameworkComponent
     {
         private const float MinSpawnRateScale = 0.1f;
+        private const string EnemyGroupName = "Enemy";
 
         private EntityComponent _entity;
 
@@ -209,10 +210,13 @@ namespace CustomComponent
         {
             if (!(e is ShowEntitySuccessEventArgs ne)) return;
 
-            if (ne.Entity.Logic is EnemyBase enemy)
+            string entityGroupName = ne.Entity?.EntityGroup?.Name;
+
+            if (entityGroupName == EnemyGroupName && ne.Entity.Logic is EnemyBase enemy)
             {
                 _currentEnemyCount++;
                 enemy.SetTarget(_player);
+                RemoveEnemyFromCache(enemy.Id);
                 _enemies.Add(enemy);
             }
 
@@ -226,9 +230,27 @@ namespace CustomComponent
         {
             if (e is HideEntityCompleteEventArgs ne)
             {
-                if (ne.EntityGroup.Name == "Enemy")
+                string entityGroupName = ne.EntityGroup.Name;
+                if (entityGroupName == EnemyGroupName)
                 {
-                    _currentEnemyCount--;
+                    if (_currentEnemyCount > 0)
+                    {
+                        _currentEnemyCount--;
+                    }
+
+                    RemoveEnemyFromCache(ne.EntityId);
+                }
+            }
+        }
+
+        private void RemoveEnemyFromCache(int entityId)
+        {
+            for (int i = _enemies.Count - 1; i >= 0; i--)
+            {
+                EntityBase cachedEnemy = _enemies[i];
+                if (cachedEnemy == null || cachedEnemy.Id == entityId)
+                {
+                    _enemies.RemoveAt(i);
                 }
             }
         }

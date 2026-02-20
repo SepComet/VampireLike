@@ -1,4 +1,3 @@
-using Components;
 using UnityEngine;
 
 namespace CustomUtility
@@ -11,33 +10,33 @@ namespace CustomUtility
             public float Radius;
         }
 
-        private readonly System.Collections.Generic.Dictionary<MovementComponent, Agent> _agents = new();
-        private readonly System.Collections.Generic.List<MovementComponent> _agentKeys = new();
+        private readonly System.Collections.Generic.Dictionary<Transform, Agent> _agents = new();
+        private readonly System.Collections.Generic.List<Transform> _agentKeys = new();
 
-        public void Register(MovementComponent mover, Transform transform, float bodyRadius)
+        public void Register(Transform transform, float bodyRadius)
         {
-            if (mover == null || transform == null) return;
+            if (transform == null) return;
 
-            if (!_agents.TryGetValue(mover, out var agent))
+            if (!_agents.TryGetValue(transform, out var agent))
             {
                 agent = new Agent();
-                _agents.Add(mover, agent);
+                _agents.Add(transform, agent);
             }
 
             agent.Transform = transform;
             agent.Radius = Mathf.Max(0.01f, bodyRadius);
         }
 
-        public void Unregister(MovementComponent mover)
+        public void Unregister(Transform transform)
         {
-            if (mover == null) return;
-            _agents.Remove(mover);
+            if (transform == null) return;
+            _agents.Remove(transform);
         }
 
-        public Vector3 Resolve(MovementComponent mover, Vector3 desiredPosition, Vector3 fallbackDirection, int iterations)
+        public Vector3 Resolve(Transform transform, Vector3 desiredPosition, Vector3 fallbackDirection, int iterations)
         {
-            if (mover == null) return desiredPosition;
-            if (!_agents.TryGetValue(mover, out var self)) return desiredPosition;
+            if (transform == null) return desiredPosition;
+            if (!_agents.TryGetValue(transform, out var self)) return desiredPosition;
 
             Vector3 candidate = desiredPosition;
             candidate.y = 0f;
@@ -56,9 +55,9 @@ namespace CustomUtility
             {
                 for (int i = 0; i < _agentKeys.Count; i++)
                 {
-                    MovementComponent otherMover = _agentKeys[i];
-                    if (otherMover == mover) continue;
-                    if (!_agents.TryGetValue(otherMover, out var other)) continue;
+                    Transform otherTransform = _agentKeys[i];
+                    if (otherTransform == transform) continue;
+                    if (!_agents.TryGetValue(otherTransform, out var other)) continue;
                     if (other.Transform == null) continue;
 
                     Vector3 otherPosition = other.Transform.position;

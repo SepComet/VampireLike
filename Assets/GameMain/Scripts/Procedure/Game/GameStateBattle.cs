@@ -5,7 +5,8 @@ using DataTable;
 using Entity;
 using GameFramework.Fsm;
 using GameFramework.Procedure;
-using UnityGameFramework.Runtime;
+using Simulation;
+using UnityEngine;
 
 namespace Procedure
 {
@@ -13,15 +14,15 @@ namespace Procedure
     {
         public override GameStateType GameStateType => GameStateType.Battle;
 
-        private EnemyManagerComponent _enemyManager = null;
+        private EnemyManagerComponent _enemyManager;
 
-        private int _currentLevel = 0;
+        private int _currentLevel;
 
-        private float _levelTimeLeft = 0;
+        private float _levelTimeLeft;
 
         private Player Player => _procedureGame.Player;
 
-        private ProcedureGame _procedureGame = null;
+        private ProcedureGame _procedureGame;
 
         public void AddBattleDuration(float seconds)
         {
@@ -64,6 +65,13 @@ namespace Procedure
             }
 
             _enemyManager.OnUpdate(elapseSeconds, realElapseSeconds);
+
+            SimulationWorld simulationWorld = GameEntry.SimulationWorld;
+            if (simulationWorld != null)
+            {
+                Vector3 playerPosition = Player != null ? Player.CachedTransform.position : Vector3.zero;
+                simulationWorld.Tick(new SimulationTickContext(elapseSeconds, realElapseSeconds, playerPosition));
+            }
 
             _levelTimeLeft -= elapseSeconds;
             GameEntry.Event.Fire(this, LevelProcessEventArgs.Create((int)_levelTimeLeft));

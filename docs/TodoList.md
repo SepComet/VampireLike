@@ -25,17 +25,90 @@
 - 以上问题修正后，核心流程可稳定连续跑 10 分钟无异常日志。
 
 ## 2. P1 Simulation 分层（为 Job/Burst 做结构准备）
-- [ ] 新建 `Simulation` 层（建议目录：`Assets/GameMain/Scripts/Simulation`）：
-  - `SimulationWorld`：统一持有敌人/投射物/掉落物的纯数据容器。
-  - `EnemySimData / ProjectileSimData / PickupSimData`：结构化、连续内存友好的数据定义。
-  - `EntityBinding`：维护 `EntityId <-> SimulationIndex` 映射。
-- [ ] 将“逻辑计算”和“表现层（Transform/Animator/特效/UI）”拆离：
-  - 逻辑层输出 position/rotation/state。
-  - 表现层只消费结果做显示。
-- [ ] 先保持现有 GameFramework 实体生命周期不变，仅替换更新路径。
+- [x] Checkpoint 1：搭建 Simulation 基础骨架（仅新增，不改行为）
+  - 新建目录：`Assets/GameMain/Scripts/Simulation`。
+  - 新建 `SimulationWorld`，统一持有 `EnemySimData / ProjectileSimData / PickupSimData` 容器。
+  - 新建 `EntityBinding`，维护 `EntityId <-> SimulationIndex` 双向映射。
+  - 新建 `SimulationTickContext`（至少包含 `deltaTime`、`playerPosition`）。
+  - 完成标准：工程可编译，场景运行行为与当前一致（只加结构，不切链路）。
+
+- [x] Checkpoint 2：敌人生命周期接入 Simulation（保持 GameFramework 生命周期不变）
+  - 在敌人 `Show/Hide` 时同步注册/反注册到 `SimulationWorld` 与 `EntityBinding`。
+  - `EnemyManagerComponent` 继续负责刷怪与实体显隐，不改外部调用方式。
+  - 完成标准：敌人数量统计与当前一致，无重复注册、无悬空索引。
+
+- [x] Checkpoint 3：建立 Simulation 主更新入口并接入 Battle 状态
+  - 在 `GameStateBattle.OnUpdate` 中增加 `SimulationWorld.Tick(...)` 调用。
+  - 先只接“敌人移动/追踪”系统，其他逻辑保持原路径。
+  - 增加开关（建议 `UseSimulationMovement`）用于 A/B 对比与回滚。
+  - 完成标准：关闭开关与当前行为一致；开启开关后敌人仍能正常追踪玩家。
+
+- [x] Checkpoint 4：迁移敌人核心移动逻辑到 Simulation（去 MonoBehaviour 核心逻辑）
+  - 将 `MeleeEnemy/RemoteEnemy` 的目标追踪、移动方向、攻击距离判定迁至 Simulation。
+  - `EnemySimData` 至少包含：`position`、`forward`、`speed`、`attackRange`、`targetType`、`state`。
+  - `MeleeEnemy/RemoteEnemy.OnUpdate` 仅保留表现层或空实现（不再做核心移动计算）。
+  - 完成标准：同等刷怪量下，敌人移动结果与旧逻辑视觉一致，无明显穿模/停滞回归。
+
+- [x] Checkpoint 5：拆分“逻辑输出”与“表现层消费”
+  - 逻辑层输出：`position/rotation/state`（必要时含 `isMoving`）。
+  - 表现层仅消费并回写 `Transform`，动画/特效/UI 不参与逻辑计算。
+  - 明确边界：HPBar、DamageText、Animator 继续由表现层驱动。
+  - 完成标准：关闭/开启 Simulation 不影响 UI 事件链（血量、经验、金币、关卡流程）。
+
+- [x] Checkpoint 6：补齐 Projectile/Pickup 的 Simulation 占位数据通道
+  - 在 `SimulationWorld` 中接入 `ProjectileSimData / PickupSimData` 容器与绑定关系。
+  - 先不迁移完整行为，只保证创建、回收、索引同步路径可用。
+  - 完成标准：投射物/掉落物实体生命周期正常，无索引越界与回收遗漏。
+
+- [x] Checkpoint 7：P1 阶段回归与性能记录
+  - 回归用例：战斗 10 分钟、`Battle -> LevelUp -> Shop -> Battle` 循环、掉落吸附与拾取。
+  - Profiling 对比：记录 1k/2k/3k 敌人下 Main Thread、GC Alloc、敌人更新耗时。
+  - 输出文档：`P1 Simulation 分层设计 + 回滚开关说明 + 对比数据`。
+  - 完成标准：核心流程稳定，无新增 Error/Exception；可一键回滚到旧更新路径。
 
 **验收标准**
 - 敌人移动/追踪由 Simulation 统一调度，不再逐个 Enemy MonoBehaviour 执行核心逻辑。
+
+## 2.5 P1.5 Simulation 收尾（P2 前置）
+- [ ] Checkpoint 1：清理 `TickEnemies` 侧 GC（优先级最高）
+  - 目标：将 `TickEnemies GC` 从当前 `27~108 KB` 降到 `< 5 KB / frame`。
+  - 重点文件：`Assets/GameMain/Scripts/Utility/EnemySeperator/GridBucketEnemySeparationSolver.cs`。
+  - 处理方式：桶容器与临时列表复用（包含 bucket list 复用池），避免每帧重建集合。
+  - 完成标准：`2000` 敌人压测下 `TickEnemies GC` 稳定 `< 5 KB / frame`。
+
+- [ ] Checkpoint 2：解耦 Simulation 核心与 `Transform` 运行时依赖
+  - 目标：`SimulationWorld.TickEnemies` 不直接读取或写入 `Transform`。
+  - 重点文件：`Assets/GameMain/Scripts/Simulation/SimulationWorld.cs`、`Assets/GameMain/Scripts/Utility/EnemySeperator/IEnemySeparationSolver.cs`、`Assets/GameMain/Scripts/Utility/EnemySeperator/EnemySeparationSolverProvider.cs`。
+  - 处理方式：互斥求解输入改为纯数据（位置/半径/索引），`Transform` 仅在 Presentation 阶段回写。
+  - 完成标准：`TickEnemies` 热路径中不出现 `Transform` 访问。
+
+- [ ] Checkpoint 3：收口 `EntitySync` 职责边界
+  - 目标：`EntitySync` 仅处理生命周期映射，不承担运行时移动逻辑。
+  - 重点文件：`Assets/GameMain/Scripts/Simulation/SimulationWorld.EntitySync.cs`。
+  - 处理方式：保留注册/反注册与初值同步，移除 Tick 过程依赖。
+  - 完成标准：`OnShow/OnHide` 逻辑稳定，且不引入运行时分配热点。
+
+- [ ] Checkpoint 4：拆分 Simulation Tick 阶段，为 Job 化铺路
+  - 目标：将敌人 Tick 拆分为稳定阶段，便于后续迁移 `IJobParallelFor`。
+  - 建议阶段：`BuildInput -> Move/Separation -> StateUpdate -> WriteBack`。
+  - 重点文件：`Assets/GameMain/Scripts/Simulation/SimulationWorld.cs`。
+  - 完成标准：每阶段有独立 `ProfilerMarker`，可明确观测耗时占比。
+
+- [ ] Checkpoint 5：补最小回归测试（P1.5 重构保护）
+  - 目标：确保重构不改变战斗行为。
+  - 建议目录：`Assets/Tests/Simulation/`。
+  - 用例范围：追踪玩家、攻击距离停下、实体移除后的索引重映射。
+  - 完成标准：EditMode/PlayMode 相关用例通过，主流程手测无回归。
+
+- [ ] Checkpoint 6：补充 P1.5 结项文档
+  - 输出：`P1.5 收尾说明 + 对比数据 + 回滚开关`。
+  - 明确记录：Android 60fps 上限、Profiler 采样配置（Call Stacks 开关状态）、评估以 CPU ms 为主。
+  - 完成标准：文档可复现实验结论，并可作为 P2 输入基线。
+
+**验收标准**
+- `Movement_Update` 持续维持 `0 ms`（或可忽略占比）。
+- `TickEnemies` 在目标敌人数下 GC 与 CPU 耗时均有明显下降，并可复现。
+- Simulation 层与表现层边界清晰，可无缝衔接 P2 Job/Burst 改造。
 
 ## 3. P2 Job System + Burst 落地（核心性能阶段）
 - [ ] 引入并锁定依赖版本（Unity 2022.3 对应）：
