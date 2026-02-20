@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using CustomDebugger;
 using CustomUtility;
+using Unity.Profiling;
 using UnityEngine;
 using UnityGameFramework.Runtime;
 
@@ -214,7 +216,10 @@ namespace Simulation
                 return;
             }
 
-            TickEnemies(in context);
+            using (CustomProfilerMarker.TickEnemies.Auto())
+            {
+                TickEnemies(in context);
+            }
         }
 
         public void Clear()

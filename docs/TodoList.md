@@ -60,7 +60,7 @@
   - 先不迁移完整行为，只保证创建、回收、索引同步路径可用。
   - 完成标准：投射物/掉落物实体生命周期正常，无索引越界与回收遗漏。
 
-- [ ] Checkpoint 7：P1 阶段回归与性能记录
+- [x] Checkpoint 7：P1 阶段回归与性能记录
   - 回归用例：战斗 10 分钟、`Battle -> LevelUp -> Shop -> Battle` 循环、掉落吸附与拾取。
   - Profiling 对比：记录 1k/2k/3k 敌人下 Main Thread、GC Alloc、敌人更新耗时。
   - 输出文档：`P1 Simulation 分层设计 + 回滚开关说明 + 对比数据`。
@@ -68,6 +68,47 @@
 
 **验收标准**
 - 敌人移动/追踪由 Simulation 统一调度，不再逐个 Enemy MonoBehaviour 执行核心逻辑。
+
+## 2.5 P1.5 Simulation 收尾（P2 前置）
+- [ ] Checkpoint 1：清理 `TickEnemies` 侧 GC（优先级最高）
+  - 目标：将 `TickEnemies GC` 从当前 `27~108 KB` 降到 `< 5 KB / frame`。
+  - 重点文件：`Assets/GameMain/Scripts/Utility/EnemySeperator/GridBucketEnemySeparationSolver.cs`。
+  - 处理方式：桶容器与临时列表复用（包含 bucket list 复用池），避免每帧重建集合。
+  - 完成标准：`2000` 敌人压测下 `TickEnemies GC` 稳定 `< 5 KB / frame`。
+
+- [ ] Checkpoint 2：解耦 Simulation 核心与 `Transform` 运行时依赖
+  - 目标：`SimulationWorld.TickEnemies` 不直接读取或写入 `Transform`。
+  - 重点文件：`Assets/GameMain/Scripts/Simulation/SimulationWorld.cs`、`Assets/GameMain/Scripts/Utility/EnemySeperator/IEnemySeparationSolver.cs`、`Assets/GameMain/Scripts/Utility/EnemySeperator/EnemySeparationSolverProvider.cs`。
+  - 处理方式：互斥求解输入改为纯数据（位置/半径/索引），`Transform` 仅在 Presentation 阶段回写。
+  - 完成标准：`TickEnemies` 热路径中不出现 `Transform` 访问。
+
+- [ ] Checkpoint 3：收口 `EntitySync` 职责边界
+  - 目标：`EntitySync` 仅处理生命周期映射，不承担运行时移动逻辑。
+  - 重点文件：`Assets/GameMain/Scripts/Simulation/SimulationWorld.EntitySync.cs`。
+  - 处理方式：保留注册/反注册与初值同步，移除 Tick 过程依赖。
+  - 完成标准：`OnShow/OnHide` 逻辑稳定，且不引入运行时分配热点。
+
+- [ ] Checkpoint 4：拆分 Simulation Tick 阶段，为 Job 化铺路
+  - 目标：将敌人 Tick 拆分为稳定阶段，便于后续迁移 `IJobParallelFor`。
+  - 建议阶段：`BuildInput -> Move/Separation -> StateUpdate -> WriteBack`。
+  - 重点文件：`Assets/GameMain/Scripts/Simulation/SimulationWorld.cs`。
+  - 完成标准：每阶段有独立 `ProfilerMarker`，可明确观测耗时占比。
+
+- [ ] Checkpoint 5：补最小回归测试（P1.5 重构保护）
+  - 目标：确保重构不改变战斗行为。
+  - 建议目录：`Assets/Tests/Simulation/`。
+  - 用例范围：追踪玩家、攻击距离停下、实体移除后的索引重映射。
+  - 完成标准：EditMode/PlayMode 相关用例通过，主流程手测无回归。
+
+- [ ] Checkpoint 6：补充 P1.5 结项文档
+  - 输出：`P1.5 收尾说明 + 对比数据 + 回滚开关`。
+  - 明确记录：Android 60fps 上限、Profiler 采样配置（Call Stacks 开关状态）、评估以 CPU ms 为主。
+  - 完成标准：文档可复现实验结论，并可作为 P2 输入基线。
+
+**验收标准**
+- `Movement_Update` 持续维持 `0 ms`（或可忽略占比）。
+- `TickEnemies` 在目标敌人数下 GC 与 CPU 耗时均有明显下降，并可复现。
+- Simulation 层与表现层边界清晰，可无缝衔接 P2 Job/Burst 改造。
 
 ## 3. P2 Job System + Burst 落地（核心性能阶段）
 - [ ] 引入并锁定依赖版本（Unity 2022.3 对应）：
