@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Components;
 using DataTable;
 using Definition.Enum;
 using Entity;
@@ -252,6 +253,8 @@ namespace CustomComponent
 
         private static EnemySimData CreateEnemySimData(EnemyBase enemy, EnemyData enemyData)
         {
+            MovementComponent movementComponent = enemy != null ? enemy.GetComponent<MovementComponent>() : null;
+
             return new EnemySimData
             {
                 EntityId = enemy.Id,
@@ -259,6 +262,9 @@ namespace CustomComponent
                 Forward = enemy.CachedTransform.forward,
                 Speed = enemyData != null ? enemyData.SpeedBase : 0f,
                 AttackRange = 1f,
+                AvoidEnemyOverlap = movementComponent != null && movementComponent.AvoidEnemyOverlap,
+                EnemyBodyRadius = movementComponent != null ? movementComponent.EnemyBodyRadius : 0.45f,
+                SeparationIterations = movementComponent != null ? movementComponent.SeparationIterations : 2,
                 TargetType = 0,
                 State = 0
             };

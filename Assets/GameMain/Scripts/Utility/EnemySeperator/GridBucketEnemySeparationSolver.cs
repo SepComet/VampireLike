@@ -1,4 +1,3 @@
-using Components;
 using UnityEngine;
 
 namespace CustomUtility
@@ -14,12 +13,12 @@ namespace CustomUtility
             public int CellZ;
         }
 
-        private readonly System.Collections.Generic.Dictionary<MovementComponent, Agent> _agents = new();
+        private readonly System.Collections.Generic.Dictionary<Transform, Agent> _agents = new();
 
-        private readonly System.Collections.Generic.Dictionary<long, System.Collections.Generic.List<MovementComponent>>
+        private readonly System.Collections.Generic.Dictionary<long, System.Collections.Generic.List<Transform>>
             _buckets = new();
 
-        private readonly System.Collections.Generic.List<MovementComponent> _recycle = new();
+        private readonly System.Collections.Generic.List<Transform> _recycle = new();
         private readonly float _cellSize;
 
         private int _snapshotFrame = -1;
@@ -30,14 +29,14 @@ namespace CustomUtility
             _cellSize = Mathf.Max(0.1f, cellSize);
         }
 
-        public void Register(MovementComponent mover, Transform transform, float bodyRadius)
+        public void Register(Transform transform, float bodyRadius)
         {
-            if (mover == null || transform == null) return;
+            if (transform == null) return;
 
-            if (!_agents.TryGetValue(mover, out var agent))
+            if (!_agents.TryGetValue(transform, out var agent))
             {
                 agent = new Agent();
-                _agents.Add(mover, agent);
+                _agents.Add(transform, agent);
             }
 
             agent.Transform = transform;
@@ -50,22 +49,22 @@ namespace CustomUtility
             _snapshotFrame = -1;
         }
 
-        public void Unregister(MovementComponent mover)
+        public void Unregister(Transform transform)
         {
-            if (mover == null) return;
-            if (!_agents.TryGetValue(mover, out var agent)) return;
+            if (transform == null) return;
+            if (!_agents.TryGetValue(transform, out var agent)) return;
 
-            RemoveFromBucket(mover, agent.CellX, agent.CellZ);
-            _agents.Remove(mover);
+            RemoveFromBucket(transform, agent.CellX, agent.CellZ);
+            _agents.Remove(transform);
             RecalculateMaxRadius();
             _snapshotFrame = -1;
         }
 
-        public Vector3 Resolve(MovementComponent mover, Vector3 desiredPosition, Vector3 fallbackDirection,
+        public Vector3 Resolve(Transform transform, Vector3 desiredPosition, Vector3 fallbackDirection,
             int iterations)
         {
-            if (mover == null) return desiredPosition;
-            if (!_agents.TryGetValue(mover, out var self)) return desiredPosition;
+            if (transform == null) return desiredPosition;
+            if (!_agents.TryGetValue(transform, out var self)) return desiredPosition;
 
             EnsureSnapshot();
 
@@ -90,9 +89,9 @@ namespace CustomUtility
 
                         for (int i = 0; i < bucket.Count; i++)
                         {
-                            MovementComponent otherMover = bucket[i];
-                            if (otherMover == mover) continue;
-                            if (!_agents.TryGetValue(otherMover, out var other)) continue;
+                            Transform otherTransform = bucket[i];
+                            if (otherTransform == transform) continue;
+                            if (!_agents.TryGetValue(otherTransform, out var other)) continue;
 
                             Vector3 toSelf = candidate - other.Position;
                             float minDistance = self.Radius + other.Radius;
@@ -115,7 +114,7 @@ namespace CustomUtility
                 }
             }
 
-            SyncAgentPosition(mover, self, candidate);
+            SyncAgentPosition(transform, self, candidate);
 
             candidate.y = desiredPosition.y;
             return candidate;
@@ -132,11 +131,11 @@ namespace CustomUtility
 
             foreach (var pair in _agents)
             {
-                MovementComponent mover = pair.Key;
+                Transform transform = pair.Key;
                 Agent agent = pair.Value;
-                if (mover == null || agent.Transform == null)
+                if (transform == null || agent.Transform == null)
                 {
-                    _recycle.Add(mover);
+                    _recycle.Add(transform);
                     continue;
                 }
 
@@ -146,7 +145,7 @@ namespace CustomUtility
 
                 agent.CellX = ToCell(position.x);
                 agent.CellZ = ToCell(position.z);
-                AddToBucket(mover, agent.CellX, agent.CellZ);
+                AddToBucket(transform, agent.CellX, agent.CellZ);
             }
 
             for (int i = 0; i < _recycle.Count; i++)
@@ -155,15 +154,15 @@ namespace CustomUtility
             }
         }
 
-        private void SyncAgentPosition(MovementComponent mover, Agent agent, Vector3 position)
+        private void SyncAgentPosition(Transform transform, Agent agent, Vector3 position)
         {
             int newCellX = ToCell(position.x);
             int newCellZ = ToCell(position.z);
 
             if (agent.CellX != newCellX || agent.CellZ != newCellZ)
             {
-                RemoveFromBucket(mover, agent.CellX, agent.CellZ);
-                AddToBucket(mover, newCellX, newCellZ);
+                RemoveFromBucket(transform, agent.CellX, agent.CellZ);
+                AddToBucket(transform, newCellX, newCellZ);
                 agent.CellX = newCellX;
                 agent.CellZ = newCellZ;
             }
@@ -171,24 +170,24 @@ namespace CustomUtility
             agent.Position = position;
         }
 
-        private void AddToBucket(MovementComponent mover, int cellX, int cellZ)
+        private void AddToBucket(Transform transform, int cellX, int cellZ)
         {
             long key = CellKey(cellX, cellZ);
             if (!_buckets.TryGetValue(key, out var list))
             {
-                list = new System.Collections.Generic.List<MovementComponent>(8);
+                list = new System.Collections.Generic.List<Transform>(8);
                 _buckets.Add(key, list);
             }
 
-            list.Add(mover);
+            list.Add(transform);
         }
 
-        private void RemoveFromBucket(MovementComponent mover, int cellX, int cellZ)
+        private void RemoveFromBucket(Transform transform, int cellX, int cellZ)
         {
             long key = CellKey(cellX, cellZ);
             if (!_buckets.TryGetValue(key, out var list)) return;
 
-            list.Remove(mover);
+            list.Remove(transform);
             if (list.Count == 0)
             {
                 _buckets.Remove(key);

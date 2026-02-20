@@ -54,6 +54,11 @@ namespace Entity
 
         protected override void OnUpdate(float elapseSeconds, float realElapseSeconds)
         {
+            if (IsSimulationMovementEnabled())
+            {
+                return;
+            }
+
             base.OnUpdate(elapseSeconds, realElapseSeconds);
 
             if (_target == null)

@@ -18,6 +18,9 @@ namespace Components
         [SerializeField] private int _separationIterations = 2;
 
         public float Speed => (_speedBase + _movementStat.Value) * _movementStat.Percent;
+        public bool AvoidEnemyOverlap => _avoidEnemyOverlap;
+        public float EnemyBodyRadius => _enemyBodyRadius;
+        public int SeparationIterations => _separationIterations;
         [SerializeField] private float _speedBase;
 
         private StatComponent _statComponent;
@@ -61,6 +64,8 @@ namespace Components
 
         public void OnReset()
         {
+            Transform transformToUnregister = _cachedTransform;
+
             _speedBase = 0;
             _cachedTransform = null;
             _direction = Vector3.zero;
@@ -77,7 +82,7 @@ namespace Components
 
             _statComponent = null;
 
-            UnregisterEnemyMover();
+            UnregisterEnemyMover(transformToUnregister);
         }
 
         private void Move(float deltaTime = 0)
@@ -91,7 +96,7 @@ namespace Components
                 if (_avoidEnemyOverlap)
                 {
                     nextPosition = EnemySeparationSolverProvider.Resolve(
-                        this,
+                        _cachedTransform,
                         nextPosition,
                         _direction,
                         _separationIterations);
@@ -108,12 +113,12 @@ namespace Components
         {
             UnregisterEnemyMover();
             if (!_avoidEnemyOverlap) return;
-            EnemySeparationSolverProvider.Register(this, _cachedTransform, _enemyBodyRadius);
+            EnemySeparationSolverProvider.Register(_cachedTransform, _enemyBodyRadius);
         }
 
-        private void UnregisterEnemyMover()
+        private void UnregisterEnemyMover(Transform transform = null)
         {
-            EnemySeparationSolverProvider.Unregister(this);
+            EnemySeparationSolverProvider.Unregister(transform ?? _cachedTransform);
         }
     }
 }

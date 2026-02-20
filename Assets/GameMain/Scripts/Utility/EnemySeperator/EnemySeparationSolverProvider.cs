@@ -1,6 +1,5 @@
 
 using System.Collections.Generic;
-using Components;
 using UnityEngine;
 
 namespace CustomUtility
@@ -9,12 +8,11 @@ namespace CustomUtility
     {
         private struct Registration
         {
-            public Transform Transform;
             public float BodyRadius;
         }
 
         private static IEnemySeparationSolver _current = new GridBucketEnemySeparationSolver();
-        private static readonly Dictionary<MovementComponent, Registration> Registrations = new();
+        private static readonly Dictionary<Transform, Registration> Registrations = new();
 
         public static IEnemySeparationSolver Current => _current;
         public static string CurrentSolverName => _current.GetType().Name;
@@ -36,42 +34,41 @@ namespace CustomUtility
             SetSolver(new NaiveEnemySeparationSolver());
         }
 
-        public static void Register(MovementComponent mover, Transform transform, float bodyRadius)
+        public static void Register(Transform transform, float bodyRadius)
         {
-            if (mover == null || transform == null) return;
+            if (transform == null) return;
 
             var registration = new Registration
             {
-                Transform = transform,
                 BodyRadius = bodyRadius
             };
-            Registrations[mover] = registration;
-            _current.Register(mover, transform, bodyRadius);
+            Registrations[transform] = registration;
+            _current.Register(transform, bodyRadius);
         }
 
-        public static void Unregister(MovementComponent mover)
+        public static void Unregister(Transform transform)
         {
-            if (mover == null) return;
+            if (transform == null) return;
 
-            _current.Unregister(mover);
-            Registrations.Remove(mover);
+            _current.Unregister(transform);
+            Registrations.Remove(transform);
         }
 
-        public static Vector3 Resolve(MovementComponent mover, Vector3 desiredPosition, Vector3 fallbackDirection,
+        public static Vector3 Resolve(Transform transform, Vector3 desiredPosition, Vector3 fallbackDirection,
             int iterations)
         {
-            return _current.Resolve(mover, desiredPosition, fallbackDirection, iterations);
+            return _current.Resolve(transform, desiredPosition, fallbackDirection, iterations);
         }
 
         private static void ReRegisterAll()
         {
             foreach (var pair in Registrations)
             {
-                MovementComponent mover = pair.Key;
+                Transform transform = pair.Key;
                 Registration registration = pair.Value;
-                if (mover == null || registration.Transform == null) continue;
+                if (transform == null) continue;
 
-                _current.Register(mover, registration.Transform, registration.BodyRadius);
+                _current.Register(transform, registration.BodyRadius);
             }
         }
     }    

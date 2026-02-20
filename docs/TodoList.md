@@ -37,13 +37,13 @@
   - `EnemyManagerComponent` 继续负责刷怪与实体显隐，不改外部调用方式。
   - 完成标准：敌人数量统计与当前一致，无重复注册、无悬空索引。
 
-- [ ] Checkpoint 3：建立 Simulation 主更新入口并接入 Battle 状态
+- [x] Checkpoint 3：建立 Simulation 主更新入口并接入 Battle 状态
   - 在 `GameStateBattle.OnUpdate` 中增加 `SimulationWorld.Tick(...)` 调用。
   - 先只接“敌人移动/追踪”系统，其他逻辑保持原路径。
   - 增加开关（建议 `UseSimulationMovement`）用于 A/B 对比与回滚。
   - 完成标准：关闭开关与当前行为一致；开启开关后敌人仍能正常追踪玩家。
 
-- [ ] Checkpoint 4：迁移敌人核心移动逻辑到 Simulation（去 MonoBehaviour 核心逻辑）
+- [x] Checkpoint 4：迁移敌人核心移动逻辑到 Simulation（去 MonoBehaviour 核心逻辑）
   - 将 `MeleeEnemy/RemoteEnemy` 的目标追踪、移动方向、攻击距离判定迁至 Simulation。
   - `EnemySimData` 至少包含：`position`、`forward`、`speed`、`attackRange`、`targetType`、`state`。
   - `MeleeEnemy/RemoteEnemy.OnUpdate` 仅保留表现层或空实现（不再做核心移动计算）。

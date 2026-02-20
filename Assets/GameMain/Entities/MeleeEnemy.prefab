@@ -151,7 +151,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _isMoving: 0
   _direction: {x: 0, y: 0, z: 0}
-  _cachedTransform: {fileID: 0}
+  _cachedTransform: {fileID: 7683855655592166216}
+  _avoidEnemyOverlap: 0
+  _enemyBodyRadius: 0.45
+  _separationIterations: 2
   _speedBase: 0
 --- !u!114 &6353753365317756414
 MonoBehaviour:

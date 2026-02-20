@@ -9,4 +9,10 @@ public abstract class EnemyBase : TargetableObject
     public abstract override ImpactData GetImpactData();
 
     public virtual void SetTarget(Transform target) => _target = target;
+
+    protected bool IsSimulationMovementEnabled()
+    {
+        var simulationWorld = GameEntry.SimulationWorld;
+        return simulationWorld != null && simulationWorld.UseSimulationMovement;
+    }
 }
