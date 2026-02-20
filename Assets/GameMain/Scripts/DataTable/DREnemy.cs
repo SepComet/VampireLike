@@ -5,12 +5,21 @@ namespace DataTable
     public class DREnemy : DataRowBase
     {
         private int m_id;
+        
         public override int Id => m_id;
+        
+        public int EntityTypeId { get; private set; }
+        
         public int MaxHealth { get; private set; }
+        
         public int HpAddPerLevel { get; private set; }
+        
         public float Speed { get; private set; }
+        
         public int DropCoin { get; private set; }
+        
         public int DropExp { get; private set; }
+        
         public float DropPercent { get; private set; }
 
         public override bool ParseDataRow(string dataRowString, object userData)
@@ -21,6 +30,7 @@ namespace DataTable
             index++;
             m_id = int.Parse(columnStrings[index++]);
             index++;
+            EntityTypeId = int.Parse(columnStrings[index++]);
             MaxHealth = int.Parse(columnStrings[index++]);
             HpAddPerLevel = int.Parse(columnStrings[index++]);
             Speed = float.Parse(columnStrings[index++]);

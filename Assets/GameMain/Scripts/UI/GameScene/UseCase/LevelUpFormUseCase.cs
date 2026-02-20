@@ -7,7 +7,7 @@ using Entity;
 using Procedure;
 using UnityEngine;
 using UnityGameFramework.Runtime;
-using Game.Utility;
+using CustomUtility;
 using GameFramework.DataTable;
 
 namespace UI

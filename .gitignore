@@ -82,5 +82,8 @@ crashlytics-build.properties
 /UI参考
 /AGENTS.md
 /bin
+/docs/screenshot
+*.xmind
+/数据表/__pycache__/
 
 ~$*.xlsx

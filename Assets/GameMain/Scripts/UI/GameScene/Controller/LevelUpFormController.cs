@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using CustomEvent;
 using Definition.Enum;
-using Game.Utility;
+using CustomUtility;
 using GameFramework.Event;
 using UnityGameFramework.Runtime;
 
@@ -49,6 +49,7 @@ namespace UI
                 {
                     Title = reward.Title,
                     Icon = null,
+                    ItemRarity =  reward.Rarity,
                     Description = ItemDescUtility.CreatePropDescription(reward.Modifiers),
                     IconAssetName = reward.IconAssetName
                 });

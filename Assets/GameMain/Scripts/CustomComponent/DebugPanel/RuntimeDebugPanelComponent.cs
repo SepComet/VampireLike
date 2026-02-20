@@ -4,7 +4,8 @@ using System.Linq;
 using DataTable;
 using Definition.DataStruct;
 using Entity;
-using Game.Utility;
+using CustomUtility;
+using Procedure;
 using UnityEngine;
 using UnityGameFramework.Runtime;
 #if ENABLE_INPUT_SYSTEM
@@ -41,7 +42,7 @@ namespace CustomComponent
         protected override void Awake()
         {
             base.Awake();
-            
+
             _windowId = GetInstanceID();
         }
 
@@ -105,6 +106,7 @@ namespace CustomComponent
             {
                 EnsurePropList(true);
             }
+
             GUILayout.EndHorizontal();
 
             ApplyFilter(_searchText);
@@ -135,12 +137,14 @@ namespace CustomComponent
             {
                 AddSelectedBuffToPlayer(selectedProp, _addCount);
             }
+
             GUILayout.EndHorizontal();
         }
 
         private void DrawBattleSection()
         {
             GUILayout.Label("Battle Debug");
+            ProcedureGame procedure = GameEntry.Procedure.CurrentProcedure as ProcedureGame;
             EnemyManagerComponent enemyManager = GameEntry.EnemyManager;
             Player player = FindPlayer();
 
@@ -150,8 +154,15 @@ namespace CustomComponent
                 return;
             }
 
+            if (procedure == null)
+            {
+                GUILayout.Label("ProcedureGame unavailable.");
+                return;
+            }
+
             GUILayout.Label($"Spawn Rate: {enemyManager.SpawnRateScale:F2}");
             GUILayout.Label($"Battle Time: {enemyManager.ElapsedBattleTime:F1}s / {enemyManager.BattleDuration:F1}s");
+            GUILayout.Label($"Enemy Count: {enemyManager.CurrentEnemyCount}");
 
             GUILayout.BeginHorizontal();
             GUILayout.Label("Rate", GUILayout.Width(52f));
@@ -165,16 +176,19 @@ namespace CustomComponent
             {
                 enemyManager.SetSpawnRateScale(_spawnRateScaleInput);
             }
+
             if (GUILayout.Button("x0.5", GUILayout.Width(60f)))
             {
                 _spawnRateScaleInput = Mathf.Max(MinSpawnRate, enemyManager.SpawnRateScale * 0.5f);
                 enemyManager.SetSpawnRateScale(_spawnRateScaleInput);
             }
+
             if (GUILayout.Button("x2", GUILayout.Width(60f)))
             {
                 _spawnRateScaleInput = enemyManager.SpawnRateScale * 2f;
                 enemyManager.SetSpawnRateScale(_spawnRateScaleInput);
             }
+
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();
@@ -187,21 +201,43 @@ namespace CustomComponent
 
             if (GUILayout.Button("Extend Battle", GUILayout.Height(24f)))
             {
-                enemyManager.AddBattleDuration(_extendDurationSeconds);
+                if (procedure.CurrentGameState is GameStateBattle gameState)
+                {
+                    gameState.AddBattleDuration(_extendDurationSeconds);
+                }
             }
+
             GUILayout.EndHorizontal();
 
-            GUILayout.Label($"Player Weapon: {(player == null ? "Player not found" : (player.WeaponEnabled ? "Enabled" : "Disabled"))}");
+            GUILayout.Space(4f);
+            GUILayout.Label($"Enemy Separation Solver: {EnemySeparationSolverProvider.CurrentSolverName}");
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Use Naive O(N^2)", GUILayout.Height(24f)))
+            {
+                EnemySeparationSolverProvider.UseNaiveSolver();
+            }
+
+            if (GUILayout.Button("Use Grid Bucket", GUILayout.Height(24f)))
+            {
+                EnemySeparationSolverProvider.UseGridBucketSolver();
+            }
+
+            GUILayout.EndHorizontal();
+
+            GUILayout.Label(
+                $"Player Weapon: {(player == null ? "Player not found" : (player.WeaponEnabled ? "Enabled" : "Disabled"))}");
             GUILayout.BeginHorizontal();
             GUI.enabled = player != null;
             if (GUILayout.Button("Disable Weapons", GUILayout.Height(24f)))
             {
                 player.SetWeaponEnabled(false);
             }
+
             if (GUILayout.Button("Enable Weapons", GUILayout.Height(24f)))
             {
                 player.SetWeaponEnabled(true);
             }
+
             GUI.enabled = true;
             GUILayout.EndHorizontal();
         }

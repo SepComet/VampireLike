@@ -29,6 +29,7 @@
       <Resource Name="URPAssets" LoadType="0" Packed="True" />
     </Resources>
     <Assets>
+      <Asset Guid="0080b46050fc460cb6d6c7fc8d4e8c27" ResourceName="DataTables" />
       <Asset Guid="0179316b5fc7c2946a67c5877c02fc30" ResourceName="UI/UISprites/Common" />
       <Asset Guid="04d7dde7615d71b4db1a0c8d67a62e95" ResourceName="UI/UIForms" />
       <Asset Guid="04dbc0581071c254ea6564b2ff06ff9b" ResourceName="Textures" />
@@ -64,10 +65,11 @@
       <Asset Guid="28988b1366cba3e4b947bb60d6b118f9" ResourceName="DataTables" />
       <Asset Guid="28c42f88cfe56e84e95c0d7545db8c1b" ResourceName="Materials" />
       <Asset Guid="2cb5eef4d7d7bf6459dd13a3f8d90246" ResourceName="Textures" />
+      <Asset Guid="2d1b2cc11a8e99f42b34265765fc6d86" ResourceName="Entities" />
+      <Asset Guid="2ed59bf0745586248aaa89cf7d3305a7" ResourceName="Entities" />
       <Asset Guid="308577c72eb4cd14ca676aeee62b0ea5" ResourceName="UI/UIItems" />
       <Asset Guid="312264fc6c05ca04499685cc989e533d" ResourceName="UI/UISprites/Icons" />
       <Asset Guid="315e8ed2db27c254cb3366ff0793cd90" ResourceName="DataTables" />
-      <Asset Guid="3455fe69f7ddc4604b95bf9b0a1e88d7" ResourceName="Entities" />
       <Asset Guid="352da872791696c48af3b21132e3e3c3" ResourceName="DataTables" />
       <Asset Guid="372a8b1e52bedc64b9207b12d167afaa" ResourceName="DataTables" />
       <Asset Guid="3aa539b1e46111d4299a83c73ebe762c" ResourceName="UI/UIForms" />
@@ -91,6 +93,7 @@
       <Asset Guid="583ff7026dac91849b7c7b2468ba456b" ResourceName="Materials" />
       <Asset Guid="5b5a6a737c460eb4abc105d6583d405e" ResourceName="Fonts" />
       <Asset Guid="5dcd89912e222bf4c87f76db4044bc5e" ResourceName="Localization/Dictionaries" ResourceVariant="ko-kr" />
+      <Asset Guid="5ebb46af6f16ae94e87f64a7dc0a49cb" ResourceName="Entities" />
       <Asset Guid="62af9e5c8f39cfa49af9e10ccf42f1da" ResourceName="UI/UISprites/Common" />
       <Asset Guid="638ff8ae4a0d15047839cd265d3bc296" ResourceName="Music/Background" />
       <Asset Guid="63fe6ff9ab9e1433f8db4ebd940f2442" ResourceName="Materials" />
@@ -119,6 +122,7 @@
       <Asset Guid="7f5aee8da226edf4991598327cb32ce0" ResourceName="UI/UISprites/Logos" />
       <Asset Guid="7fd11dc5d29076d469d414dec2818f11" ResourceName="Configs" />
       <Asset Guid="836be25be3e1e8c41ae5545bc8a9a4d7" ResourceName="Textures" />
+      <Asset Guid="83e5fce2d1e5b3e4ab6551de03cc9c22" ResourceName="Materials" />
       <Asset Guid="8940b037a9b441c4cbd3d2b446838424" ResourceName="Materials" />
       <Asset Guid="8e27380ee68aa4a219b4db9018e7da31" ResourceName="Materials" />
       <Asset Guid="91b565625868b59428114c4a5b945e80" ResourceName="UI/UISprites/SelectRoleFormRT" />
@@ -136,7 +140,6 @@
       <Asset Guid="a23eef5e20ff8cb46adf33491fc443fb" ResourceName="Materials" />
       <Asset Guid="a6560a915ef98420e9faacc1c7438823" ResourceName="URPAssets" />
       <Asset Guid="a6ac41115088b5946bc544429260c997" ResourceName="Entities" />
-      <Asset Guid="a6d58f54ce5934781962a4f887e834f3" ResourceName="Entities" />
       <Asset Guid="a71f8bb1b1b2c51438e2bafc884cb02c" ResourceName="DataTables" />
       <Asset Guid="a76ff56683a2bc2479ebd63dcdd658b0" ResourceName="UI/UIItems" />
       <Asset Guid="a7b030cffa2dc44478c14e49a22771c2" ResourceName="Materials" />
@@ -157,6 +160,7 @@
       <Asset Guid="bf75b984df8a84987bcf3a8bf6e2862d" ResourceName="Sounds" />
       <Asset Guid="c40be3174f62c4acf8c1216858c64956" ResourceName="URPAssets" />
       <Asset Guid="c49cffd4fc1dfb549b2b30448a0becda" ResourceName="UI/UISprites/Icons" />
+      <Asset Guid="c4f37184fcb9306428d7d002f7dca96d" ResourceName="Materials" />
       <Asset Guid="c547624e174de984882f0a14b4bb32e1" ResourceName="Materials" />
       <Asset Guid="c58c9afddbd36d14d837fa218d772996" ResourceName="Materials" />
       <Asset Guid="c7d1e11dd37634b48a9dd4012b8e4306" ResourceName="UI/UISounds" />

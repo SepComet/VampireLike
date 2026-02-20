@@ -13,7 +13,7 @@ using Scene;
 using StarForce;
 using UnityGameFramework.Runtime;
 using ProcedureOwner = GameFramework.Fsm.IFsm<GameFramework.Procedure.IProcedureManager>;
-using Game.Utility;
+using CustomUtility;
 
 namespace Procedure
 {

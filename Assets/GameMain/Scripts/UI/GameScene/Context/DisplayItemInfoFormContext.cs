@@ -5,6 +5,7 @@ namespace UI
 {
     public class DisplayItemInfoFormContext : UIContext
     {
+        public int Index;
         public string IconAssetName;
         public string Title;
         public string TypeText;

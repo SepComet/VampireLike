@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityGameFramework.Runtime;
 
-namespace StarForce
+namespace CustomUtility
 {
     public static class EnumUtility<T> where T : struct, System.Enum
     {

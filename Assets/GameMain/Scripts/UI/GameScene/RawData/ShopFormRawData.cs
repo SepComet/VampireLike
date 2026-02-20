@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using Definition.DataStruct;
-using Entity;
+using Entity.Weapon;
 
 namespace UI
 {

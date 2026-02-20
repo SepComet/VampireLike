@@ -3,7 +3,7 @@ using Definition.Enum;
 using GameFramework.DataTable;
 using UnityEngine;
 
-namespace Game.Utility
+namespace CustomUtility
 {
     public static class RarityUtility
     {

@@ -1,8 +1,10 @@
 using System;
+using CustomUtility;
 using Definition.DataStruct;
 using Definition.Enum;
+using Unity.Profiling;
 using UnityEngine;
-using UnityGameFramework.Runtime;
+using CustomDebugger;
 
 namespace Components
 {
@@ -11,6 +13,9 @@ namespace Components
         [SerializeField] private bool _isMoving;
         [SerializeField] private Vector3 _direction;
         [SerializeField] private Transform _cachedTransform;
+        [SerializeField] private bool _avoidEnemyOverlap;
+        [SerializeField] private float _enemyBodyRadius = 0.45f;
+        [SerializeField] private int _separationIterations = 2;
 
         public float Speed => (_speedBase + _movementStat.Value) * _movementStat.Percent;
         [SerializeField] private float _speedBase;
@@ -20,11 +25,15 @@ namespace Components
         private StatProperty _movementStat;
         private Action<StatModifier, bool> _movementStatCallback;
 
-        public void OnInit(float speed, Transform target, StatComponent statComponent = null)
+        public void OnInit(float speed, Transform target, StatComponent statComponent = null,
+            bool avoidEnemyOverlap = false, float enemyBodyRadius = 0.45f, int separationIterations = 2)
         {
             _speedBase = speed;
             _cachedTransform = target;
             _direction = Vector3.forward;
+            _avoidEnemyOverlap = avoidEnemyOverlap;
+            _enemyBodyRadius = Mathf.Max(0.01f, enemyBodyRadius);
+            _separationIterations = Mathf.Max(1, separationIterations);
 
             _statComponent = statComponent;
             if (_statComponent != null)
@@ -38,6 +47,8 @@ namespace Components
             {
                 _movementStat = new StatProperty();
             }
+
+            RefreshEnemyRegistration();
         }
 
         public void OnUpdate(float elapseSeconds, float realElapseSeconds)
@@ -54,6 +65,9 @@ namespace Components
             _cachedTransform = null;
             _direction = Vector3.zero;
             _isMoving = false;
+            _avoidEnemyOverlap = false;
+            _enemyBodyRadius = 0.45f;
+            _separationIterations = 2;
 
             if (_statComponent != null)
             {
@@ -62,14 +76,44 @@ namespace Components
             }
 
             _statComponent = null;
+
+            UnregisterEnemyMover();
         }
 
         private void Move(float deltaTime = 0)
         {
-            this.transform.Translate(Speed * deltaTime * _direction);
+            using (CustomProfilerMarker.Movement_Update.Auto())
+            {
+                if (_cachedTransform == null) return;
+
+                Vector3 displacement = Speed * deltaTime * _direction;
+                Vector3 nextPosition = _cachedTransform.position + displacement;
+                if (_avoidEnemyOverlap)
+                {
+                    nextPosition = EnemySeparationSolverProvider.Resolve(
+                        this,
+                        nextPosition,
+                        _direction,
+                        _separationIterations);
+                }
+
+                _cachedTransform.position = nextPosition;
+            }
         }
 
         public void SetMove(bool isMoving) => _isMoving = isMoving;
         public void SetDirection(Vector3 direction) => _direction = direction;
+
+        private void RefreshEnemyRegistration()
+        {
+            UnregisterEnemyMover();
+            if (!_avoidEnemyOverlap) return;
+            EnemySeparationSolverProvider.Register(this, _cachedTransform, _enemyBodyRadius);
+        }
+
+        private void UnregisterEnemyMover()
+        {
+            EnemySeparationSolverProvider.Unregister(this);
+        }
     }
 }

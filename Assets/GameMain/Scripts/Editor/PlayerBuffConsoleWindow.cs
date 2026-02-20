@@ -5,7 +5,8 @@ using CustomComponent;
 using DataTable;
 using Definition.DataStruct;
 using Entity;
-using Game.Utility;
+using CustomUtility;
+using Procedure;
 using UnityEditor;
 using UnityEngine;
 
@@ -80,9 +81,17 @@ namespace StarForce.Editor
 
             EnemyManagerComponent enemyManager = GameEntry.EnemyManager;
             Player player = FindPlayer();
+            ProcedureGame procedure = GameEntry.Procedure.CurrentProcedure as ProcedureGame;
+
             if (enemyManager == null)
             {
                 EditorGUILayout.HelpBox("EnemyManager is unavailable.", MessageType.Warning);
+                return;
+            }
+
+            if (procedure == null)
+            {
+                EditorGUILayout.HelpBox("ProcedureGame is unavailable.", MessageType.Warning);
                 return;
             }
 
@@ -90,9 +99,11 @@ namespace StarForce.Editor
             EditorGUILayout.LabelField("Battle Time",
                 $"{enemyManager.ElapsedBattleTime:F1}s / {enemyManager.BattleDuration:F1}s");
 
-            _spawnRateScaleInput = Mathf.Clamp(EditorGUILayout.FloatField("Spawn Rate Scale", _spawnRateScaleInput), 0.1f,
+            _spawnRateScaleInput = Mathf.Clamp(EditorGUILayout.FloatField("Spawn Rate Scale", _spawnRateScaleInput),
+                0.1f,
                 50f);
-            _extendDurationSeconds = Mathf.Clamp(EditorGUILayout.FloatField("Add Duration (Seconds)", _extendDurationSeconds),
+            _extendDurationSeconds = Mathf.Clamp(
+                EditorGUILayout.FloatField("Add Duration (Seconds)", _extendDurationSeconds),
                 1f, 3600f);
 
             EditorGUILayout.BeginHorizontal();
@@ -113,16 +124,21 @@ namespace StarForce.Editor
                 _spawnRateScaleInput = enemyManager.SpawnRateScale * 2f;
                 enemyManager.SetSpawnRateScale(_spawnRateScaleInput);
             }
+
             EditorGUILayout.EndHorizontal();
 
             if (GUILayout.Button("Add Battle Duration"))
             {
-                enemyManager.AddBattleDuration(_extendDurationSeconds);
-                ShowNotification(new GUIContent($"+{_extendDurationSeconds:F0}s Battle Duration"));
+                if (procedure.CurrentGameState is GameStateBattle gameState)
+                {
+                    gameState.AddBattleDuration(_extendDurationSeconds);
+                    ShowNotification(new GUIContent($"+{_extendDurationSeconds:F0}s Battle Duration"));
+                }
             }
 
             EditorGUILayout.Space(6f);
-            EditorGUILayout.LabelField("Player Weapon", player == null ? "Player not found" : (player.WeaponEnabled ? "Enabled" : "Disabled"));
+            EditorGUILayout.LabelField("Player Weapon",
+                player == null ? "Player not found" : (player.WeaponEnabled ? "Enabled" : "Disabled"));
             using (new EditorGUI.DisabledScope(player == null))
             {
                 EditorGUILayout.BeginHorizontal();

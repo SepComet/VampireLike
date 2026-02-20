@@ -10,5 +10,6 @@ namespace UI
         public List<GoodsItemContext> GoodsItems;
         public DisplayListAreaContext PropListContext;
         public DisplayListAreaContext WeaponListContext;
+        public float WeaponRecycleRate = 0.3f;
     }
 }

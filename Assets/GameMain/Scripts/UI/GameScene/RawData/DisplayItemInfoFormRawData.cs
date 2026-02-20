@@ -7,6 +7,7 @@ namespace UI
 {
     public class DisplayItemInfoFormRawData
     {
+        public int Index;
         public string IconAssetName;
         public string Title;
         public string TypeText;

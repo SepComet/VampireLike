@@ -12,7 +12,7 @@ using DataTable;
 using Definition;
 using Definition.Enum;
 using Procedure;
-using Game.Utility;
+using CustomUtility;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityGameFramework.Runtime;

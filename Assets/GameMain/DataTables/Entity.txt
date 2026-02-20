@@ -7,5 +7,7 @@
 	102	远程敌人	RemoteEnemy
 	11	跟随相机	FollowCamera
 	201	武器小刀	WeaponKnife
+	202	武器手枪	WeaponHandgun
+	203	武器斧头	WeaponSlash
 	10001	金币实体	CoinEntity
 	10002	经验实体	ExpEntity

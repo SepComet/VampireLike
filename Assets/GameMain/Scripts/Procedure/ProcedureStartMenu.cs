@@ -1,6 +1,8 @@
 using Definition.Enum;
 using Scene;
 using UI;
+using UnityEngine;
+using UnityEngine.Rendering;
 using UnityGameFramework.Runtime;
 using ProcedureOwner = GameFramework.Fsm.IFsm<GameFramework.Procedure.IProcedureManager>;
 
@@ -30,6 +32,9 @@ namespace Procedure
 
             var useCase2 = new SelectRoleFormUseCase(this);
             GameEntry.UIRouter.BindUIUseCase(UIFormType.SelectRoleForm, useCase2);
+            
+            QualitySettings.vSyncCount = 0;
+            Application.targetFrameRate = 120;
         }
 
         protected override void OnLeave(ProcedureOwner procedureOwner, bool isShutdown)

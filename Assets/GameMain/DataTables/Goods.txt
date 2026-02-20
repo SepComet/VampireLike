@@ -3,7 +3,25 @@
 #	int		GoodsType	int
 #	商品编号	策划备注	商品类型	商品对应物品Id
 	101	道具：药	Prop	101
-	102	小刀	Weapon	201
+	102	小刀	Weapon	1
 	103		Prop	102
 	104		Prop	103
 	105		Prop	104
+	106		Weapon	2
+	107		Prop	105
+	108		Prop	106
+	109		Prop	107
+	110		Prop	108
+	111		Prop	109
+	112		Prop	110
+	113		Prop	111
+	114		Prop	112
+	115		Prop	113
+	116		Prop	114
+	117		Prop	115
+	118		Prop	116
+	119		Prop	117
+	120		Prop	118
+	121		Prop	119
+	122		Prop	120
+	123		Weapon	3

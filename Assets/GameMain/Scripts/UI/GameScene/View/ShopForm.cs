@@ -120,6 +120,12 @@ namespace UI
             _weaponListArea.AddItem(context);
         }
 
+        internal void RemoveWeaponDisplayItem(int index)
+        {
+            if (_weaponListArea == null) return;
+            _weaponListArea.RemoveItemAt(index);
+        }
+
         #region ButtonClick
 
         public void OnContinueButtonClick()

@@ -1,7 +1,6 @@
 using System;
-using Definition.DataStruct;
+using CustomUtility;
 using Definition.Enum;
-using StarForce;
 using UnityGameFramework.Runtime;
 
 namespace DataTable
@@ -18,7 +17,7 @@ namespace DataTable
         /// <summary>
         /// 获取关卡内会生成的实体编号
         /// </summary>
-        public int[] EntityIds { get; private set; }
+        public EnemyType[] EntityTypes { get; private set; }
 
         /// <summary>
         /// 获取关卡内每次生成实体的数量
@@ -43,7 +42,7 @@ namespace DataTable
             index++;
             m_Id = int.Parse(columnStrings[index++]);
             index++;
-            GenerateEntityIds(columnStrings[index++]);
+            GenerateEntityTypes(columnStrings[index++]);
             GenerateEntityCounts(columnStrings[index++]);
             GenerateIntervals(columnStrings[index++]);
             Duration = int.Parse(columnStrings[index++]);
@@ -56,7 +55,7 @@ namespace DataTable
         {
         }
 
-        private void GenerateEntityIds(string raw)
+        private void GenerateEntityTypes(string raw)
         {
             if (!raw.StartsWith('[') || !raw.EndsWith(']'))
             {
@@ -66,10 +65,10 @@ namespace DataTable
             if (raw.Length == 2) return;
             string[] entityIds = raw.Substring(1, raw.Length - 2).Split(",");
             int length = entityIds.Length;
-            EntityIds = new int[length];
+            EntityTypes = new EnemyType[length];
             for (int i = 0; i < length; i++)
             {
-                EntityIds[i] = int.Parse(entityIds[i]);
+                EntityTypes[i] = EnumUtility<EnemyType>.Get(entityIds[i]);
             }
         }
 

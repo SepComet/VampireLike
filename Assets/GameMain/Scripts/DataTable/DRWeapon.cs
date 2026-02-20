@@ -1,11 +1,11 @@
 ﻿using System;
-using System.IO;
-using System.Text;
+using System.Collections.Generic;
+using System.Globalization;
 using Definition.DataStruct;
 using Definition.Enum;
-using Entity;
 using GameFramework;
-using StarForce;
+using CustomUtility;
+using UnityEngine;
 using UnityGameFramework.Runtime;
 
 namespace DataTable
@@ -22,6 +22,8 @@ namespace DataTable
         /// </summary>
         public override int Id => m_Id;
 
+        public int EntityTypeId { get; private set; }
+        
         /// <summary>
         /// 获取武器名称。
         /// </summary>
@@ -32,8 +34,19 @@ namespace DataTable
         /// </summary>
         public string IconAssetName { get; private set; }
 
+        /// <summary>
+        /// 获取武器稀有度
+        /// </summary>
         public ItemRarity Rarity { get; private set; }
+        
+        /// <summary>
+        /// 获取武器价值
+        /// </summary>
         public int Price { get; private set; }
+        
+        /// <summary>
+        /// 获取武器价值浮动率
+        /// </summary>
         public float PriceRandomPercent { get; private set; }
 
         /// <summary>
@@ -59,7 +72,7 @@ namespace DataTable
         /// <summary>
         /// 获取武器额外参数。
         /// </summary>
-        public string Pramas { get; private set; }
+        public Dictionary<string, string> Pramas { get; private set; }
 
         /// <summary>
         /// 获取武器额外属性。
@@ -74,6 +87,7 @@ namespace DataTable
             index++;
             m_Id = int.Parse(columnStrings[index++]);
             index++;
+            EntityTypeId = int.Parse(columnStrings[index++]);
             Title = columnStrings[index++];
             IconAssetName = columnStrings[index++];
             Rarity = EnumUtility<ItemRarity>.Get(columnStrings[index++]);
@@ -83,7 +97,7 @@ namespace DataTable
             Cooldown = float.Parse(columnStrings[index++]);
             AttackRange = float.Parse(columnStrings[index++]);
             AttackSoundId = int.Parse(columnStrings[index++]);
-            Pramas = columnStrings[index++];
+            Pramas = DeserializeParams(columnStrings[index++]);
             Modifiers = Utility.Json.ToObject<StatModifier[]>(columnStrings[index++]);
 
             GeneratePropertyArray();
@@ -93,6 +107,31 @@ namespace DataTable
 
         private void GeneratePropertyArray()
         {
+        }
+        
+        private Dictionary<string, string> DeserializeParams(string rawParams)
+        {
+            if (!rawParams.StartsWith('[') || !rawParams.EndsWith(']'))
+            {
+                throw new ArgumentException("Input must be enclosed in square brackets.");
+            }
+            
+            var dict = new Dictionary<string, string>();
+            
+            if (string.IsNullOrEmpty(rawParams)) return dict;
+
+            string[] items = rawParams.Substring(1, rawParams.Length - 2).Split(";");
+            foreach (var item in items)
+            {
+                string entry = item.Trim();
+                if (string.IsNullOrEmpty(entry)) continue;
+
+                string[] pair = entry.Split(':' , StringSplitOptions.RemoveEmptyEntries);
+                if (pair.Length != 2) continue;
+                dict.Add(pair[0].ToLower(), pair[1]);
+            }
+
+            return dict;
         }
     }
 }

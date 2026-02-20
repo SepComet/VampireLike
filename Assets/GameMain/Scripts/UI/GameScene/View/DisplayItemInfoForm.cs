@@ -1,6 +1,6 @@
+using CustomEvent;
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 using UnityGameFramework.Runtime;
 
 namespace UI
@@ -45,6 +45,7 @@ namespace UI
             _context = context;
 
             _targetPos = ConvertWorldToAnchored(_context.TargetPos);
+            Log.Info($"{_context.TargetPos}->{_targetPos}");
 
             if (_content != null)
             {
@@ -172,20 +173,33 @@ namespace UI
             }
 
             Canvas canvas = _content.GetComponentInParent<Canvas>();
+            Canvas rootCanvas = canvas != null ? canvas.rootCanvas : null;
             Camera uiCamera = null;
-            if (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay)
+            if (rootCanvas != null && rootCanvas.renderMode != RenderMode.ScreenSpaceOverlay)
             {
-                uiCamera = canvas.worldCamera;
+                uiCamera = rootCanvas.worldCamera != null ? rootCanvas.worldCamera : Camera.main;
             }
 
             Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(uiCamera, worldPos);
-            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(parent, screenPoint, uiCamera, out Vector2 localPoint))
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(parent, screenPoint, uiCamera,
+                    out Vector2 localPoint))
             {
                 return worldPos;
             }
 
             float z = _content.anchoredPosition3D.z;
             return new Vector3(localPoint.x, localPoint.y, z);
+        }
+
+        public void OnRecycleButtonClick()
+        {
+            if (_context == null || !_context.IsWeapon) return;
+            GameEntry.Event.Fire(this, ShopWeaponRecycleEventArgs.Create(_context.Index, _context.Price));
+        }
+
+        public void OnCancelButtonClick()
+        {
+            GameEntry.Event.Fire(this, DisplayItemInfoHideEventArgs.Create());
         }
     }
 }

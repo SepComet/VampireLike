@@ -11,11 +11,12 @@ using System.Runtime.InteropServices;
 using Definition.DataStruct;
 using Definition.Enum;
 using Entity;
+using Entity.Weapon;
 using UnityEngine;
 using UnityGameFramework.Runtime;
 using Random = UnityEngine.Random;
 
-namespace Game.Utility
+namespace CustomUtility
 {
     /// <summary>
     /// AI 工具类。
@@ -134,6 +135,29 @@ namespace Game.Utility
             return (toTransform.position - fromTransform.position).sqrMagnitude;
         }
 
+        /// <summary>
+        /// 获取实体间在 XZ 平面的距离（忽略 Y 轴）。
+        /// </summary>
+        /// <returns>实体间在 XZ 平面的距离。</returns>
+        public static float GetDistanceXZ(EntityBase fromEntity, EntityBase toEntity)
+        {
+            return Mathf.Sqrt(GetSqrMagnitudeXZ(fromEntity, toEntity));
+        }
+
+        /// <summary>
+        /// 获取实体间在 XZ 平面的平方距离（忽略 Y 轴）。
+        /// </summary>
+        /// <returns>实体间在 XZ 平面的平方距离。</returns>
+        public static float GetSqrMagnitudeXZ(EntityBase fromEntity, EntityBase toEntity)
+        {
+            Transform fromTransform = fromEntity.CachedTransform;
+            Transform toTransform = toEntity.CachedTransform;
+
+            Vector3 delta = toTransform.position - fromTransform.position;
+            delta.y = 0f;
+            return delta.sqrMagnitude;
+        }
+
         public static void PerformCollision(TargetableObject entity, EntityBase other)
         {
             if (entity == null || other == null)
@@ -159,23 +183,23 @@ namespace Game.Utility
             //     return;
             // }
 
-            Bullet bullet = other as Bullet;
-            if (bullet != null)
-            {
-                ImpactData entityImpactData = entity.GetImpactData();
-                ImpactData bulletImpactData = bullet.GetImpactData();
-                if (GetRelation(entityImpactData.Camp, bulletImpactData.Camp) == RelationType.Friendly)
-                {
-                    return;
-                }
-
-                int entityDamageHP = CalcDamageHP(bulletImpactData.AttackBase, bulletImpactData.AttackStat,
-                    entityImpactData.DefenseStat, entityImpactData.DodgeStat);
-
-                entity.ApplyDamage(bullet, entityDamageHP);
-                GameEntry.Entity.HideEntity(bullet);
-                return;
-            }
+            // Bullet bullet = other as Bullet;
+            // if (bullet != null)
+            // {
+            //     ImpactData entityImpactData = entity.GetImpactData();
+            //     ImpactData bulletImpactData = bullet.GetImpactData();
+            //     if (GetRelation(entityImpactData.Camp, bulletImpactData.Camp) == RelationType.Friendly)
+            //     {
+            //         return;
+            //     }
+            //
+            //     int entityDamageHP = CalcDamageHP(bulletImpactData.AttackBase, bulletImpactData.AttackStat,
+            //         entityImpactData.DefenseStat, entityImpactData.DodgeStat);
+            //
+            //     entity.ApplyDamage(bullet, entityDamageHP);
+            //     GameEntry.Entity.HideEntity(bullet);
+            //     return;
+            // }
 
             WeaponBase weapon = other as WeaponBase;
             if (weapon != null)

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using DataTable;
 using Definition.DataStruct;
 using Definition.Enum;
@@ -10,16 +11,39 @@ namespace Entity.EntityData
     {
         private DRWeapon _drWeapon;
 
-        public WeaponData(int entityId, int typeId, int ownerId, CampType ownerCamp)
-            : base(entityId, typeId, ownerId, ownerCamp)
+        private int _entityTypeId = 0;
+
+        public WeaponData(int entityId, WeaponType weaponType, int ownerId, CampType ownerCamp)
+            : base(entityId, (int)weaponType, ownerId, ownerCamp)
         {
-            _drWeapon = GameEntry.DataTable.GetDataTableRow<DRWeapon>(TypeId);
+            _drWeapon = GameEntry.DataTable.GetDataTableRow<DRWeapon>((int)weaponType);
+
+            if (_drWeapon == null)
+            {
+                throw new Exception($"Weapon data table row is missing, WeaponType='{weaponType}'.");
+            }
+
+            _entityTypeId = _drWeapon.EntityTypeId;
+        }
+
+        public WeaponType WeaponType => (WeaponType)_drWeapon.Id;
+
+        public string GetParamsString(string paramsName)
+        {
+            if (!Params.TryGetValue(paramsName.ToLower(), out var value))
+            {
+                throw new Exception($"Parameter '{paramsName}' not found.");
+            }
+
+            return value;
         }
 
         /// <summary>
         /// 攻击力。
         /// </summary>
         public int Attack => _drWeapon.Attack;
+
+        public int EntityTypeId => _entityTypeId;
 
         /// <summary>
         /// 武器名称。
@@ -53,7 +77,7 @@ namespace Entity.EntityData
         /// <summary>
         /// 额外参数。
         /// </summary>
-        public string Params => _drWeapon.Pramas;
+        public Dictionary<string, string> Params => _drWeapon.Pramas;
 
         /// <summary>
         /// 额外属性。

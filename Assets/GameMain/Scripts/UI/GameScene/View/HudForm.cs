@@ -1,6 +1,5 @@
-using Components;
+using CustomComponent;
 using CustomEvent;
-using Entity;
 using GameFramework.Event;
 using TMPro;
 using UnityEngine;
@@ -13,17 +12,17 @@ namespace UI
         [SerializeField] private float _sliderFadeDuration = 0.5f;
 
         [SerializeField] private Slider _hpSlider;
-        
+
         [SerializeField] private TMP_Text _hpText;
-        
+
         private float _currentHpPercent = 0;
         private Coroutine _hpSliderFadeCoroutine;
 
         [SerializeField] private Slider _expSlider;
-        
+
         private float _currentExpPercent = 0;
         private Coroutine _expSliderFadeCoroutine;
-        
+
         [SerializeField] private TMP_Text _expText;
 
         private int _playerCurrentLevel = 1;
@@ -31,11 +30,16 @@ namespace UI
         [SerializeField] private TMP_Text _coinText;
         private int _currentCoin = 0;
 
+        [SerializeField] private TMP_Text _levelTimeLeftText;
+        private int _currentTimeLeft = 0;
+
+        [SerializeField] private TMP_Text _enemyCountText;
+        private EnemyManagerComponent _enemy;
+        
         public void RefreshUI(HudFormContext hudFormContext)
         {
-            
         }
-        
+
         #region FSM
 
         protected override void OnInit(object userData)
@@ -46,6 +50,9 @@ namespace UI
             GameEntry.Event.Subscribe(PlayerExpChangeEventArgs.EventId, PlayerExpChange);
             GameEntry.Event.Subscribe(PlayerCoinChangeEventArgs.EventId, PlayerCoinChange);
             GameEntry.Event.Subscribe(PlayerLevelUpEventArgs.EventId, PlayerLevelUp);
+            GameEntry.Event.Subscribe(LevelProcessEventArgs.EventId, LevelProcess);
+
+            _enemy = GameEntry.EnemyManager;
         }
 
         protected override void OnClose(bool isShutdown, object userData)
@@ -54,8 +61,23 @@ namespace UI
             GameEntry.Event.Unsubscribe(PlayerHealthChangeEventArgs.EventId, PlayerHpChange);
             GameEntry.Event.Unsubscribe(PlayerExpChangeEventArgs.EventId, PlayerExpChange);
             GameEntry.Event.Unsubscribe(PlayerCoinChangeEventArgs.EventId, PlayerCoinChange);
+            GameEntry.Event.Unsubscribe(PlayerLevelUpEventArgs.EventId, PlayerLevelUp);
 
             base.OnClose(isShutdown, userData);
+        }
+        
+        protected override void OnUpdate(float elapseSeconds, float realElapseSeconds)
+        {
+            base.OnUpdate(elapseSeconds, realElapseSeconds);
+            if (_enemy == null)
+            {
+                _enemy = GameEntry.EnemyManager;
+            }
+
+            if (_enemy != null)
+            {
+                _enemyCountText.text = $"Enemy: {_enemy.CurrentEnemyCount}";
+            }
         }
 
         #endregion
@@ -67,7 +89,7 @@ namespace UI
             if (!(e is PlayerHealthChangeEventArgs args)) return;
 
             _hpText.text = $"{args.CurrentHealth}/{args.MaxHealth}";
-            
+
             float percent = (float)args.CurrentHealth / args.MaxHealth;
             if (Mathf.Approximately(_currentHpPercent, percent)) return;
 
@@ -96,7 +118,7 @@ namespace UI
             _playerCurrentLevel++;
             _expText.text = $"LV.{_playerCurrentLevel}";
         }
-        
+
         private void PlayerCoinChange(object sender, GameEventArgs e)
         {
             if (!(e is PlayerCoinChangeEventArgs args)) return;
@@ -106,22 +128,13 @@ namespace UI
             _currentCoin = args.CoinCount;
         }
 
-        #endregion
-
-        #region Test
-
-        private Player _player;
-
-        public void CauseDamageToPlayer()
+        private void LevelProcess(object sender, GameEventArgs e)
         {
-            if (_player == null)
-            {
-                _player = FindObjectOfType<Player>();
-            }
+            if (!(e is LevelProcessEventArgs args)) return;
+            if (_currentTimeLeft == args.LevelTimeLeft) return;
 
-            if (_player == null) return;
-
-            _player.GetComponent<HealthComponent>().TakeDamage(2);
+            _currentTimeLeft = args.LevelTimeLeft;
+            _levelTimeLeftText.text = _currentTimeLeft.ToString();
         }
 
         #endregion

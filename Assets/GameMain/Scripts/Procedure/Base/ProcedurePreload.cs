@@ -12,7 +12,7 @@ using System.Collections.Generic;
 using DataTable;
 using Definition;
 using Scene;
-using Game.Utility;
+using CustomUtility;
 using TMPro;
 using UI;
 using UnityEngine;
@@ -25,20 +25,20 @@ namespace Procedure
     {
         public static readonly string[] DataTableNames = new string[]
         {
-            "Enemy",
             "Entity",
+            "Enemy",
+            "Weapon",
             "Music",
             "Scene",
             "Sound",
             "UIForm",
             "UISound",
             "Goods",
-            "Weapon",
             "Prop",
             "Role",
             "Level",
             "LevelUpReward",
-            "LevelRarity"
+            "LevelRarity",
         };
 
         private Dictionary<string, bool> _loadedFlag = new Dictionary<string, bool>();

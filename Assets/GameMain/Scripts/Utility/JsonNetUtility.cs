@@ -1,7 +1,7 @@
 using System;
 using Newtonsoft.Json;
 
-namespace Game.Utility
+namespace CustomUtility
 {
     /// <summary>
     /// Newtonsoft.Json 函数集辅助器。

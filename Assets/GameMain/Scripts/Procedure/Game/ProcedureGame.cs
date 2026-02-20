@@ -35,6 +35,8 @@ namespace Procedure
         private Dictionary<GameStateType, GameStateBase> _gameStates;
         public Player Player;
 
+        public GameStateBase CurrentGameState => _gameStates[_currentGameState];
+
         private void InitGameState()
         {
             _gameStates = new Dictionary<GameStateType, GameStateBase>
@@ -93,7 +95,7 @@ namespace Procedure
             CurrentLevel = 1;
             _currentPlayerData = new PlayerData(-1, 1001);
             GameEntry.Entity.ShowPlayer(_currentPlayerData);
-            
+
             GameEntry.UIRouter.OpenUI(UIFormType.HudForm);
         }
 
@@ -127,11 +129,11 @@ namespace Procedure
             _gameStates.Clear();
 
             GameEntry.UIRouter.CloseUI(UIFormType.HudForm);
-            
+
             _hudForm = null;
-            
+
             Player = null;
-            
+
             _procedureOwner = null;
 
             GameEntry.Event.Unsubscribe(OpenUIFormSuccessEventArgs.EventId, OpenUIFormSuccess);

@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using Entity;
+using Entity.Weapon;
 using UnityEngine;
 
 namespace Components

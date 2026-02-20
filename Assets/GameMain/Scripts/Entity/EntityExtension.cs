@@ -1,35 +1,25 @@
-﻿//------------------------------------------------------------
-// Game Framework
-// Copyright © 2013-2021 Jiang Yin. All rights reserved.
-// Homepage: https://gameframework.cn/
-// Feedback: mailto:ellan@gameframework.cn
-//------------------------------------------------------------
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Definition;
 using Entity.EntityData;
 using UnityGameFramework.Runtime;
 using DataTable;
-using Definition.Enum;
-using Game.Utility;
+using CustomUtility;
 
 namespace Entity
 {
     public static class EntityExtension
     {
-        // 关于 EntityId 的约定：
-        // 0 为无效
-        // 正值用于和服务器通信的实体（如玩家角色、NPC、怪等，服务器只产生正值）
-        // 负值用于本地生成的临时实体（如特效、FakeObject等）
         private static int s_SerialId = -10;
 
         private const string EntityNamespace = "Entity.";
-        private static Dictionary<string, Type> _typeDict;
+        private static readonly Dictionary<string, Type> _typeDict;
+        private static readonly Dictionary<int, string> _assetNameDict;
 
         static EntityExtension()
         {
             _typeDict = new Dictionary<string, Type>();
+            _assetNameDict = new Dictionary<int, string>();
         }
 
         public static EntityBase GetGameEntity(this EntityComponent entityComponent, int entityId)
@@ -61,44 +51,63 @@ namespace Entity
 
         public static void ShowEnemy(this EntityComponent entityComponent, EnemyData data)
         {
-            string typeName = EntityNamespace + (EnemyType)data.TypeId;
-            if (!_typeDict.TryGetValue(typeName, out Type enemyType))
+            if (data == null)
             {
-                enemyType = Type.GetType(typeName);
-                if (enemyType == null)
-                {
-                    Log.Warning("Can not load entity type '{0}'.", typeName);
-                    return;
-                }
-
-                _typeDict.Add(typeName, enemyType);
+                Log.Warning("Enemy data is invalid.");
+                return;
             }
 
-            entityComponent.ShowEntity(enemyType, "Enemy", Constant.AssetPriority.EnemyAsset, data);
+            var enemyType = TryGetType(data.EnemyType.ToString());
+            var assetName = TryGetAssetName(data.EntityTypeId);
+
+            entityComponent.ShowEntity(
+                entityId: data.Id,
+                entityLogicType: enemyType,
+                entityAssetName: AssetUtility.GetEntityAsset(assetName),
+                entityGroupName: "Enemy",
+                priority: Constant.AssetPriority.BulletAsset,
+                userData: data);
         }
 
         public static void ShowWeapon(this EntityComponent entityComponent, WeaponData data)
         {
-            string typeName = EntityNamespace + (WeaponType)data.TypeId;
-            if (!_typeDict.TryGetValue(typeName, out Type weaponType))
+            if (data == null)
             {
-                weaponType = Type.GetType(typeName);
-                if (weaponType == null)
-                {
-                    Log.Warning("Can not load entity type '{0}'.", typeName);
-                    return;
-                }
-
-                _typeDict.Add(typeName, weaponType);
+                Log.Warning("Weapon data is invalid.");
+                return;
             }
 
-            entityComponent.ShowEntity(weaponType, "Weapon", Constant.AssetPriority.WeaponAsset, data);
+            var weaponType = TryGetType("Weapon." + data.WeaponType);
+            var assetName = TryGetAssetName(data.EntityTypeId);
+
+            entityComponent.ShowEntity(
+                entityId: data.Id,
+                entityLogicType: weaponType,
+                entityAssetName: AssetUtility.GetEntityAsset(assetName),
+                entityGroupName: "Weapon",
+                priority: Constant.AssetPriority.BulletAsset,
+                userData: data);
         }
 
-        public static void ShowBullet(this EntityComponent entityComponent, BulletData data)
-        {
-            entityComponent.ShowEntity(typeof(Bullet), "Bullet", Constant.AssetPriority.BulletAsset, data);
-        }
+        // public static void ShowBullet(this EntityComponent entityComponent, BulletData data)
+        // {
+        //     if (data == null)
+        //     {
+        //         Log.Warning("Bullet data is invalid.");
+        //         return;
+        //     }
+        //
+        //     var bulletType = TryGetType(data.BulletType.ToString());
+        //     string assetName = TryGetAssetName(data.EntityTypeId);
+        //
+        //     entityComponent.ShowEntity(
+        //         entityId: data.Id,
+        //         entityLogicType: bulletType,
+        //         entityAssetName: AssetUtility.GetEntityAsset(assetName),
+        //         entityGroupName: "Bullet",
+        //         priority: Constant.AssetPriority.BulletAsset,
+        //         userData: data);
+        // }
 
         public static void ShowEffect(this EntityComponent entityComponent, EffectData data)
         {
@@ -133,6 +142,42 @@ namespace Entity
 
             entityComponent.ShowEntity(data.Id, logicType, AssetUtility.GetEntityAsset(drEntity.AssetName), entityGroup,
                 priority, data);
+        }
+
+        private static Type TryGetType(string rawTypeName)
+        {
+            string typeName = EntityNamespace + rawTypeName;
+            if (!_typeDict.TryGetValue(typeName, out Type type))
+            {
+                type = Type.GetType(typeName);
+                if (type == null)
+                {
+                    Log.Warning("Can not load entity type '{0}'.", typeName);
+                    return null;
+                }
+
+                _typeDict.Add(typeName, type);
+            }
+
+            return type;
+        }
+
+        private static string TryGetAssetName(int entityId)
+        {
+            if (!_assetNameDict.TryGetValue(entityId, out string assetName))
+            {
+                DREntity drEntity = GameEntry.DataTable.GetDataTableRow<DREntity>(entityId);
+                if (drEntity == null)
+                {
+                    Log.Warning("Can not load bullet entity id '{0}' from data table.", entityId.ToString());
+                    return null;
+                }
+
+                assetName = drEntity.AssetName;
+                _assetNameDict.Add(entityId, assetName);
+            }
+
+            return assetName;
         }
 
         public static int GenerateSerialId(this EntityComponent entityComponent)

@@ -1,6 +1,7 @@
 using Components;
 using Definition.DataStruct;
 using Entity.EntityData;
+using Entity.Weapon;
 using UnityEngine;
 using UnityGameFramework.Runtime;
 
@@ -39,7 +40,7 @@ namespace Entity
             {
                 _meleeEnemyData = enemyData;
                 _healthComponent.OnInit(enemyData.MaxHealthBase);
-                _movementComponent.OnInit(_meleeEnemyData.SpeedBase, this.CachedTransform);
+                _movementComponent.OnInit(_meleeEnemyData.SpeedBase, this.CachedTransform, null, true);
                 _movementComponent.SetMove(true);
                 _attackRangeSquared = _attackRange * _attackRange;
                 this.CachedTransform.position = enemyData.Position;
@@ -54,6 +55,13 @@ namespace Entity
         protected override void OnUpdate(float elapseSeconds, float realElapseSeconds)
         {
             base.OnUpdate(elapseSeconds, realElapseSeconds);
+
+            if (_target == null)
+            {
+                _movementComponent.SetMove(false);
+                _movementComponent.OnUpdate(elapseSeconds, realElapseSeconds);
+                return;
+            }
 
             float distanceSquared = (this.CachedTransform.position - _target.position).sqrMagnitude;
             if (distanceSquared < _attackRangeSquared)
@@ -105,6 +113,11 @@ namespace Entity
 
         private Vector3 GetTargetDirection()
         {
+            if (_target == null)
+            {
+                return Vector3.zero;
+            }
+
             return new Vector3(
                 _target.position.x - this.CachedTransform.position.x,
                 0f,

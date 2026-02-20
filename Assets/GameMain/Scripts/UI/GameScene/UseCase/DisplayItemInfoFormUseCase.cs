@@ -1,6 +1,7 @@
 using Definition.DataStruct;
 using Entity;
-using Game.Utility;
+using CustomUtility;
+using Entity.Weapon;
 using Procedure;
 
 namespace UI

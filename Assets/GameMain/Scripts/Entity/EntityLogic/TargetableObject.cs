@@ -8,7 +8,7 @@
 using Components;
 using Definition.DataStruct;
 using Entity.EntityData;
-using Game.Utility;
+using CustomUtility;
 using UnityEngine;
 
 namespace Entity

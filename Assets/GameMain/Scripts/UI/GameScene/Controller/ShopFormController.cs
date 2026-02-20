@@ -3,8 +3,10 @@ using CustomEvent;
 using Definition.DataStruct;
 using Definition.Enum;
 using Entity;
-using Game.Utility;
+using CustomUtility;
+using Entity.Weapon;
 using GameFramework.Event;
+using UnityEngine;
 using UnityGameFramework.Runtime;
 
 namespace UI
@@ -25,18 +27,18 @@ namespace UI
         {
             GameEntry.Event.Subscribe(RefreshEventArgs.EventId, Refresh);
             GameEntry.Event.Subscribe(ShopPurchaseEventArgs.EventId, ShopPurchase);
+            GameEntry.Event.Subscribe(ShopWeaponRecycleEventArgs.EventId, WeaponRecycle);
             GameEntry.Event.Subscribe(ShopContinueEventArgs.EventId, ShopContinue);
             GameEntry.Event.Subscribe(DisplayItemShowEventArgs.EventId, DisplayItemShow);
-            GameEntry.Event.Subscribe(DisplayItemHideEventArgs.EventId, DisplayItemHide);
         }
 
         protected override void UnsubscribeCustomEvents()
         {
             GameEntry.Event.Unsubscribe(RefreshEventArgs.EventId, Refresh);
             GameEntry.Event.Unsubscribe(ShopPurchaseEventArgs.EventId, ShopPurchase);
+            GameEntry.Event.Unsubscribe(ShopWeaponRecycleEventArgs.EventId, WeaponRecycle);
             GameEntry.Event.Unsubscribe(ShopContinueEventArgs.EventId, ShopContinue);
             GameEntry.Event.Unsubscribe(DisplayItemShowEventArgs.EventId, DisplayItemShow);
-            GameEntry.Event.Unsubscribe(DisplayItemHideEventArgs.EventId, DisplayItemHide);
         }
 
         #region BuildContext
@@ -56,12 +58,15 @@ namespace UI
                 RefreshPrice = rawData.RefreshPrice,
                 PlayerCoin = rawData.PlayerCoin,
                 GoodsItems = rawData.GoodsItems,
-                PropListContext = BuildDisplayListAreaContext(DisplayListAreaType.Prop, rawData.PropItems, rawData.PropMaxCount),
-                WeaponListContext = BuildDisplayListAreaContext(DisplayListAreaType.Weapon, rawData.WeaponItems, rawData.WeaponMaxCount)
+                PropListContext =
+                    BuildDisplayListAreaContext(DisplayListAreaType.Prop, rawData.PropItems, rawData.PropMaxCount),
+                WeaponListContext = BuildDisplayListAreaContext(DisplayListAreaType.Weapon, rawData.WeaponItems,
+                    rawData.WeaponMaxCount)
             };
         }
 
-        private static DisplayListAreaContext BuildDisplayListAreaContext(DisplayListAreaType listType, IReadOnlyList<object> items,
+        private static DisplayListAreaContext BuildDisplayListAreaContext(DisplayListAreaType listType,
+            IReadOnlyList<object> items,
             int maxCount)
         {
             string title = GetDisplayListTitle(listType);
@@ -89,6 +94,7 @@ namespace UI
                             itemContexts[i] = BuildWeaponItem(weapon);
                         }
                     }
+
                     break;
 
                 case DisplayListAreaType.Prop:
@@ -101,6 +107,7 @@ namespace UI
                             itemContexts[i] = BuildPropItem(propItem);
                         }
                     }
+
                     break;
             }
 
@@ -347,6 +354,7 @@ namespace UI
 
             DisplayItemInfoFormRawData rawData = new();
             rawData.TargetPos = args.TargetPos;
+            rawData.Index = args.Index;
             if (args.IsWeapon)
             {
                 var weaponData = _rawData.WeaponItems[args.Index].WeaponData;
@@ -355,7 +363,7 @@ namespace UI
                 rawData.Rarity = weaponData.Rarity;
                 rawData.TypeText = "武器";
                 rawData.Description = ItemDescUtility.CreateWeaponDescription(weaponData);
-                rawData.Price = 0;
+                rawData.Price = Mathf.FloorToInt(weaponData.Price * Context.WeaponRecycleRate);
                 rawData.IsWeapon = true;
             }
             else
@@ -373,11 +381,29 @@ namespace UI
             GameEntry.UIRouter.OpenUI(UIFormType.DisplayItemInfoForm, rawData);
         }
 
-        private void DisplayItemHide(object sender, GameEventArgs e)
+        private void WeaponRecycle(object sender, GameEventArgs e)
         {
-            if (!(e is DisplayItemHideEventArgs)) return;
+            if (!(e is ShopWeaponRecycleEventArgs args)) return;
 
-            GameEntry.UIRouter.CloseUI(UIFormType.DisplayItemInfoForm);
+            if (_useCase == null || Context == null)
+            {
+                return;
+            }
+
+            bool success = _useCase.TryRecycleWeapon(args.Index, args.Price);
+            if (!success)
+            {
+                return;
+            }
+
+            if (Context.WeaponListContext != null)
+            {
+                int currentCount = Mathf.Max(0, Context.WeaponListContext.CurrentCount - 1);
+                Context.WeaponListContext.CurrentCount = currentCount;
+            }
+
+            Form?.RemoveWeaponDisplayItem(args.Index);
+            GameEntry.Event.Fire(this, DisplayItemInfoHideEventArgs.Create(true));
         }
 
         #endregion

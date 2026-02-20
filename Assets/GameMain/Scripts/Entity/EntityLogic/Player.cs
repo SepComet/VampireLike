@@ -6,6 +6,7 @@ using Definition.DataStruct;
 using Entity.EntityData;
 using GameFramework.Event;
 using UnityGameFramework.Runtime;
+using Entity.Weapon;
 
 namespace Entity
 {
@@ -45,6 +46,7 @@ namespace Entity
         /// 玩家是否启用。
         /// </summary>
         private bool _enable;
+
         private bool _weaponEnabled = true;
 
         public int Coin
@@ -89,6 +91,22 @@ namespace Entity
             return _backpackComponent.AttachProp(prop);
         }
 
+        public bool RemoveWeapon(WeaponBase weapon)
+        {
+            if (weapon == null || _backpackComponent == null)
+            {
+                return false;
+            }
+
+            if (!_backpackComponent.DetachWeapon(weapon))
+            {
+                return false;
+            }
+
+            GameEntry.Entity.HideEntity(weapon);
+            return true;
+        }
+
         public bool Enable
         {
             get => _enable;
@@ -122,8 +140,7 @@ namespace Entity
             // BackpackComponent
             Coin = role.Coin;
             _backpackComponent.OnInit(this, role.WeaponCapacity);
-            GameEntry.Entity.ShowWeapon(new WeaponKnifeData(GameEntry.Entity.GenerateSerialId(), 201,
-                this.Id, _playerData.Camp));
+            GameEntry.Entity.ShowWeapon(new WeaponKnifeData(GameEntry.Entity.GenerateSerialId(), Id, _playerData.Camp));
 
             // StatComponent
             foreach (var modifier in role.InitialProperties)

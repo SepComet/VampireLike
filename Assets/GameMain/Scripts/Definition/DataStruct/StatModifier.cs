@@ -1,6 +1,6 @@
 using System;
 using Definition.Enum;
-using StarForce;
+using CustomUtility;
 using UnityGameFramework.Runtime;
 
 namespace Definition.DataStruct

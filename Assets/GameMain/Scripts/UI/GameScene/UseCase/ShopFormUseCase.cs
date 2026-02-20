@@ -4,7 +4,8 @@ using DataTable;
 using Definition.DataStruct;
 using Definition.Enum;
 using Entity;
-using Game.Utility;
+using Entity.EntityData;
+using CustomUtility;
 using GameFramework.DataTable;
 using Procedure;
 using UnityEngine;
@@ -127,8 +128,13 @@ namespace UI
                 return null;
             }
 
-            player.Coin -= selection.Price;
             DisplayItemContext displayItem = ApplyGoodsPurchase(selection);
+            if (displayItem == null)
+            {
+                return null;
+            }
+
+            player.Coin -= selection.Price;
             _selections[goodsIndex] = null;
 
             return new ShopPurchaseResult
@@ -340,13 +346,97 @@ namespace UI
 
             if (goods.GoodsType == GoodsType.Weapon)
             {
-                // TODO: Weapon purchase apply flow depends on the upcoming weapon system integration.
-                // Implement weapon creation/equip/add-to-inventory here when weapon runtime model is ready.
-                Log.Warning("ShopFormUseCase::ApplyGoodsPurchase: Weapon purchase flow is not implemented yet.");
-                return null;
+                if (Player.Weapons != null && Player.Weapons.Count >= Player.WeaponCapacity)
+                {
+                    Log.Warning("ShopFormUseCase::ApplyGoodsPurchase: Weapon capacity is full.");
+                    return null;
+                }
+
+                DRWeapon drWeapon = _weaponDataTable != null ? _weaponDataTable.GetDataRow(goods.GoodsTypeId) : null;
+                if (drWeapon == null)
+                {
+                    Log.Warning($"ShopFormUseCase::ApplyGoodsPurchase: Missing DRWeapon, id = {goods.GoodsTypeId}");
+                    return null;
+                }
+
+                var weaponData = CreateWeaponData(goods.GoodsTypeId);
+                if (weaponData == null)
+                {
+                    Log.Warning(
+                        $"ShopFormUseCase::ApplyGoodsPurchase: Unsupported weapon type id = {goods.GoodsTypeId}");
+                    return null;
+                }
+
+                GameEntry.Entity.ShowWeapon(weaponData);
+
+                return new DisplayItemContext
+                {
+                    IconAssetName = drWeapon.IconAssetName,
+                    Rarity = drWeapon.Rarity,
+                    IsWeapon = true
+                };
             }
 
             return null;
+        }
+
+        private WeaponData CreateWeaponData(int weaponTypeId)
+        {
+            int entityId = GameEntry.Entity.GenerateSerialId();
+            int ownerId = Player.Id;
+            CampType ownerCamp = CampType.Player;
+
+            WeaponType weaponType = (WeaponType)weaponTypeId;
+            switch (weaponType)
+            {
+                case WeaponType.WeaponKnife:
+                    return new WeaponKnifeData(entityId, ownerId, ownerCamp);
+                case WeaponType.WeaponHandgun:
+                    return new WeaponHandgunData(entityId, ownerId, ownerCamp);
+                case WeaponType.WeaponSlash:
+                    return new WeaponSlashData(entityId, ownerId, ownerCamp);
+                default:
+                    return null;
+            }
+        }
+
+        public bool TryRecycleWeapon(int argsIndex, int argsPrice)
+        {
+            Player player = Player;
+            if (player == null)
+            {
+                return false;
+            }
+
+            var weapons = player.Weapons;
+            if (weapons == null || weapons.Count <= 1)
+            {
+                Log.Warning("ShopFormUseCase::TryRecycleWeapon: Can not recycle the last weapon.");
+                return false;
+            }
+
+            if (argsIndex < 0 || argsIndex >= weapons.Count)
+            {
+                Log.Warning($"ShopFormUseCase::TryRecycleWeapon: Invalid weapon index = {argsIndex}");
+                return false;
+            }
+
+            var weapon = weapons[argsIndex];
+            if (weapon == null)
+            {
+                Log.Warning("ShopFormUseCase::TryRecycleWeapon: Weapon is null.");
+                return false;
+            }
+
+            int recyclePrice = Mathf.Max(0, argsPrice);
+            if (!player.RemoveWeapon(weapon))
+            {
+                Log.Warning("ShopFormUseCase::TryRecycleWeapon: Remove weapon failed.");
+                return false;
+            }
+
+            player.Coin += recyclePrice;
+            return true;
         }
     }
 }

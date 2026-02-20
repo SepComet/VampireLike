@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using DataTable;
+using Definition.Enum;
 using Entity;
 using Entity.EntityData;
 using GameFramework.Event;
@@ -22,20 +23,20 @@ namespace CustomComponent
         public List<EntityBase> Enemies => _enemies;
 
         private float _spawnEnemyTimer;
-        
-        private int _spawnEnemyMaxCount = 5000;
-        
+
+        [SerializeField] private int _spawnEnemyMaxCount = 5000;
+
         private int _currentEnemyCount;
-        
-        private int _spawnDistanceFromPlayer = 20;
-        
+
+        [SerializeField] private int _spawnDistanceFromPlayer = 20;
+
         private int _currentSpawnEnemyId;
-        
+
         private int _currentLevel;
 
         private float[] _baseSpawnEnemyIntervals;
         private float[] _spawnEnemyIntervals;
-        private int[] _spawnEnemyIds;
+        private EnemyType[] _spawnEnemyTypes;
         private int[] _spawnEnemyCounts;
         private float _duration;
         private float _baseDuration;
@@ -45,11 +46,10 @@ namespace CustomComponent
 
         private Transform _player;
 
-        private GameStateBattle _battle;
-
         public float SpawnRateScale => _spawnRateScale;
         public float BattleDuration => _duration;
         public float ElapsedBattleTime => _spawnEnemyTimer;
+        public int CurrentEnemyCount => _currentEnemyCount;
 
         #region FSM
 
@@ -71,22 +71,18 @@ namespace CustomComponent
             _entity = null;
         }
 
-        public void OnInit(int level, GameStateBattle battle)
+        public void OnInit(DRLevel level)
         {
-            _battle = battle;
-
-            _currentLevel = level;
-
-            DRLevel levelData = GameEntry.DataTable.GetDataTableRow<DRLevel>(_currentLevel);
-            _baseSpawnEnemyIntervals = (float[])levelData.Intervals.Clone();
+            _baseSpawnEnemyIntervals = (float[])level.Intervals.Clone();
             _spawnEnemyIntervals = (float[])_baseSpawnEnemyIntervals.Clone();
-            _spawnEnemyIds = levelData.EntityIds;
-            _spawnEnemyCounts = levelData.EntityCounts;
-            _baseDuration = levelData.Duration;
+            _spawnEnemyTypes = level.EntityTypes;
+            _spawnEnemyCounts = level.EntityCounts;
+            _baseDuration = level.Duration;
             _duration = _baseDuration;
 
             SetSpawnRateScale(_spawnRateScale);
 
+            _currentEnemyCount = 0;
             _currentSpawnEnemyId = 0;
         }
 
@@ -94,19 +90,13 @@ namespace CustomComponent
         {
             _spawnEnemyTimer += elapseSeconds;
 
-            if (_spawnEnemyTimer > _duration)
-            {
-                _battle.LevelOver();
-                return;
-            }
-
             for (int i = 0; i < _nextSpawnTimes.Length; i++)
             {
                 float nextSpawnTime = _nextSpawnTimes[i];
                 if (_spawnEnemyTimer < nextSpawnTime) continue;
                 for (int j = 0; j < _spawnEnemyCounts[i]; j++)
                 {
-                    SpawnEnemy(_spawnEnemyIds[i]);
+                    SpawnEnemy(_spawnEnemyTypes[i]);
                 }
 
                 _nextSpawnTimes[i] += _spawnEnemyIntervals[i];
@@ -115,24 +105,57 @@ namespace CustomComponent
 
         public void OnReset()
         {
-            _currentEnemyCount = 0;
-
             _spawnEnemyTimer = 0;
             _currentSpawnEnemyId = 0;
             _currentLevel = 0;
 
             _baseSpawnEnemyIntervals = null;
             _spawnEnemyIntervals = null;
-            _spawnEnemyIds = null;
+            _spawnEnemyTypes = null;
             _spawnEnemyCounts = null;
             _baseDuration = 0;
             _duration = 0;
 
             _nextSpawnTimes = null;
 
-            _battle = null;
-
             ClearEnemies();
+            
+            _currentEnemyCount = 0;
+        }
+
+        #endregion
+
+        private void SpawnEnemy(EnemyType enemyType)
+        {
+            if (_player == null) return;
+
+            if (_currentEnemyCount >= _spawnEnemyMaxCount) return;
+            int entityPoolId = _currentSpawnEnemyId % _spawnEnemyMaxCount;
+            var enemyData = new EnemyData(entityPoolId, enemyType, _currentLevel)
+            {
+                Position = GetRandomPosition()
+            };
+            _entity.ShowEnemy(enemyData);
+            _currentSpawnEnemyId++;
+        }
+
+        private Vector3 GetRandomPosition()
+        {
+            float x = Random.Range(-1f, 1f);
+            float z = Random.Range(-1f, 1f);
+            Vector3 dir = new Vector3(x, 0, z).normalized;
+            return _player.position + dir * _spawnDistanceFromPlayer;
+        }
+
+        public void ClearEnemies()
+        {
+            foreach (var enemy in _enemies)
+            {
+                if (enemy == null || !enemy.Available) continue;
+                _entity.HideEntity(enemy);
+            }
+
+            _enemies.Clear();
         }
 
         public void SetSpawnRateScale(float scale)
@@ -174,51 +197,10 @@ namespace CustomComponent
             }
         }
 
-        public void AddBattleDuration(float seconds)
-        {
-            if (seconds <= 0f) return;
-            _duration += seconds;
-        }
-
         private static float GetScaledInterval(float baseInterval, float scale)
         {
             float safeScale = Mathf.Max(MinSpawnRateScale, scale);
             return baseInterval / safeScale;
-        }
-
-        #endregion
-
-        private void SpawnEnemy(int entityId)
-        {
-            if (_player == null) return;
-
-            if (_currentEnemyCount >= _spawnEnemyMaxCount) return;
-            int entityPoolId = _currentSpawnEnemyId % _spawnEnemyMaxCount;
-            var enemyData = new EnemyData(entityPoolId, entityId, _currentLevel)
-            {
-                Position = GetRandomPosition()
-            };
-            _entity.ShowEnemy(enemyData);
-            _currentSpawnEnemyId++;
-        }
-
-        private Vector3 GetRandomPosition()
-        {
-            float x = Random.Range(-1f, 1f);
-            float z = Random.Range(-1f, 1f);
-            Vector3 dir = new Vector3(x, 0, z).normalized;
-            return _player.position + dir * _spawnDistanceFromPlayer;
-        }
-
-        public void ClearEnemies()
-        {
-            foreach (var enemy in _enemies)
-            {
-                if (enemy == null || !enemy.Available) continue;
-                _entity.HideEntity(enemy);
-            }
-
-            _enemies.Clear();
         }
 
         #region Event Handler

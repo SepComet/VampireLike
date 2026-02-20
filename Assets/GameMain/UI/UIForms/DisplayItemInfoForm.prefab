@@ -204,7 +204,7 @@ MonoBehaviour:
   _onPointerEnterAction:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
+      - m_Target: {fileID: 395929355422612576}
         m_TargetAssemblyTypeName: UI.UGuiForm, Assembly-CSharp
         m_MethodName: PlayUISound
         m_Mode: 3
@@ -219,7 +219,7 @@ MonoBehaviour:
   _onClickAction:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
+      - m_Target: {fileID: 395929355422612576}
         m_TargetAssemblyTypeName: UI.UGuiForm, Assembly-CSharp
         m_MethodName: PlayUISound
         m_Mode: 3
@@ -231,10 +231,10 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: UI.ShopForm, Assembly-CSharp
-        m_MethodName: OnPurchaseButtonClick
-        m_Mode: 3
+      - m_Target: {fileID: 4303509830935515119}
+        m_TargetAssemblyTypeName: UI.DisplayItemInfoForm, Assembly-CSharp
+        m_MethodName: OnCancelButtonClick
+        m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
@@ -444,7 +444,7 @@ MonoBehaviour:
   _onPointerEnterAction:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
+      - m_Target: {fileID: 4303509830935515119}
         m_TargetAssemblyTypeName: UI.UGuiForm, Assembly-CSharp
         m_MethodName: PlayUISound
         m_Mode: 3
@@ -459,7 +459,7 @@ MonoBehaviour:
   _onClickAction:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
+      - m_Target: {fileID: 4303509830935515119}
         m_TargetAssemblyTypeName: UI.UGuiForm, Assembly-CSharp
         m_MethodName: PlayUISound
         m_Mode: 3
@@ -471,10 +471,10 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: UI.ShopForm, Assembly-CSharp
-        m_MethodName: OnPurchaseButtonClick
-        m_Mode: 3
+      - m_Target: {fileID: 4303509830935515119}
+        m_TargetAssemblyTypeName: UI.DisplayItemInfoForm, Assembly-CSharp
+        m_MethodName: OnRecycleButtonClick
+        m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine

@@ -30,7 +30,7 @@ namespace UI
 
             if (_titleText != null) _titleText.text = context.Title;
             if (_descriptionText != null) _descriptionText.text = context.Description;
-            if (_iconArea != null) _iconArea.SetIcon(context.Icon);
+            if (_iconArea != null) _iconArea.OnInit(context.Icon, context.ItemRarity);
 
             LoadIcon(_context.IconAssetName);
         }

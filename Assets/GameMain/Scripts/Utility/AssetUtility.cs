@@ -1,6 +1,6 @@
 ﻿using Text = GameFramework.Utility.Text;
 
-namespace Game.Utility
+namespace CustomUtility
 {
     public static class AssetUtility
     {

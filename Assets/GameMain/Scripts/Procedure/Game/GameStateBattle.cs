@@ -1,4 +1,7 @@
+using System;
 using CustomComponent;
+using CustomEvent;
+using DataTable;
 using Entity;
 using GameFramework.Fsm;
 using GameFramework.Procedure;
@@ -11,19 +14,19 @@ namespace Procedure
         public override GameStateType GameStateType => GameStateType.Battle;
 
         private EnemyManagerComponent _enemyManager = null;
-        
+
         private int _currentLevel = 0;
-        
-        private bool _levelOver;
+
+        private float _levelTimeLeft = 0;
 
         private Player Player => _procedureGame.Player;
-        
+
         private ProcedureGame _procedureGame = null;
 
-        public void LevelOver()
+        public void AddBattleDuration(float seconds)
         {
-            if (_levelOver) return;
-            _levelOver = true;
+            if (seconds <= 0f) return;
+            _levelTimeLeft += seconds;
         }
 
         #region FSM
@@ -37,21 +40,33 @@ namespace Procedure
         public override void OnEnter(IFsm<IProcedureManager> procedureOwner)
         {
             _currentLevel = _procedureGame.CurrentLevel;
-            _levelOver = false;
-            _enemyManager.OnInit(_currentLevel, this);
-            
+
+            var drLevel = GameEntry.DataTable.GetDataTableRow<DRLevel>(_currentLevel);
+
+            if (drLevel == null)
+            {
+                throw new Exception($"GameStateBattle.OnEnter: {_currentLevel} is not found.");
+            }
+
+            _levelTimeLeft = drLevel.Duration;
+            _enemyManager.OnInit(drLevel);
+
             if (Player != null) Player.Enable = true;
         }
 
         public override void OnUpdate(IFsm<IProcedureManager> procedureOwner, float elapseSeconds,
             float realElapseSeconds)
         {
-            _enemyManager.OnUpdate(elapseSeconds, realElapseSeconds);
-
-            if (_levelOver)
+            if (_levelTimeLeft < 0)
             {
                 _procedureGame.BattleToShopOrLevelUp();
+                return;
             }
+
+            _enemyManager.OnUpdate(elapseSeconds, realElapseSeconds);
+
+            _levelTimeLeft -= elapseSeconds;
+            GameEntry.Event.Fire(this, LevelProcessEventArgs.Create((int)_levelTimeLeft));
         }
 
         public override void OnLeave(IFsm<IProcedureManager> procedureOwner)
