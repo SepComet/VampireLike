@@ -5,6 +5,7 @@ using Entity;
 using Entity.EntityData;
 using GameFramework.Event;
 using Procedure;
+using Simulation;
 using StarForce;
 using UnityEngine;
 using UnityGameFramework.Runtime;
@@ -213,7 +214,17 @@ namespace CustomComponent
             {
                 _currentEnemyCount++;
                 enemy.SetTarget(_player);
+                RemoveEnemyFromCache(enemy.Id);
                 _enemies.Add(enemy);
+
+                if (ne.UserData is EnemyData enemyData)
+                {
+                    GameEntry.SimulationWorld?.UpsertEnemy(CreateEnemySimData(enemy, enemyData));
+                }
+                else
+                {
+                    GameEntry.SimulationWorld?.UpsertEnemy(CreateEnemySimData(enemy, null));
+                }
             }
 
             if (ne.EntityLogicType == typeof(Player))
@@ -228,7 +239,39 @@ namespace CustomComponent
             {
                 if (ne.EntityGroup.Name == "Enemy")
                 {
-                    _currentEnemyCount--;
+                    if (_currentEnemyCount > 0)
+                    {
+                        _currentEnemyCount--;
+                    }
+
+                    RemoveEnemyFromCache(ne.EntityId);
+                    GameEntry.SimulationWorld?.RemoveEnemyByEntityId(ne.EntityId);
+                }
+            }
+        }
+
+        private static EnemySimData CreateEnemySimData(EnemyBase enemy, EnemyData enemyData)
+        {
+            return new EnemySimData
+            {
+                EntityId = enemy.Id,
+                Position = enemy.CachedTransform.position,
+                Forward = enemy.CachedTransform.forward,
+                Speed = enemyData != null ? enemyData.SpeedBase : 0f,
+                AttackRange = 1f,
+                TargetType = 0,
+                State = 0
+            };
+        }
+
+        private void RemoveEnemyFromCache(int entityId)
+        {
+            for (int i = _enemies.Count - 1; i >= 0; i--)
+            {
+                EntityBase cachedEnemy = _enemies[i];
+                if (cachedEnemy == null || cachedEnemy.Id == entityId)
+                {
+                    _enemies.RemoveAt(i);
                 }
             }
         }

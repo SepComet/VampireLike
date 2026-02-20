@@ -32,7 +32,7 @@
   - 新建 `SimulationTickContext`（至少包含 `deltaTime`、`playerPosition`）。
   - 完成标准：工程可编译，场景运行行为与当前一致（只加结构，不切链路）。
 
-- [ ] Checkpoint 2：敌人生命周期接入 Simulation（保持 GameFramework 生命周期不变）
+- [x] Checkpoint 2：敌人生命周期接入 Simulation（保持 GameFramework 生命周期不变）
   - 在敌人 `Show/Hide` 时同步注册/反注册到 `SimulationWorld` 与 `EntityBinding`。
   - `EnemyManagerComponent` 继续负责刷怪与实体显隐，不改外部调用方式。
   - 完成标准：敌人数量统计与当前一致，无重复注册、无悬空索引。

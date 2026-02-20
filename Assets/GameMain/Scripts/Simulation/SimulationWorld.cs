@@ -1,8 +1,9 @@
 using System.Collections.Generic;
+using UnityGameFramework.Runtime;
 
 namespace Simulation
 {
-    public sealed class SimulationWorld
+    public sealed class SimulationWorld : GameFrameworkComponent
     {
         private readonly List<EnemySimData> _enemies = new List<EnemySimData>();
         private readonly List<ProjectileSimData> _projectiles = new List<ProjectileSimData>();
@@ -22,6 +23,17 @@ namespace Simulation
             _enemies.Add(simData);
             EnemyBinding.Bind(simData.EntityId, simulationIndex);
             return simulationIndex;
+        }
+
+        public int UpsertEnemy(in EnemySimData simData)
+        {
+            if (EnemyBinding.TryGetSimulationIndex(simData.EntityId, out int simulationIndex))
+            {
+                _enemies[simulationIndex] = simData;
+                return simulationIndex;
+            }
+
+            return AddEnemy(simData);
         }
 
         public bool RemoveEnemyByEntityId(int entityId)
@@ -52,6 +64,17 @@ namespace Simulation
             return simulationIndex;
         }
 
+        public int UpsertProjectile(in ProjectileSimData simData)
+        {
+            if (ProjectileBinding.TryGetSimulationIndex(simData.EntityId, out int simulationIndex))
+            {
+                _projectiles[simulationIndex] = simData;
+                return simulationIndex;
+            }
+
+            return AddProjectile(simData);
+        }
+
         public bool RemoveProjectileByEntityId(int entityId)
         {
             if (!ProjectileBinding.TryGetSimulationIndex(entityId, out int simulationIndex))
@@ -78,6 +101,17 @@ namespace Simulation
             _pickups.Add(simData);
             PickupBinding.Bind(simData.EntityId, simulationIndex);
             return simulationIndex;
+        }
+
+        public int UpsertPickup(in PickupSimData simData)
+        {
+            if (PickupBinding.TryGetSimulationIndex(simData.EntityId, out int simulationIndex))
+            {
+                _pickups[simulationIndex] = simData;
+                return simulationIndex;
+            }
+
+            return AddPickup(simData);
         }
 
         public bool RemovePickupByEntityId(int entityId)

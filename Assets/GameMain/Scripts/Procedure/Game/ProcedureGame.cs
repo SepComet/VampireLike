@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using CustomEvent;
 using DataTable;
 using Definition.Enum;
 using Entity;
@@ -24,11 +23,11 @@ namespace Procedure
     {
         public override bool UseNativeDialog => false;
 
-        private HudForm _hudForm = null;
-        private bool _hudInitialized = false;
+        private HudForm _hudForm;
+        private bool _hudInitialized;
 
-        private IFsm<IProcedureManager> _procedureOwner = null;
-        private PlayerData _currentPlayerData = null;
+        private IFsm<IProcedureManager> _procedureOwner;
+        private PlayerData _currentPlayerData;
         public int CurrentLevel = 1;
 
         private GameStateType _currentGameState = GameStateType.None;
@@ -88,6 +87,7 @@ namespace Procedure
             base.OnEnter(procedureOwner);
 
             _procedureOwner = procedureOwner;
+            GameEntry.SimulationWorld?.Clear();
 
             GameEntry.Event.Subscribe(OpenUIFormSuccessEventArgs.EventId, OpenUIFormSuccess);
             GameEntry.Event.Subscribe(ShowEntitySuccessEventArgs.EventId, ShowEntitySuccess);
@@ -135,6 +135,7 @@ namespace Procedure
             Player = null;
 
             _procedureOwner = null;
+            GameEntry.SimulationWorld?.Clear();
 
             GameEntry.Event.Unsubscribe(OpenUIFormSuccessEventArgs.EventId, OpenUIFormSuccess);
             GameEntry.Event.Unsubscribe(ShowEntitySuccessEventArgs.EventId, ShowEntitySuccess);
