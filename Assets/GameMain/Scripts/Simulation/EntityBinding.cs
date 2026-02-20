@@ -32,6 +32,12 @@ namespace Simulation
                 return;
             }
 
+            if (_simulationIndexToEntityId.TryGetValue(newSimulationIndex, out int oldEntityId) &&
+                oldEntityId != entityId)
+            {
+                _entityIdToSimulationIndex.Remove(oldEntityId);
+            }
+
             _simulationIndexToEntityId.Remove(oldSimulationIndex);
             _entityIdToSimulationIndex[entityId] = newSimulationIndex;
             _simulationIndexToEntityId[newSimulationIndex] = entityId;
