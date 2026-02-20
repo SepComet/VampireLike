@@ -25,14 +25,46 @@
 - 以上问题修正后，核心流程可稳定连续跑 10 分钟无异常日志。
 
 ## 2. P1 Simulation 分层（为 Job/Burst 做结构准备）
-- [ ] 新建 `Simulation` 层（建议目录：`Assets/GameMain/Scripts/Simulation`）：
-  - `SimulationWorld`：统一持有敌人/投射物/掉落物的纯数据容器。
-  - `EnemySimData / ProjectileSimData / PickupSimData`：结构化、连续内存友好的数据定义。
-  - `EntityBinding`：维护 `EntityId <-> SimulationIndex` 映射。
-- [ ] 将“逻辑计算”和“表现层（Transform/Animator/特效/UI）”拆离：
-  - 逻辑层输出 position/rotation/state。
-  - 表现层只消费结果做显示。
-- [ ] 先保持现有 GameFramework 实体生命周期不变，仅替换更新路径。
+- [ ] Checkpoint 1：搭建 Simulation 基础骨架（仅新增，不改行为）
+  - 新建目录：`Assets/GameMain/Scripts/Simulation`。
+  - 新建 `SimulationWorld`，统一持有 `EnemySimData / ProjectileSimData / PickupSimData` 容器。
+  - 新建 `EntityBinding`，维护 `EntityId <-> SimulationIndex` 双向映射。
+  - 新建 `SimulationTickContext`（至少包含 `deltaTime`、`playerPosition`）。
+  - 完成标准：工程可编译，场景运行行为与当前一致（只加结构，不切链路）。
+
+- [ ] Checkpoint 2：敌人生命周期接入 Simulation（保持 GameFramework 生命周期不变）
+  - 在敌人 `Show/Hide` 时同步注册/反注册到 `SimulationWorld` 与 `EntityBinding`。
+  - `EnemyManagerComponent` 继续负责刷怪与实体显隐，不改外部调用方式。
+  - 完成标准：敌人数量统计与当前一致，无重复注册、无悬空索引。
+
+- [ ] Checkpoint 3：建立 Simulation 主更新入口并接入 Battle 状态
+  - 在 `GameStateBattle.OnUpdate` 中增加 `SimulationWorld.Tick(...)` 调用。
+  - 先只接“敌人移动/追踪”系统，其他逻辑保持原路径。
+  - 增加开关（建议 `UseSimulationMovement`）用于 A/B 对比与回滚。
+  - 完成标准：关闭开关与当前行为一致；开启开关后敌人仍能正常追踪玩家。
+
+- [ ] Checkpoint 4：迁移敌人核心移动逻辑到 Simulation（去 MonoBehaviour 核心逻辑）
+  - 将 `MeleeEnemy/RemoteEnemy` 的目标追踪、移动方向、攻击距离判定迁至 Simulation。
+  - `EnemySimData` 至少包含：`position`、`forward`、`speed`、`attackRange`、`targetType`、`state`。
+  - `MeleeEnemy/RemoteEnemy.OnUpdate` 仅保留表现层或空实现（不再做核心移动计算）。
+  - 完成标准：同等刷怪量下，敌人移动结果与旧逻辑视觉一致，无明显穿模/停滞回归。
+
+- [ ] Checkpoint 5：拆分“逻辑输出”与“表现层消费”
+  - 逻辑层输出：`position/rotation/state`（必要时含 `isMoving`）。
+  - 表现层仅消费并回写 `Transform`，动画/特效/UI 不参与逻辑计算。
+  - 明确边界：HPBar、DamageText、Animator 继续由表现层驱动。
+  - 完成标准：关闭/开启 Simulation 不影响 UI 事件链（血量、经验、金币、关卡流程）。
+
+- [ ] Checkpoint 6：补齐 Projectile/Pickup 的 Simulation 占位数据通道
+  - 在 `SimulationWorld` 中接入 `ProjectileSimData / PickupSimData` 容器与绑定关系。
+  - 先不迁移完整行为，只保证创建、回收、索引同步路径可用。
+  - 完成标准：投射物/掉落物实体生命周期正常，无索引越界与回收遗漏。
+
+- [ ] Checkpoint 7：P1 阶段回归与性能记录
+  - 回归用例：战斗 10 分钟、`Battle -> LevelUp -> Shop -> Battle` 循环、掉落吸附与拾取。
+  - Profiling 对比：记录 1k/2k/3k 敌人下 Main Thread、GC Alloc、敌人更新耗时。
+  - 输出文档：`P1 Simulation 分层设计 + 回滚开关说明 + 对比数据`。
+  - 完成标准：核心流程稳定，无新增 Error/Exception；可一键回滚到旧更新路径。
 
 **验收标准**
 - 敌人移动/追踪由 Simulation 统一调度，不再逐个 Enemy MonoBehaviour 执行核心逻辑。
