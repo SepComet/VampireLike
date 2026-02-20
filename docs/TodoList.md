@@ -25,7 +25,7 @@
 - 以上问题修正后，核心流程可稳定连续跑 10 分钟无异常日志。
 
 ## 2. P1 Simulation 分层（为 Job/Burst 做结构准备）
-- [ ] Checkpoint 1：搭建 Simulation 基础骨架（仅新增，不改行为）
+- [x] Checkpoint 1：搭建 Simulation 基础骨架（仅新增，不改行为）
   - 新建目录：`Assets/GameMain/Scripts/Simulation`。
   - 新建 `SimulationWorld`，统一持有 `EnemySimData / ProjectileSimData / PickupSimData` 容器。
   - 新建 `EntityBinding`，维护 `EntityId <-> SimulationIndex` 双向映射。
