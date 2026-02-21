@@ -4,24 +4,20 @@ namespace CustomUtility
 {
     public sealed class GridBucketEnemySeparationSolver : IEnemySeparationSolver
     {
-        private sealed class Agent
+        private struct Agent
         {
-            public Transform Transform;
             public float Radius;
             public Vector3 Position;
             public int CellX;
             public int CellZ;
         }
 
-        private readonly System.Collections.Generic.Dictionary<Transform, Agent> _agents = new();
-
-        private readonly System.Collections.Generic.Dictionary<long, System.Collections.Generic.List<Transform>>
-            _buckets = new();
-
-        private readonly System.Collections.Generic.List<Transform> _recycle = new();
+        private readonly System.Collections.Generic.Dictionary<int, Agent> _agents = new();
+        private readonly System.Collections.Generic.Dictionary<long, System.Collections.Generic.List<int>> _buckets = new();
+        private readonly System.Collections.Generic.Stack<System.Collections.Generic.List<int>> _bucketListPool = new();
+        private readonly System.Collections.Generic.List<long> _activeBucketKeys = new();
         private readonly float _cellSize;
 
-        private int _snapshotFrame = -1;
         private float _maxRadius = 0.45f;
 
         public GridBucketEnemySeparationSolver(float cellSize = 1f)
@@ -29,44 +25,42 @@ namespace CustomUtility
             _cellSize = Mathf.Max(0.1f, cellSize);
         }
 
-        public void Register(Transform transform, float bodyRadius)
+        public void SetAgents(System.Collections.Generic.IReadOnlyList<EnemySeparationAgent> agents)
         {
-            if (transform == null) return;
+            RecycleBucketsForSnapshot();
+            _agents.Clear();
+            _maxRadius = 0.01f;
 
-            if (!_agents.TryGetValue(transform, out var agent))
+            if (agents == null) return;
+
+            for (int i = 0; i < agents.Count; i++)
             {
-                agent = new Agent();
-                _agents.Add(transform, agent);
-            }
+                EnemySeparationAgent input = agents[i];
+                Vector3 position = input.Position;
+                position.y = 0f;
+                float radius = Mathf.Max(0.01f, input.Radius);
 
-            agent.Transform = transform;
-            agent.Radius = Mathf.Max(0.01f, bodyRadius);
-            if (agent.Radius > _maxRadius)
-            {
-                _maxRadius = agent.Radius;
-            }
+                Agent agent = new Agent
+                {
+                    Radius = radius,
+                    Position = position,
+                    CellX = ToCell(position.x),
+                    CellZ = ToCell(position.z)
+                };
 
-            _snapshotFrame = -1;
+                _agents[input.AgentId] = agent;
+                AddToBucket(input.AgentId, agent.CellX, agent.CellZ);
+
+                if (radius > _maxRadius)
+                {
+                    _maxRadius = radius;
+                }
+            }
         }
 
-        public void Unregister(Transform transform)
+        public Vector3 Resolve(int agentId, Vector3 desiredPosition, Vector3 fallbackDirection, int iterations)
         {
-            if (transform == null) return;
-            if (!_agents.TryGetValue(transform, out var agent)) return;
-
-            RemoveFromBucket(transform, agent.CellX, agent.CellZ);
-            _agents.Remove(transform);
-            RecalculateMaxRadius();
-            _snapshotFrame = -1;
-        }
-
-        public Vector3 Resolve(Transform transform, Vector3 desiredPosition, Vector3 fallbackDirection,
-            int iterations)
-        {
-            if (transform == null) return desiredPosition;
-            if (!_agents.TryGetValue(transform, out var self)) return desiredPosition;
-
-            EnsureSnapshot();
+            if (!_agents.TryGetValue(agentId, out var self)) return desiredPosition;
 
             Vector3 candidate = desiredPosition;
             candidate.y = 0f;
@@ -89,9 +83,9 @@ namespace CustomUtility
 
                         for (int i = 0; i < bucket.Count; i++)
                         {
-                            Transform otherTransform = bucket[i];
-                            if (otherTransform == transform) continue;
-                            if (!_agents.TryGetValue(otherTransform, out var other)) continue;
+                            int otherAgentId = bucket[i];
+                            if (otherAgentId == agentId) continue;
+                            if (!_agents.TryGetValue(otherAgentId, out var other)) continue;
 
                             Vector3 toSelf = candidate - other.Position;
                             float minDistance = self.Radius + other.Radius;
@@ -114,98 +108,65 @@ namespace CustomUtility
                 }
             }
 
-            SyncAgentPosition(transform, self, candidate);
+            SyncAgentPosition(agentId, ref self, candidate);
 
             candidate.y = desiredPosition.y;
             return candidate;
         }
 
-        private void EnsureSnapshot()
+        private void RecycleBucketsForSnapshot()
         {
-            int frame = Time.frameCount;
-            if (_snapshotFrame == frame) return;
-
-            _snapshotFrame = frame;
-            _buckets.Clear();
-            _recycle.Clear();
-
-            foreach (var pair in _agents)
+            for (int i = 0; i < _activeBucketKeys.Count; i++)
             {
-                Transform transform = pair.Key;
-                Agent agent = pair.Value;
-                if (transform == null || agent.Transform == null)
-                {
-                    _recycle.Add(transform);
-                    continue;
-                }
+                long key = _activeBucketKeys[i];
+                if (!_buckets.TryGetValue(key, out var bucket)) continue;
 
-                Vector3 position = agent.Transform.position;
-                position.y = 0f;
-                agent.Position = position;
-
-                agent.CellX = ToCell(position.x);
-                agent.CellZ = ToCell(position.z);
-                AddToBucket(transform, agent.CellX, agent.CellZ);
+                bucket.Clear();
+                _bucketListPool.Push(bucket);
+                _buckets.Remove(key);
             }
 
-            for (int i = 0; i < _recycle.Count; i++)
-            {
-                _agents.Remove(_recycle[i]);
-            }
+            _activeBucketKeys.Clear();
         }
 
-        private void SyncAgentPosition(Transform transform, Agent agent, Vector3 position)
+        private void SyncAgentPosition(int agentId, ref Agent agent, Vector3 position)
         {
             int newCellX = ToCell(position.x);
             int newCellZ = ToCell(position.z);
 
             if (agent.CellX != newCellX || agent.CellZ != newCellZ)
             {
-                RemoveFromBucket(transform, agent.CellX, agent.CellZ);
-                AddToBucket(transform, newCellX, newCellZ);
+                RemoveFromBucket(agentId, agent.CellX, agent.CellZ);
+                AddToBucket(agentId, newCellX, newCellZ);
                 agent.CellX = newCellX;
                 agent.CellZ = newCellZ;
             }
 
             agent.Position = position;
+            _agents[agentId] = agent;
         }
 
-        private void AddToBucket(Transform transform, int cellX, int cellZ)
+        private void AddToBucket(int agentId, int cellX, int cellZ)
         {
             long key = CellKey(cellX, cellZ);
             if (!_buckets.TryGetValue(key, out var list))
             {
-                list = new System.Collections.Generic.List<Transform>(8);
+                list = _bucketListPool.Count > 0
+                    ? _bucketListPool.Pop()
+                    : new System.Collections.Generic.List<int>(8);
                 _buckets.Add(key, list);
+                _activeBucketKeys.Add(key);
             }
 
-            list.Add(transform);
+            list.Add(agentId);
         }
 
-        private void RemoveFromBucket(Transform transform, int cellX, int cellZ)
+        private void RemoveFromBucket(int agentId, int cellX, int cellZ)
         {
             long key = CellKey(cellX, cellZ);
             if (!_buckets.TryGetValue(key, out var list)) return;
 
-            list.Remove(transform);
-            if (list.Count == 0)
-            {
-                _buckets.Remove(key);
-            }
-        }
-
-        private void RecalculateMaxRadius()
-        {
-            float max = 0.01f;
-            foreach (var pair in _agents)
-            {
-                if (pair.Value.Radius > max)
-                {
-                    max = pair.Value.Radius;
-                }
-            }
-
-            _maxRadius = max;
+            list.Remove(agentId);
         }
 
         private int ToCell(float value)
@@ -218,5 +179,4 @@ namespace CustomUtility
             return ((long)x << 32) ^ (uint)z;
         }
     }
-
 }

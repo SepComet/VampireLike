@@ -4,39 +4,41 @@ namespace CustomUtility
 {
     public sealed class NaiveEnemySeparationSolver : IEnemySeparationSolver
     {
-        private sealed class Agent
+        private struct Agent
         {
-            public Transform Transform;
             public float Radius;
+            public Vector3 Position;
         }
 
-        private readonly System.Collections.Generic.Dictionary<Transform, Agent> _agents = new();
-        private readonly System.Collections.Generic.List<Transform> _agentKeys = new();
+        private readonly System.Collections.Generic.Dictionary<int, Agent> _agents = new();
+        private readonly System.Collections.Generic.List<int> _agentKeys = new();
 
-        public void Register(Transform transform, float bodyRadius)
+        public void SetAgents(System.Collections.Generic.IReadOnlyList<EnemySeparationAgent> agents)
         {
-            if (transform == null) return;
+            _agents.Clear();
+            _agentKeys.Clear();
+            if (agents == null) return;
 
-            if (!_agents.TryGetValue(transform, out var agent))
+            for (int i = 0; i < agents.Count; i++)
             {
-                agent = new Agent();
-                _agents.Add(transform, agent);
+                EnemySeparationAgent input = agents[i];
+                Vector3 position = input.Position;
+                position.y = 0f;
+
+                Agent agent = new Agent
+                {
+                    Radius = Mathf.Max(0.01f, input.Radius),
+                    Position = position
+                };
+
+                _agents[input.AgentId] = agent;
+                _agentKeys.Add(input.AgentId);
             }
-
-            agent.Transform = transform;
-            agent.Radius = Mathf.Max(0.01f, bodyRadius);
         }
 
-        public void Unregister(Transform transform)
+        public Vector3 Resolve(int agentId, Vector3 desiredPosition, Vector3 fallbackDirection, int iterations)
         {
-            if (transform == null) return;
-            _agents.Remove(transform);
-        }
-
-        public Vector3 Resolve(Transform transform, Vector3 desiredPosition, Vector3 fallbackDirection, int iterations)
-        {
-            if (transform == null) return desiredPosition;
-            if (!_agents.TryGetValue(transform, out var self)) return desiredPosition;
+            if (!_agents.TryGetValue(agentId, out var self)) return desiredPosition;
 
             Vector3 candidate = desiredPosition;
             candidate.y = 0f;
@@ -44,26 +46,16 @@ namespace CustomUtility
             Vector3 fallback = fallbackDirection.sqrMagnitude > 0.0001f ? fallbackDirection.normalized : Vector3.right;
             fallback.y = 0f;
 
-            _agentKeys.Clear();
-            foreach (var pair in _agents)
-            {
-                _agentKeys.Add(pair.Key);
-            }
-
             int effectiveIterations = Mathf.Max(1, iterations);
             for (int iter = 0; iter < effectiveIterations; iter++)
             {
                 for (int i = 0; i < _agentKeys.Count; i++)
                 {
-                    Transform otherTransform = _agentKeys[i];
-                    if (otherTransform == transform) continue;
-                    if (!_agents.TryGetValue(otherTransform, out var other)) continue;
-                    if (other.Transform == null) continue;
+                    int otherAgentId = _agentKeys[i];
+                    if (otherAgentId == agentId) continue;
+                    if (!_agents.TryGetValue(otherAgentId, out var other)) continue;
 
-                    Vector3 otherPosition = other.Transform.position;
-                    otherPosition.y = 0f;
-
-                    Vector3 toSelf = candidate - otherPosition;
+                    Vector3 toSelf = candidate - other.Position;
                     float minDistance = self.Radius + other.Radius;
                     float minDistanceSq = minDistance * minDistance;
                     float sqrDistance = toSelf.sqrMagnitude;

@@ -1,6 +1,4 @@
-using Components;
 using Entity;
-using Entity.EntityData;
 using GameFramework.Event;
 using UnityGameFramework.Runtime;
 
@@ -45,21 +43,20 @@ namespace Simulation
 
                 if (groupName == EnemyGroupName && args.Entity.Logic is EnemyBase enemy)
                 {
-                    _world.RegisterEnemyTransform(enemy.Id, enemy.CachedTransform);
-                    _world.UpsertEnemy(CreateEnemySimData(enemy, args.UserData as EnemyData));
+                    _world.RegisterEnemyLifecycle(enemy, args.UserData);
                     return;
                 }
 
                 if (groupName == DropGroupName && args.Entity.Logic is EntityBase pickupEntity)
                 {
-                    _world.UpsertPickup(CreatePickupSimData(pickupEntity));
+                    _world.RegisterPickupLifecycle(pickupEntity);
                     return;
                 }
 
                 if ((groupName == BulletGroupName || groupName == ProjectileGroupName) &&
                     args.Entity.Logic is EntityBase projectileEntity)
                 {
-                    _world.UpsertProjectile(CreateProjectileSimData(projectileEntity));
+                    _world.RegisterProjectileLifecycle(projectileEntity);
                 }
             }
 
@@ -72,66 +69,20 @@ namespace Simulation
                 string groupName = args.EntityGroup.Name;
                 if (groupName == EnemyGroupName)
                 {
-                    _world.UnregisterEnemyTransform(args.EntityId);
-                    _world.RemoveEnemyByEntityId(args.EntityId);
+                    _world.UnregisterEnemyLifecycle(args.EntityId);
                     return;
                 }
 
                 if (groupName == DropGroupName)
                 {
-                    _world.RemovePickupByEntityId(args.EntityId);
+                    _world.UnregisterPickupLifecycle(args.EntityId);
                     return;
                 }
 
                 if (groupName == BulletGroupName || groupName == ProjectileGroupName)
                 {
-                    _world.RemoveProjectileByEntityId(args.EntityId);
+                    _world.UnregisterProjectileLifecycle(args.EntityId);
                 }
-            }
-
-            private static EnemySimData CreateEnemySimData(EnemyBase enemy, EnemyData enemyData)
-            {
-                MovementComponent movementComponent = enemy != null ? enemy.GetComponent<MovementComponent>() : null;
-
-                return new EnemySimData
-                {
-                    EntityId = enemy.Id,
-                    Position = enemy.CachedTransform.position,
-                    Forward = enemy.CachedTransform.forward,
-                    Rotation = enemy.CachedTransform.rotation,
-                    Speed = enemyData != null ? enemyData.SpeedBase : 0f,
-                    AttackRange = 1f,
-                    AvoidEnemyOverlap = movementComponent != null && movementComponent.AvoidEnemyOverlap,
-                    EnemyBodyRadius = movementComponent != null ? movementComponent.EnemyBodyRadius : 0.45f,
-                    SeparationIterations = movementComponent != null ? movementComponent.SeparationIterations : 2,
-                    TargetType = 0,
-                    State = 0
-                };
-            }
-
-            private static PickupSimData CreatePickupSimData(EntityBase pickupEntity)
-            {
-                return new PickupSimData
-                {
-                    EntityId = pickupEntity.Id,
-                    Position = pickupEntity.CachedTransform.position,
-                    PickupRadius = 0.35f,
-                    State = 0
-                };
-            }
-
-            private static ProjectileSimData CreateProjectileSimData(EntityBase projectileEntity)
-            {
-                return new ProjectileSimData
-                {
-                    EntityId = projectileEntity.Id,
-                    OwnerEntityId = 0,
-                    Position = projectileEntity.CachedTransform.position,
-                    Forward = projectileEntity.CachedTransform.forward,
-                    Speed = 0f,
-                    RemainingLifetime = 0f,
-                    State = 0
-                };
             }
         }
     }

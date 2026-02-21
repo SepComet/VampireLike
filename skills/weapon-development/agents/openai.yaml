@@ -1,0 +1,4 @@
+interface:
+  display_name: "Weapon Development"
+  short_description: "Build and extend VampireLike weapon architecture"
+  default_prompt: "Use $weapon-development to implement a weapon system change with stable state flow and data contracts."

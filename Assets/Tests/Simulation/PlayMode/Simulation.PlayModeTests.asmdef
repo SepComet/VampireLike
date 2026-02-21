@@ -1,0 +1,9 @@
+{
+    "name": "Simulation.PlayModeTests",
+    "references": [],
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": []
+}
