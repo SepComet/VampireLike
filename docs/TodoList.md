@@ -123,13 +123,13 @@
   - 约束：默认可一键回退到 P1.5 路径，避免全量切换导致定位困难。
   - 完成标准：Editor/Development Build 均可编译运行；关闭开关时行为与 P1.5 一致。
 
-- [ ] Checkpoint 2：Simulation 与 Job 数据通道打通（仅建通道，不改行为）
+- [x] Checkpoint 2：Simulation 与 Job 数据通道打通（仅建通道，不改行为）
   - 为敌人/投射物建立 Job 输入输出结构（纯数据，不含 `Transform`/托管引用）。
   - 建立 `SimulationWorld -> NativeContainer -> SimulationWorld` 的拷贝与回写流程。
   - 统一生命周期：`Allocator.Persistent` 分配、集中 `Dispose`，避免泄漏。
   - 完成标准：战斗循环可稳定运行，且该通道持续帧无新增 GC Alloc 热点。
 
-- [ ] Checkpoint 3：敌人移动与朝向 Job 化（第一优先）
+- [x] Checkpoint 3：敌人移动与朝向 Job 化（第一优先）
   - 将敌人移动、朝向更新迁移至 `IJobParallelFor`。
   - 输入最少包含：`position/forward/speed/targetPosition/deltaTime/state`。
   - 输出最少包含：`nextPosition/nextForward/isMoving`。

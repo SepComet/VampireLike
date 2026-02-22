@@ -40,6 +40,9 @@ namespace Simulation.Tests.PlayMode
         private static readonly MethodInfo SetUseSimulationMovementMethod =
             SimulationWorldType?.GetMethod("SetUseSimulationMovement", PublicInstance);
 
+        private static readonly MethodInfo SetUseJobSimulationMethod =
+            SimulationWorldType?.GetMethod("SetUseJobSimulation", PublicInstance);
+
         private static readonly MethodInfo UseGridBucketSolverMethod =
             EnemySeparationSolverProviderType?.GetMethod("UseGridBucketSolver", PublicStatic);
 
@@ -67,6 +70,7 @@ namespace Simulation.Tests.PlayMode
             Assert.NotNull(TryGetEnemyDataMethod, "TryGetEnemyData reflection lookup failed.");
             Assert.NotNull(TickMethod, "Tick reflection lookup failed.");
             Assert.NotNull(SetUseSimulationMovementMethod, "SetUseSimulationMovement reflection lookup failed.");
+            Assert.NotNull(SetUseJobSimulationMethod, "SetUseJobSimulation reflection lookup failed.");
             Assert.NotNull(UseGridBucketSolverMethod, "UseGridBucketSolver reflection lookup failed.");
             Assert.NotNull(EnemiesProperty, "Enemies property reflection lookup failed.");
 
@@ -152,6 +156,24 @@ namespace Simulation.Tests.PlayMode
             Assert.IsTrue(movedEntityExists);
             Assert.That((int)GetField(movedEnemy, "EntityId"), Is.EqualTo(3103));
             Assert.That((int)GetField(GetEnemyAt(1), "EntityId"), Is.EqualTo(3103));
+            yield break;
+        }
+
+        [UnityTest]
+        public IEnumerator TickEnemies_ChasesPlayer_WhenJobSimulationChannelEnabled()
+        {
+            SetUseJobSimulationMethod.Invoke(_worldComponent, new object[] { true });
+            UpsertEnemy(CreateEnemy(entityId: 3201, position: Vector3.zero, speed: 2f, attackRange: 1f));
+
+            InvokeTick(deltaTime: 1f, realDeltaTime: 1f, playerPosition: new Vector3(10f, 0f, 0f));
+
+            object enemy = GetEnemyAt(0);
+            Assert.That((int)GetField(enemy, "State"), Is.EqualTo(1));
+            Vector3 position = (Vector3)GetField(enemy, "Position");
+            Vector3 forward = (Vector3)GetField(enemy, "Forward");
+            Assert.That(position.x, Is.EqualTo(2f).Within(0.0001f));
+            Assert.That(position.z, Is.EqualTo(0f).Within(0.0001f));
+            Assert.That(forward.x, Is.EqualTo(1f).Within(0.0001f));
             yield break;
         }
 

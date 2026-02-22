@@ -78,6 +78,7 @@ namespace Simulation
             base.Awake();
             _entitySync = new EntitySync(this);
             _presentation = new Presentation(this);
+            InitializeJobDataChannels();
         }
 
         private void Start()
@@ -90,6 +91,7 @@ namespace Simulation
             _entitySync?.OnDestroy();
             _entitySync = null;
             _presentation = null;
+            DisposeJobDataChannels();
         }
 
         private void LateUpdate()
@@ -282,12 +284,10 @@ namespace Simulation
 
             if (_useJobSimulation)
             {
-                // Checkpoint 1: the switch is in place; Checkpoint 3+ will replace this with jobified path.
                 using (CustomProfilerMarker.TickEnemies.Auto())
                 {
-                    TickEnemies(in context);
+                    TickEnemiesJobified(in context);
                 }
-
                 return;
             }
 
@@ -304,6 +304,7 @@ namespace Simulation
             _pickups.Clear();
             _enemySeparationAgents.Clear();
             _enemyTickWorkItems.Clear();
+            ClearJobDataChannels();
 
             EnemyBinding.Clear();
             ProjectileBinding.Clear();
