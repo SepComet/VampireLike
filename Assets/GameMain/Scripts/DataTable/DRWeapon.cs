@@ -109,6 +109,12 @@ namespace DataTable
         {
         }
         
+        /// <summary>
+        /// 解参数
+        /// </summary>
+        /// <param name="rawParams"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentException"></exception>
         private Dictionary<string, string> DeserializeParams(string rawParams)
         {
             if (!rawParams.StartsWith('[') || !rawParams.EndsWith(']'))

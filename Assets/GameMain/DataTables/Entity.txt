@@ -2,12 +2,13 @@
 #	Id		AssetName
 #	int		string
 #	实体编号	策划备注	资源名称
+	11	跟随相机	FollowCamera
 	1001	测试玩家	Player
 	101	近战敌人	MeleeEnemy
 	102	远程敌人	RemoteEnemy
-	11	跟随相机	FollowCamera
 	201	武器小刀	WeaponKnife
 	202	武器手枪	WeaponHandgun
 	203	武器斧头	WeaponSlash
+	204	武器闪电	WeaponLightning
 	10001	金币实体	CoinEntity
 	10002	经验实体	ExpEntity

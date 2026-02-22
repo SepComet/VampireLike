@@ -9,6 +9,11 @@ namespace CustomDebugger
         public static readonly ProfilerMarker TickEnemies_MoveSeparation = new ProfilerMarker("TickEnemies.MoveSeparation");
         public static readonly ProfilerMarker TickEnemies_StateUpdate = new ProfilerMarker("TickEnemies.StateUpdate");
         public static readonly ProfilerMarker TickEnemies_WriteBack = new ProfilerMarker("TickEnemies.WriteBack");
+        public static readonly ProfilerMarker Collision_BuildQueries = new("Collision.BuildQueries");
+        public static readonly ProfilerMarker Collision_BuildBuckets = new("Collision.BuildBuckets");
+        public static readonly ProfilerMarker Collision_QueryCandidates = new("Collision.QueryCandidates");
+        public static readonly ProfilerMarker Collision_ResolveProjectile = new("Collision.ResolveProjectile");
+        public static readonly ProfilerMarker Collision_ResolveArea = new("Collision.ResolveArea");
         public static readonly ProfilerMarker TargetSelection_BuildBuckets = new("TargetSelection.BuildBuckets");
         public static readonly ProfilerMarker TargetSelection_QueryNeighbors = new("TargetSelection.QueryNeighbors");
         public static readonly ProfilerMarker Movement_Update = new ProfilerMarker("Movement_Update"); 

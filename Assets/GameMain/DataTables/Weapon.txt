@@ -5,3 +5,4 @@
 	1	玩家武器	201	小刀	Almighty_Icon	White	120	0.05	100	1.5	5	10000	[hitRadius:2]	[]
 	2		202	手枪	Almighty_Icon	White	130	0.05	120	1	15	10000	[]	[]
 	3		203	斧头	Almighty_Icon	White	100	0.1	150	2	5	10000	[SectorAngle:120]	[]
+	4		204	闪电	Almighty_Icon	White	150	0.08	80	3	12	10000	[hitRadius:3;HoverHeight:10]	[]

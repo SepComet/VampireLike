@@ -164,6 +164,22 @@ namespace CustomComponent
             GUILayout.Label($"Battle Time: {enemyManager.ElapsedBattleTime:F1}s / {enemyManager.BattleDuration:F1}s");
             GUILayout.Label($"Enemy Count: {enemyManager.CurrentEnemyCount}");
 
+            Simulation.SimulationWorld simulationWorld = GameEntry.SimulationWorld;
+            if (simulationWorld != null)
+            {
+                GUILayout.Space(4f);
+                GUILayout.Label(
+                    $"Sim Switch: Move={(simulationWorld.UseSimulationMovement ? "On" : "Off")} Job={(simulationWorld.UseJobSimulation ? "On" : "Off")} Burst={(simulationWorld.UseBurstJobs ? "On" : "Off")}");
+                GUILayout.Label(
+                    $"Collision Queries: total {simulationWorld.LastCollisionQueryCount} (Projectile {simulationWorld.LastProjectileCollisionQueryCount} / Area {simulationWorld.LastAreaCollisionQueryCount})");
+                GUILayout.Label(
+                    $"Collision Candidates: total {simulationWorld.LastCollisionCandidateCount} (Projectile {simulationWorld.LastProjectileCollisionCandidateCount} / Area {simulationWorld.LastAreaCollisionCandidateCount})");
+                GUILayout.Label(
+                    $"Area Resolve: hits {simulationWorld.LastResolvedAreaHitCount}");
+                GUILayout.Label(
+                    $"Broad Phase: cell {simulationWorld.LastCollisionCellSize:F2}, hasEnemyTargets {(simulationWorld.LastCollisionHasEnemyTargets ? "Yes" : "No")}");
+            }
+
             GUILayout.BeginHorizontal();
             GUILayout.Label("Rate", GUILayout.Width(52f));
             string rateText = GUILayout.TextField(_spawnRateScaleInput.ToString("F2"), GUILayout.Width(60f));

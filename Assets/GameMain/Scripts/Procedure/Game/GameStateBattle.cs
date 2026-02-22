@@ -91,6 +91,15 @@ namespace Procedure
             {
                 GameEntry.Entity.HideEntity(entity.Id);
             }
+
+            var enemyProjectiles = GameEntry.Entity.GetEntityGroup("EnemyProjectile")?.GetAllEntities();
+            if (enemyProjectiles != null)
+            {
+                foreach (var projectile in enemyProjectiles)
+                {
+                    GameEntry.Entity.HideEntity(projectile.Id);
+                }
+            }
         }
 
         public override void OnDestroy(IFsm<IProcedureManager> procedureOwner)

@@ -28,14 +28,15 @@ namespace Entity.EntityData
 
         public WeaponType WeaponType => (WeaponType)_drWeapon.Id;
 
-        public string GetParamsString(string paramsName)
+        public bool TryGetParam(string key, out string value)
         {
-            if (!Params.TryGetValue(paramsName.ToLower(), out var value))
+            value = null;
+            if (string.IsNullOrEmpty(key) || Params == null)
             {
-                throw new Exception($"Parameter '{paramsName}' not found.");
+                return false;
             }
 
-            return value;
+            return Params.TryGetValue(key.ToLower(), out value);
         }
 
         /// <summary>

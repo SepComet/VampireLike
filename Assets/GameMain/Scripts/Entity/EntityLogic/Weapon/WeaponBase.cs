@@ -220,6 +220,32 @@ namespace Entity.Weapon
             return AIUtility.GetSqrMagnitudeXZ(this, target) < sqrRange;
         }
 
+        protected bool TryQueueAreaCollisionQuery(in Vector3 center, float radius, int maxTargets = 16)
+        {
+            var simulationWorld = GameEntry.SimulationWorld;
+            if (simulationWorld == null)
+            {
+                return false;
+            }
+
+            int ownerEntityId = WeaponData != null ? WeaponData.OwnerId : Id;
+            return simulationWorld.TryEnqueueAreaCollisionQuery(Id, ownerEntityId, in center, radius, maxTargets);
+        }
+
+        protected bool TryQueueSectorCollisionQuery(in Vector3 center, float radius, in Vector3 direction,
+            float halfAngleDeg, int maxTargets = 16)
+        {
+            var simulationWorld = GameEntry.SimulationWorld;
+            if (simulationWorld == null)
+            {
+                return false;
+            }
+
+            int ownerEntityId = WeaponData != null ? WeaponData.OwnerId : Id;
+            return simulationWorld.TryEnqueueSectorCollisionQuery(Id, ownerEntityId, in center, radius, in direction,
+                halfAngleDeg, maxTargets);
+        }
+
         protected void SetTargetSelector(TargetSelectorType selectorType)
         {
             TargetSelector = CreateSelector(selectorType);
@@ -284,6 +310,5 @@ namespace Entity.Weapon
 
  
 }
-
 
 

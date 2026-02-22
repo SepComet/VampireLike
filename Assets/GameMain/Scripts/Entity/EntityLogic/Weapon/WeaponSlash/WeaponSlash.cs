@@ -93,12 +93,8 @@ namespace Entity.Weapon
 
         private void ApplySectorDamage()
         {
-            if (_attackRadius <= 0f || _hitResults == null || _hitResults.Length == 0) return;
+            if (_attackRadius <= 0f) return;
 
-            int hitCount = Physics.OverlapSphereNonAlloc(_attackCenter, _attackRadius, _hitResults, _hitMask,
-                QueryTriggerInteraction.Collide);
-
-            _hitEntityIds.Clear();
             Vector3 forward = CachedTransform.forward;
             forward.y = 0f;
             if (forward.sqrMagnitude <= Mathf.Epsilon)
@@ -107,8 +103,20 @@ namespace Entity.Weapon
             }
 
             forward.Normalize();
-
             float halfAngle = _sectorAngle * 0.5f;
+            if (TryQueueSectorCollisionQuery(_attackCenter, _attackRadius, in forward, halfAngle,
+                    Mathf.Max(1, _maxHitColliders)))
+            {
+                _hitEntityIds.Clear();
+                return;
+            }
+
+            if (_hitResults == null || _hitResults.Length == 0) return;
+
+            int hitCount = Physics.OverlapSphereNonAlloc(_attackCenter, _attackRadius, _hitResults, _hitMask,
+                QueryTriggerInteraction.Collide);
+
+            _hitEntityIds.Clear();
             for (int i = 0; i < hitCount; i++)
             {
                 Collider collider = _hitResults[i];

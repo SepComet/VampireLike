@@ -12,6 +12,7 @@ namespace Simulation
             private const string DropGroupName = "Drop";
             private const string BulletGroupName = "Bullet";
             private const string ProjectileGroupName = "Projectile";
+            private const string EnemyProjectileGroupName = "EnemyProjectile";
 
             private readonly SimulationWorld _world;
 
@@ -53,10 +54,11 @@ namespace Simulation
                     return;
                 }
 
-                if ((groupName == BulletGroupName || groupName == ProjectileGroupName) &&
+                if ((groupName == BulletGroupName || groupName == ProjectileGroupName ||
+                     groupName == EnemyProjectileGroupName) &&
                     args.Entity.Logic is EntityBase projectileEntity)
                 {
-                    _world.RegisterProjectileLifecycle(projectileEntity);
+                    _world.RegisterProjectileLifecycle(projectileEntity, args.UserData);
                 }
             }
 
@@ -79,7 +81,8 @@ namespace Simulation
                     return;
                 }
 
-                if (groupName == BulletGroupName || groupName == ProjectileGroupName)
+                if (groupName == BulletGroupName || groupName == ProjectileGroupName ||
+                    groupName == EnemyProjectileGroupName)
                 {
                     _world.UnregisterProjectileLifecycle(args.EntityId);
                 }

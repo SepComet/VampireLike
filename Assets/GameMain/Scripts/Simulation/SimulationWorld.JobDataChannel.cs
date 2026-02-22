@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine;
@@ -43,7 +44,11 @@ namespace Simulation
             public int OwnerEntityId;
             public Vector3 Position;
             public Vector3 Forward;
+            public Vector3 Velocity;
             public float Speed;
+            public float LifeTime;
+            public float Age;
+            public bool Active;
             public float RemainingLifetime;
             public int State;
         }
@@ -54,10 +59,66 @@ namespace Simulation
             public int OwnerEntityId;
             public Vector3 Position;
             public Vector3 Forward;
+            public Vector3 Velocity;
             public float Speed;
+            public float LifeTime;
+            public float Age;
+            public bool Active;
             public float RemainingLifetime;
             public int State;
         }
+
+        // Shared broad-phase query payload for CP5 projectile collision and CP6 AOE collision candidates.
+        private struct CollisionQueryData
+        {
+            public int QueryId;
+            public int SourceType;
+            public int SourceEntityId;
+            public int SourceOwnerEntityId;
+            public float3 Position;
+            public float Radius;
+            public int MaxTargets;
+            public int ShapeType;
+            public float3 Direction;
+            public float HalfAngleDeg;
+        }
+
+        // Shared candidate buffer consumed by the main thread settlement stage.
+        private struct CollisionCandidateData
+        {
+            public int QueryId;
+            public int SourceType;
+            public int SourceEntityId;
+            public int SourceOwnerEntityId;
+            public int TargetEntityId;
+            public float SqrDistance;
+        }
+
+        private struct AreaCollisionRequestData
+        {
+            public int SourceEntityId;
+            public int SourceOwnerEntityId;
+            public Vector3 Center;
+            public float Radius;
+            public int MaxTargets;
+            public int ShapeType;
+            public Vector3 Direction;
+            public float HalfAngleDeg;
+        }
+
+        private struct AreaCollisionHitEventData
+        {
+            public int QueryId;
+            public int SourceEntityId;
+            public int SourceOwnerEntityId;
+            public int TargetEntityId;
+            public float SqrDistance;
+        }
+
+        private const int CollisionSourceTypeProjectile = 1;
+        private const int CollisionSourceTypeArea = 2;
+        private const int CollisionShapeCircle = 0;
+        private const int CollisionShapeSector = 1;
 
         private NativeList<EnemyJobInputData> _enemyJobInputs;
         private NativeList<EnemyJobOutputData> _enemyJobOutputs;
@@ -66,7 +127,34 @@ namespace Simulation
         private NativeList<float2> _enemySeparationCurrentPushes;
         private NativeList<ProjectileJobInputData> _projectileJobInputs;
         private NativeList<ProjectileJobOutputData> _projectileJobOutputs;
+        private NativeList<CollisionQueryData> _collisionQueryInputs;
+        private NativeList<CollisionCandidateData> _collisionCandidates;
         private NativeParallelMultiHashMap<long, int> _enemySeparationBuckets;
+        private NativeParallelMultiHashMap<long, int> _enemyCollisionBuckets;
+        private readonly List<AreaCollisionRequestData> _areaCollisionRequests = new(16);
+        private readonly List<AreaCollisionHitEventData> _areaCollisionHitEvents = new(32);
+        private readonly HashSet<long> _areaCollisionHitDedupKeys = new();
+        private int _lastCollisionQueryCount;
+        private int _lastProjectileCollisionQueryCount;
+        private int _lastAreaCollisionQueryCount;
+        private int _lastCollisionCandidateCount;
+        private int _lastProjectileCollisionCandidateCount;
+        private int _lastAreaCollisionCandidateCount;
+        private int _lastResolvedAreaHitCount;
+        private float _lastCollisionCellSize;
+        private bool _lastCollisionHasEnemyTargets;
+
+        public int CollisionCandidateCount => _collisionCandidates.IsCreated ? _collisionCandidates.Length : 0;
+        public int PendingAreaCollisionRequestCount => _areaCollisionRequests.Count;
+        public int LastCollisionQueryCount => _lastCollisionQueryCount;
+        public int LastProjectileCollisionQueryCount => _lastProjectileCollisionQueryCount;
+        public int LastAreaCollisionQueryCount => _lastAreaCollisionQueryCount;
+        public int LastCollisionCandidateCount => _lastCollisionCandidateCount;
+        public int LastProjectileCollisionCandidateCount => _lastProjectileCollisionCandidateCount;
+        public int LastAreaCollisionCandidateCount => _lastAreaCollisionCandidateCount;
+        public int LastResolvedAreaHitCount => _lastResolvedAreaHitCount;
+        public float LastCollisionCellSize => _lastCollisionCellSize;
+        public bool LastCollisionHasEnemyTargets => _lastCollisionHasEnemyTargets;
 
         private void InitializeJobDataChannels()
         {
@@ -83,7 +171,10 @@ namespace Simulation
             _enemySeparationCurrentPushes = new NativeList<float2>(64, Allocator.Persistent);
             _projectileJobInputs = new NativeList<ProjectileJobInputData>(64, Allocator.Persistent);
             _projectileJobOutputs = new NativeList<ProjectileJobOutputData>(64, Allocator.Persistent);
+            _collisionQueryInputs = new NativeList<CollisionQueryData>(64, Allocator.Persistent);
+            _collisionCandidates = new NativeList<CollisionCandidateData>(128, Allocator.Persistent);
             _enemySeparationBuckets = new NativeParallelMultiHashMap<long, int>(256, Allocator.Persistent);
+            _enemyCollisionBuckets = new NativeParallelMultiHashMap<long, int>(256, Allocator.Persistent);
             InitializeEnemyTargetSpatialIndex();
         }
 
@@ -93,57 +184,94 @@ namespace Simulation
             {
                 _enemyJobInputs.Dispose();
             }
+
             _enemyJobInputs = default;
 
             if (_enemyJobOutputs.IsCreated)
             {
                 _enemyJobOutputs.Dispose();
             }
+
             _enemyJobOutputs = default;
 
             if (_enemyJobSeparationOutputs.IsCreated)
             {
                 _enemyJobSeparationOutputs.Dispose();
             }
+
             _enemyJobSeparationOutputs = default;
 
             if (_enemySeparationPreviousPushes.IsCreated)
             {
                 _enemySeparationPreviousPushes.Dispose();
             }
+
             _enemySeparationPreviousPushes = default;
 
             if (_enemySeparationCurrentPushes.IsCreated)
             {
                 _enemySeparationCurrentPushes.Dispose();
             }
+
             _enemySeparationCurrentPushes = default;
 
             if (_projectileJobInputs.IsCreated)
             {
                 _projectileJobInputs.Dispose();
             }
+
             _projectileJobInputs = default;
 
             if (_projectileJobOutputs.IsCreated)
             {
                 _projectileJobOutputs.Dispose();
             }
+
             _projectileJobOutputs = default;
+
+            if (_collisionQueryInputs.IsCreated)
+            {
+                _collisionQueryInputs.Dispose();
+            }
+
+            _collisionQueryInputs = default;
+
+            if (_collisionCandidates.IsCreated)
+            {
+                _collisionCandidates.Dispose();
+            }
+
+            _collisionCandidates = default;
 
             if (_enemySeparationBuckets.IsCreated)
             {
                 _enemySeparationBuckets.Dispose();
             }
+
             _enemySeparationBuckets = default;
 
+            if (_enemyCollisionBuckets.IsCreated)
+            {
+                _enemyCollisionBuckets.Dispose();
+            }
+
+            _enemyCollisionBuckets = default;
+
             DisposeEnemyTargetSpatialIndex();
+            _areaCollisionRequests.Clear();
+            _areaCollisionHitEvents.Clear();
+            _areaCollisionHitDedupKeys.Clear();
+            ResetCollisionRuntimeStats();
         }
 
         private void ClearJobDataChannels()
         {
             if (!AreJobDataChannelsUsable())
             {
+                _areaCollisionRequests.Clear();
+                _areaCollisionHitEvents.Clear();
+                _areaCollisionHitDedupKeys.Clear();
+                ResetCollisionRuntimeStats();
                 return;
             }
 
@@ -167,6 +295,16 @@ namespace Simulation
                 _projectileJobOutputs.Clear();
             }
 
+            if (_collisionQueryInputs.IsCreated)
+            {
+                _collisionQueryInputs.Clear();
+            }
+
+            if (_collisionCandidates.IsCreated)
+            {
+                _collisionCandidates.Clear();
+            }
+
             if (_enemyJobSeparationOutputs.IsCreated)
             {
                 _enemyJobSeparationOutputs.Clear();
@@ -187,7 +325,29 @@ namespace Simulation
                 _enemySeparationBuckets.Clear();
             }
 
+            if (_enemyCollisionBuckets.IsCreated)
+            {
+                _enemyCollisionBuckets.Clear();
+            }
+
             ClearEnemyTargetSpatialIndex();
+            _areaCollisionRequests.Clear();
+            _areaCollisionHitEvents.Clear();
+            _areaCollisionHitDedupKeys.Clear();
+            ResetCollisionRuntimeStats();
+        }
+
+        private void ResetCollisionRuntimeStats()
+        {
+            _lastCollisionQueryCount = 0;
+            _lastProjectileCollisionQueryCount = 0;
+            _lastAreaCollisionQueryCount = 0;
+            _lastCollisionCandidateCount = 0;
+            _lastProjectileCollisionCandidateCount = 0;
+            _lastAreaCollisionCandidateCount = 0;
+            _lastResolvedAreaHitCount = 0;
+            _lastCollisionCellSize = 0f;
+            _lastCollisionHasEnemyTargets = false;
         }
 
         private void SyncSimulationToJobInput()
@@ -242,6 +402,18 @@ namespace Simulation
             }
         }
 
+        private void PrepareProjectileJobOutputBuffer(int projectileCount)
+        {
+            InitializeJobDataChannels();
+            EnsureCapacity(ref _projectileJobOutputs, projectileCount);
+            _projectileJobOutputs.Clear();
+
+            if (projectileCount > 0)
+            {
+                _projectileJobOutputs.ResizeUninitialized(projectileCount);
+            }
+        }
+
         private void SyncProjectilesToJobOutput()
         {
             InitializeJobDataChannels();
@@ -252,6 +424,116 @@ namespace Simulation
             {
                 _projectileJobOutputs.Add(ConvertToProjectileJobOutput(_projectiles[i]));
             }
+        }
+
+        private void CopyProjectileInputToOutput()
+        {
+            for (int i = 0; i < _projectileJobInputs.Length; i++)
+            {
+                ProjectileJobInputData input = _projectileJobInputs[i];
+                _projectileJobOutputs[i] = new ProjectileJobOutputData
+                {
+                    EntityId = input.EntityId,
+                    OwnerEntityId = input.OwnerEntityId,
+                    Position = input.Position,
+                    Forward = input.Forward,
+                    Velocity = input.Velocity,
+                    Speed = input.Speed,
+                    LifeTime = input.LifeTime,
+                    Age = input.Age,
+                    Active = input.Active,
+                    RemainingLifetime = input.RemainingLifetime,
+                    State = input.State
+                };
+            }
+        }
+
+        private void PrepareCollisionCandidateChannels(int queryCount, int expectedCandidateCount, int bucketCapacity)
+        {
+            InitializeJobDataChannels();
+            EnsureCapacity(ref _collisionQueryInputs, queryCount);
+            EnsureCapacity(ref _collisionCandidates, expectedCandidateCount);
+            EnsureCapacity(ref _enemyCollisionBuckets, bucketCapacity);
+
+            _collisionQueryInputs.Clear();
+            _collisionCandidates.Clear();
+            _enemyCollisionBuckets.Clear();
+        }
+
+        private void AddProjectileCollisionQuery(int queryId, in ProjectileJobOutputData projectile, float radius,
+            int maxTargets = 1)
+        {
+            if (!_collisionQueryInputs.IsCreated || radius <= 0f)
+            {
+                return;
+            }
+
+            _collisionQueryInputs.Add(new CollisionQueryData
+            {
+                QueryId = queryId,
+                SourceType = CollisionSourceTypeProjectile,
+                SourceEntityId = projectile.EntityId,
+                SourceOwnerEntityId = projectile.OwnerEntityId,
+                Position = new float3(projectile.Position.x, projectile.Position.y, projectile.Position.z),
+                Radius = radius,
+                MaxTargets = math.max(1, maxTargets),
+                ShapeType = CollisionShapeCircle,
+                Direction = new float3(0f, 0f, 1f),
+                HalfAngleDeg = 180f
+            });
+        }
+
+        private void AddAreaCollisionQuery(int queryId, int sourceEntityId, int sourceOwnerEntityId, in Vector3 center,
+            float radius, int maxTargets, int shapeType, in Vector3 direction, float halfAngleDeg)
+        {
+            if (!_collisionQueryInputs.IsCreated || radius <= 0f)
+            {
+                return;
+            }
+
+            Vector3 normalizedDirection = direction;
+            normalizedDirection.y = 0f;
+            if (normalizedDirection.sqrMagnitude <= Mathf.Epsilon)
+            {
+                normalizedDirection = Vector3.forward;
+            }
+            else
+            {
+                normalizedDirection.Normalize();
+            }
+
+            _collisionQueryInputs.Add(new CollisionQueryData
+            {
+                QueryId = queryId,
+                SourceType = CollisionSourceTypeArea,
+                SourceEntityId = sourceEntityId,
+                SourceOwnerEntityId = sourceOwnerEntityId,
+                Position = new float3(center.x, center.y, center.z),
+                Radius = radius,
+                MaxTargets = math.max(1, maxTargets),
+                ShapeType = shapeType,
+                Direction = new float3(normalizedDirection.x, normalizedDirection.y, normalizedDirection.z),
+                HalfAngleDeg = Mathf.Clamp(halfAngleDeg, 0f, 180f)
+            });
+        }
+
+        private void AddCollisionCandidate(int queryId, int sourceType, int sourceEntityId, int sourceOwnerEntityId,
+            int targetEntityId, float sqrDistance)
+        {
+            if (!_collisionCandidates.IsCreated)
+            {
+                return;
+            }
+
+            _collisionCandidates.Add(new CollisionCandidateData
+            {
+                QueryId = queryId,
+                SourceType = sourceType,
+                SourceEntityId = sourceEntityId,
+                SourceOwnerEntityId = sourceOwnerEntityId,
+                TargetEntityId = targetEntityId,
+                SqrDistance = sqrDistance
+            });
         }
 
         private void PrepareEnemySeparationJobBuffers(int enemyCount, int bucketCapacity)
@@ -358,7 +640,10 @@ namespace Simulation
                    IsNativeListUsable(_enemySeparationCurrentPushes) &&
                    IsNativeListUsable(_projectileJobInputs) &&
                    IsNativeListUsable(_projectileJobOutputs) &&
-                   IsNativeMultiHashMapUsable(_enemySeparationBuckets);
+                   IsNativeListUsable(_collisionQueryInputs) &&
+                   IsNativeListUsable(_collisionCandidates) &&
+                   IsNativeMultiHashMapUsable(_enemySeparationBuckets) &&
+                   IsNativeMultiHashMapUsable(_enemyCollisionBuckets);
         }
 
         private static void EnsureCapacity<T>(ref NativeList<T> nativeList, int targetCount) where T : unmanaged
@@ -472,7 +757,11 @@ namespace Simulation
                 OwnerEntityId = projectile.OwnerEntityId,
                 Position = projectile.Position,
                 Forward = projectile.Forward,
+                Velocity = projectile.Velocity,
                 Speed = projectile.Speed,
+                LifeTime = projectile.LifeTime,
+                Age = projectile.Age,
+                Active = projectile.Active,
                 RemainingLifetime = projectile.RemainingLifetime,
                 State = projectile.State
             };
@@ -486,7 +775,11 @@ namespace Simulation
                 OwnerEntityId = projectile.OwnerEntityId,
                 Position = projectile.Position,
                 Forward = projectile.Forward,
+                Velocity = projectile.Velocity,
                 Speed = projectile.Speed,
+                LifeTime = projectile.LifeTime,
+                Age = projectile.Age,
+                Active = projectile.Active,
                 RemainingLifetime = projectile.RemainingLifetime,
                 State = projectile.State
             };
@@ -500,7 +793,11 @@ namespace Simulation
                 OwnerEntityId = projectile.OwnerEntityId,
                 Position = projectile.Position,
                 Forward = projectile.Forward,
+                Velocity = projectile.Velocity,
                 Speed = projectile.Speed,
+                LifeTime = projectile.LifeTime,
+                Age = projectile.Age,
+                Active = projectile.Active,
                 RemainingLifetime = projectile.RemainingLifetime,
                 State = projectile.State
             };

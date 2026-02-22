@@ -61,8 +61,8 @@ namespace Entity
 
         private void OnTriggerEnter(Collider other)
         {
-            EntityBase entity = other.gameObject.GetComponent<EntityBase>();
-            if (entity == null)
+            EntityBase entity = other.GetComponentInParent<EntityBase>();
+            if (entity == null || entity == this)
             {
                 return;
             }
@@ -70,7 +70,7 @@ namespace Entity
             if (entity is TargetableObject && entity.Id < Id)
             {
                 // 碰撞事件由 Id 大的一方处理
-                // 在这里规定所有的 Enemy 的 Id 均大于 0
+                // 在这里约定 Enemy 的 Id 为非负数（通常从 0 开始）
                 // 而其他的 Entity (Player, Weapon, Bullet) 的 Id 均小于 0
                 return;
             }

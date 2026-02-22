@@ -27,7 +27,7 @@ namespace Entity.Weapon
 
         [SerializeField] private LayerMask _hitMask = ~0;
         [SerializeField] private int _maxHitColliders = 32;
-        
+
         private IWeaponAttackEffect _attackEffect;
         private Collider[] _hitResults;
         private readonly HashSet<int> _hitEntityIds = new();
@@ -116,7 +116,15 @@ namespace Entity.Weapon
 
         private void ApplyGroundAreaDamage()
         {
-            if (_hitRadius <= 0f || _hitResults == null || _hitResults.Length == 0) return;
+            if (_hitRadius <= 0f) return;
+
+            if (TryQueueAreaCollisionQuery(_attackCenter, _hitRadius, Mathf.Max(1, _maxHitColliders)))
+            {
+                _hitEntityIds.Clear();
+                return;
+            }
+
+            if (_hitResults == null || _hitResults.Length == 0) return;
 
             int hitCount = Physics.OverlapSphereNonAlloc(_attackCenter, _hitRadius, _hitResults, _hitMask,
                 QueryTriggerInteraction.Collide);
@@ -149,12 +157,14 @@ namespace Entity.Weapon
             _sqrRange = _weaponData.AttackRange * _weaponData.AttackRange;
             _cachedRotation = CachedTransform.rotation;
 
-            string hitRadiusRaw = _weaponData.GetParamsString(HitRadiusParamKey);
-            if (!float.TryParse(hitRadiusRaw, out _hitRadius))
+            if (_weaponData.TryGetParam(HitRadiusParamKey, out string hitRadiusRaw))
+            {
+                _hitRadius = Mathf.Max(0.1f, float.Parse(hitRadiusRaw));
+            }
+            else
             {
                 _hitRadius = _weaponData.AttackRange;
             }
-            _hitRadius = Mathf.Max(0.1f, _hitRadius);
 
             _hitRadiusSqr = _hitRadius * _hitRadius;
             _attackEffect = new KnifeRangeAttackEffect();

@@ -1,5 +1,6 @@
-#	敌人基础属性表								
-#	Id		EntityTypeId	MaxHealth	HpAddPerLevel	Speed	CoinDrop	ExpDrop	DropPercent
-#	int		int	int	int	float	int	int	float
-#	敌人编号	策划备注	敌人实体编号	最大生命	每关卡增加生命	移动速度	金币掉落	经验掉落	掉落概率
-	1	近战敌人	101	50	50	3	5	1	0.3
+#	敌人基础属性表												
+#	Id		EntityTypeId	MaxHealth	HpAddPerLevel	AttackDamage	AttackCooldown	AttackRange	Speed	CoinDrop	ExpDrop	DropPercent	Params
+#	int		int	int	int	int	float	float	float	int	int	float	string
+#	敌人编号	策划备注	敌人实体编号	最大生命	每关卡增加生命	基础伤害	攻击间隔	攻击范围	移动速度	金币掉落	经验掉落	掉落概率	额外参数
+	1	近战敌人	101	50	50	1	1	1.5	3	5	1	0.3	[]
+	2	远程敌人	102	40	40	1	2	8	2.5	4	2	0.2	[]

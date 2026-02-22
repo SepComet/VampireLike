@@ -15,6 +15,8 @@ namespace Simulation
         private const int EnemyStateIdle = 0;
         private const int EnemyStateChasing = 1;
         private const int EnemyStateInAttackRange = 2;
+        private const int ProjectileStateActive = 0;
+        private const int ProjectileStateExpired = 1;
 
         private struct EnemyTickWorkItem
         {
@@ -49,6 +51,8 @@ namespace Simulation
         private readonly List<EnemySimData> _enemies = new List<EnemySimData>();
         private readonly List<ProjectileSimData> _projectiles = new List<ProjectileSimData>();
         private readonly List<PickupSimData> _pickups = new List<PickupSimData>();
+        private readonly List<int> _projectileRecycleEntityIds = new List<int>();
+        private readonly HashSet<int> _projectileResolvedEntityIds = new HashSet<int>();
         private readonly List<EnemySeparationAgent> _enemySeparationAgents = new List<EnemySeparationAgent>();
         private readonly List<EnemyTickWorkItem> _enemyTickWorkItems = new List<EnemyTickWorkItem>();
 
@@ -89,10 +93,12 @@ namespace Simulation
         private void Start()
         {
             _entitySync?.OnStart();
+            _presentation?.OnStart();
         }
 
         private void OnDestroy()
         {
+            _presentation?.OnDestroy();
             _entitySync?.OnDestroy();
             _entitySync = null;
             _presentation = null;
@@ -216,14 +222,14 @@ namespace Simulation
             return true;
         }
 
-        private void RegisterProjectileLifecycle(EntityBase projectileEntity)
+        private void RegisterProjectileLifecycle(EntityBase projectileEntity, object userData)
         {
             if (projectileEntity == null || projectileEntity.CachedTransform == null)
             {
                 return;
             }
 
-            UpsertProjectile(CreateProjectileInitialSimData(projectileEntity));
+            UpsertProjectile(CreateProjectileInitialSimData(projectileEntity, userData));
         }
 
         private void UnregisterProjectileLifecycle(int entityId)
@@ -313,6 +319,11 @@ namespace Simulation
             _enemies.Clear();
             _projectiles.Clear();
             _pickups.Clear();
+            _projectileRecycleEntityIds.Clear();
+            _projectileResolvedEntityIds.Clear();
+            _areaCollisionRequests.Clear();
+            _areaCollisionHitEvents.Clear();
+            _areaCollisionHitDedupKeys.Clear();
             _enemySeparationAgents.Clear();
             _enemyTickWorkItems.Clear();
             ClearJobDataChannels();
@@ -510,6 +521,10 @@ namespace Simulation
                 speed = movementComponent.Speed;
             }
 
+            float attackRange = enemy != null && enemy.AttackRange > 0f
+                ? enemy.AttackRange
+                : DefaultAttackRange;
+
             return new EnemySimData
             {
                 EntityId = enemy.Id,
@@ -517,7 +532,7 @@ namespace Simulation
                 Forward = enemyTransform.forward,
                 Rotation = enemyTransform.rotation,
                 Speed = speed,
-                AttackRange = 1f,
+                AttackRange = attackRange,
                 AvoidEnemyOverlap = movementComponent != null && movementComponent.AvoidEnemyOverlap,
                 EnemyBodyRadius = movementComponent != null ? movementComponent.EnemyBodyRadius : 0.45f,
                 SeparationIterations = movementComponent != null ? movementComponent.SeparationIterations : 2,
@@ -537,17 +552,52 @@ namespace Simulation
             };
         }
 
-        private static ProjectileSimData CreateProjectileInitialSimData(EntityBase projectileEntity)
+        private static ProjectileSimData CreateProjectileInitialSimData(EntityBase projectileEntity, object userData)
         {
+            Vector3 forward = projectileEntity.CachedTransform.forward;
+            int ownerEntityId = 0;
+            Vector3 velocity = Vector3.zero;
+            float speed = 0f;
+            float lifeTime = 0f;
+
+            if (userData is EnemyProjectileData enemyProjectileData)
+            {
+                ownerEntityId = enemyProjectileData.OwnerEntityId;
+
+                Vector3 direction = enemyProjectileData.Direction;
+                direction.y = 0f;
+                if (direction.sqrMagnitude > Mathf.Epsilon)
+                {
+                    direction.Normalize();
+                    forward = direction;
+                }
+                else if (forward.sqrMagnitude > Mathf.Epsilon)
+                {
+                    forward = forward.normalized;
+                }
+                else
+                {
+                    forward = Vector3.forward;
+                }
+
+                speed = Mathf.Max(0f, enemyProjectileData.Speed);
+                velocity = forward * speed;
+                lifeTime = Mathf.Max(0f, enemyProjectileData.LifeTime);
+            }
+
             return new ProjectileSimData
             {
                 EntityId = projectileEntity.Id,
-                OwnerEntityId = 0,
+                OwnerEntityId = ownerEntityId,
                 Position = projectileEntity.CachedTransform.position,
-                Forward = projectileEntity.CachedTransform.forward,
-                Speed = 0f,
-                RemainingLifetime = 0f,
-                State = 0
+                Forward = forward,
+                Velocity = velocity,
+                Speed = speed,
+                LifeTime = lifeTime,
+                Age = 0f,
+                Active = true,
+                RemainingLifetime = lifeTime,
+                State = ProjectileStateActive
             };
         }
     }

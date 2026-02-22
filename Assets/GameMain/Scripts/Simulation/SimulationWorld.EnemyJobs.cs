@@ -125,25 +125,44 @@ namespace Simulation
 
         private void TickEnemiesJobified(in SimulationTickContext context)
         {
+            if (context.DeltaTime <= 0f)
+            {
+                PrepareCollisionCandidateChannels(0, 0, 0);
+                ResetCollisionRuntimeStats();
+                ClearAreaCollisionFrameBuffers();
+                return;
+            }
+
             using (CustomProfilerMarker.TickEnemies_BuildInput.Auto())
             {
                 SyncSimulationToJobInput();
+                int projectileQueryCount = _projectiles.Count;
+                int areaQueryCount = GetPendingAreaCollisionQueryCount();
+                int queryCount = projectileQueryCount + areaQueryCount;
+                int projectileExpectedCount = projectileQueryCount * Mathf.Max(1, _projectileMaxCandidatesPerQuery);
+                int areaExpectedCount = EstimatePendingAreaCollisionCandidateCount();
+                int expectedCandidateCount = Mathf.Max(16, projectileExpectedCount + areaExpectedCount);
+                int bucketCapacity = Mathf.Max(256, _enemies.Count * 2 + queryCount);
+                PrepareCollisionCandidateChannels(queryCount, expectedCandidateCount, bucketCapacity);
             }
 
             using (CustomProfilerMarker.TickEnemies_StateUpdate.Auto())
             {
                 ExecuteEnemyMovementJob(in context);
+                ExecuteProjectileMovementJob(in context);
             }
 
             using (CustomProfilerMarker.TickEnemies_MoveSeparation.Auto())
             {
                 ApplyEnemySeparationForJobOutput(in context);
+                BuildProjectileCollisionCandidates();
             }
 
             using (CustomProfilerMarker.TickEnemies_WriteBack.Auto())
             {
-                SyncProjectilesToJobOutput();
                 ApplyJobOutputToSimulation();
+                ResolveProjectileCollisionCandidatesMainThread();
+                RecycleInactiveProjectiles();
             }
 
             MarkEnemyTargetSpatialIndexDirty();
@@ -413,6 +432,9 @@ namespace Simulation
 
                             if (sqrDistance <= float.Epsilon)
                             {
+                                float3 zeroDistanceAxis = GetZeroDistanceSeparationAxis(index, otherIndex);
+                                float directionSign = index < otherIndex ? 1f : -1f;
+                                pushAccumulation += zeroDistanceAxis * (selfRadius * 0.25f * directionSign);
                                 continue;
                             }
 
@@ -526,6 +548,18 @@ namespace Simulation
         private static long SeparationCellKey(int x, int z)
         {
             return ((long)x << 32) ^ (uint)z;
+        }
+
+        private static float3 GetZeroDistanceSeparationAxis(int index, int otherIndex)
+        {
+            int lowIndex = math.min(index, otherIndex);
+            int highIndex = math.max(index, otherIndex);
+            uint pairHash = (uint)(lowIndex * 73856093) ^ (uint)(highIndex * 19349663);
+
+            float axisX = (pairHash & 1023u) / 511.5f - 1f;
+            float axisZ = ((pairHash >> 10) & 1023u) / 511.5f - 1f;
+            float3 axis = new float3(axisX, 0f, axisZ);
+            return math.normalizesafe(axis, new float3(1f, 0f, 0f));
         }
 
         private static void ExecuteEnemyMovement(int index, NativeArray<EnemyJobInputData> inputs,

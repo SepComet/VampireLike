@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 1932268889601128120}
   - component: {fileID: 557030043145096197}
   - component: {fileID: 6353753365317756414}
-  m_Layer: 7
+  m_Layer: 8
   m_Name: RemoteEnemy
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -124,6 +124,9 @@ MonoBehaviour:
   _isMoving: 0
   _direction: {x: 0, y: 0, z: 0}
   _cachedTransform: {fileID: 0}
+  _avoidEnemyOverlap: 0
+  _enemyBodyRadius: 0.45
+  _separationIterations: 2
   _speedBase: 0
 --- !u!114 &6353753365317756414
 MonoBehaviour:

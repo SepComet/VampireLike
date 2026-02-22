@@ -607,7 +607,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 11494652, guid: adb3eb1c35fcff14f89fba7b05c9d71c, type: 3}
       propertyPath: m_EntityGroups.Array.data[0].m_InstanceCapacity
-      value: 16
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 11494652, guid: adb3eb1c35fcff14f89fba7b05c9d71c, type: 3}
       propertyPath: m_EntityGroups.Array.data[1].m_InstanceCapacity
@@ -623,7 +623,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 11494652, guid: adb3eb1c35fcff14f89fba7b05c9d71c, type: 3}
       propertyPath: m_EntityGroups.Array.data[4].m_InstanceCapacity
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 11494652, guid: adb3eb1c35fcff14f89fba7b05c9d71c, type: 3}
       propertyPath: m_EntityGroups.Array.data[5].m_InstanceCapacity
@@ -1432,11 +1432,25 @@ MonoBehaviour:
   _enemySeparationCellSize: 0
   _enemySeparationPushDamping: 0.5
   _enemySeparationMaxStepScale: 0.5
-  _enemySeparationZeroDistancePushScale: 1
   _enemySeparationUseTangentialInAttackRange: 1
   _enemySeparationPushSmoothing: 0.55
-  _enemySeparationPushCarry: 1
-  _enemySeparationMinPushRetain: 1
+  _projectileHitPresentationEnabled: 1
+  _projectileHitMarkerEnabled: 1
+  _projectileHitMarkerSize: 0.2
+  _projectileHitMarkerYOffset: 1.2
+  _projectileHitMarkerDuration: 0.15
+  _projectileHitMarkerColor: {r: 1, g: 0, b: 0, a: 0.95}
+  _projectileHitEffectEnabled: 0
+  _projectileHitEffectTypeId: 0
+  _projectileMaxDistanceFromPlayer: 120
+  _projectileMaxVerticalOffsetFromPlayer: 30
+  _projectileCollisionQueryRadius: 0.35
+  _projectileMaxCandidatesPerQuery: 1
+  _projectileCollisionCellSize: 0
+  _dispatchProjectileHitPresentationEvent: 1
+  _dispatchProjectileHitMarkerEvent: 1
+  _dispatchProjectileHitEffectEvent: 1
+  _projectileHitPresentationEffectTypeId: 0
   _targetSelectionCellSize: 2
 --- !u!1 &1852670052
 GameObject:
