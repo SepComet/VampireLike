@@ -35,6 +35,8 @@ namespace Simulation
         }
 
         [SerializeField] private bool _useSimulationMovement;
+        [SerializeField] private bool _useJobSimulation;
+        [SerializeField] private bool _useBurstJobs = true;
 
         private EntitySync _entitySync;
         private Presentation _presentation;
@@ -53,10 +55,22 @@ namespace Simulation
         public IReadOnlyList<ProjectileSimData> Projectiles => _projectiles;
         public IReadOnlyList<PickupSimData> Pickups => _pickups;
         public bool UseSimulationMovement => _useSimulationMovement;
+        public bool UseJobSimulation => _useJobSimulation;
+        public bool UseBurstJobs => _useBurstJobs;
 
         public void SetUseSimulationMovement(bool enabled)
         {
             _useSimulationMovement = enabled;
+        }
+
+        public void SetUseJobSimulation(bool enabled)
+        {
+            _useJobSimulation = enabled;
+        }
+
+        public void SetUseBurstJobs(bool enabled)
+        {
+            _useBurstJobs = enabled;
         }
 
         protected override void Awake()
@@ -263,6 +277,17 @@ namespace Simulation
         {
             if (!_useSimulationMovement)
             {
+                return;
+            }
+
+            if (_useJobSimulation)
+            {
+                // Checkpoint 1: the switch is in place; Checkpoint 3+ will replace this with jobified path.
+                using (CustomProfilerMarker.TickEnemies.Auto())
+                {
+                    TickEnemies(in context);
+                }
+
                 return;
             }
 

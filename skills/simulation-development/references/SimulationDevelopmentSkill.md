@@ -32,13 +32,13 @@
 ## 生命周期与数据同步设计
 `EntitySync` 通过事件驱动保持 Simulation 容器与实体生命周期一致：
 
-| 事件 | 组名 | 行为 |
-|---|---|---|
-| `ShowEntitySuccessEventArgs` | `Enemy` | `RegisterEnemyLifecycle` + `UpsertEnemy` |
-| `HideEntityCompleteEventArgs` | `Enemy` | `UnregisterEnemyLifecycle` + `RemoveEnemyByEntityId` |
-| `ShowEntitySuccessEventArgs` | `Drop` | `RegisterPickupLifecycle` + `UpsertPickup` |
-| `HideEntityCompleteEventArgs` | `Drop` | `UnregisterPickupLifecycle` + `RemovePickupByEntityId` |
-| `ShowEntitySuccessEventArgs` | `Bullet` / `Projectile` | `RegisterProjectileLifecycle` + `UpsertProjectile` |
+| 事件                            | 组名                      | 行为                                                             |
+|-------------------------------|-------------------------|----------------------------------------------------------------|
+| `ShowEntitySuccessEventArgs`  | `Enemy`                 | `RegisterEnemyLifecycle` + `UpsertEnemy`                       |
+| `HideEntityCompleteEventArgs` | `Enemy`                 | `UnregisterEnemyLifecycle` + `RemoveEnemyByEntityId`           |
+| `ShowEntitySuccessEventArgs`  | `Drop`                  | `RegisterPickupLifecycle` + `UpsertPickup`                     |
+| `HideEntityCompleteEventArgs` | `Drop`                  | `UnregisterPickupLifecycle` + `RemovePickupByEntityId`         |
+| `ShowEntitySuccessEventArgs`  | `Bullet` / `Projectile` | `RegisterProjectileLifecycle` + `UpsertProjectile`             |
 | `HideEntityCompleteEventArgs` | `Bullet` / `Projectile` | `UnregisterProjectileLifecycle` + `RemoveProjectileByEntityId` |
 
 关键规则：
@@ -117,7 +117,9 @@
 - Android 端评估以 CPU `ms` 为主，`fps` 受 60 上限影响
 
 ## 自动化回归（P1.5 已补）
-目录：`Assets/Tests/Simulation/EditMode/SimulationWorldTickTests.cs`
+目录：
+    - `Assets/Tests/Simulation/EditMode/SimulationWorldTickTests.cs`
+    - `Assets/Tests/Simulation/PlayMode/SimulationWorldPlayModeTests.cs`
 
 覆盖点：
 - 敌人追踪玩家
