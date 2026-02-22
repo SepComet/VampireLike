@@ -1427,6 +1427,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _useSimulationMovement: 1
+  _useJobSimulation: 1
+  _useBurstJobs: 1
+  _enemySeparationCellSize: 0
+  _enemySeparationPushDamping: 0.5
+  _enemySeparationMaxStepScale: 0.5
+  _enemySeparationZeroDistancePushScale: 1
+  _enemySeparationUseTangentialInAttackRange: 1
+  _enemySeparationPushSmoothing: 0.55
+  _enemySeparationPushCarry: 1
+  _enemySeparationMinPushRetain: 1
+  _targetSelectionCellSize: 2
 --- !u!1 &1852670052
 GameObject:
   m_ObjectHideFlags: 0

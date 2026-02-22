@@ -154,7 +154,7 @@ MonoBehaviour:
   _cachedTransform: {fileID: 7683855655592166216}
   _avoidEnemyOverlap: 0
   _enemyBodyRadius: 0.45
-  _separationIterations: 2
+  _separationIterations: 5
   _speedBase: 0
 --- !u!114 &6353753365317756414
 MonoBehaviour:

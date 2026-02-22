@@ -15,7 +15,7 @@ namespace Simulation
         private const int EnemyStateIdle = 0;
         private const int EnemyStateChasing = 1;
         private const int EnemyStateInAttackRange = 2;
-        
+
         private struct EnemyTickWorkItem
         {
             public int EntityId;
@@ -34,9 +34,14 @@ namespace Simulation
             public int NextState;
         }
 
-        [SerializeField] private bool _useSimulationMovement;
-        [SerializeField] private bool _useJobSimulation;
-        [SerializeField] private bool _useBurstJobs = true;
+        [Header("模拟世界全局设置")] [Tooltip("是否启用世界模拟")] [SerializeField]
+        private bool _useSimulationMovement;
+
+        [Tooltip("是否启用 Job 运算路径")] [SerializeField]
+        private bool _useJobSimulation;
+
+        [Tooltip("是否使用 Burst 来完成计算")] [SerializeField]
+        private bool _useBurstJobs = true;
 
         private EntitySync _entitySync;
         private Presentation _presentation;
@@ -104,6 +109,8 @@ namespace Simulation
             int simulationIndex = _enemies.Count;
             _enemies.Add(simData);
             EnemyBinding.Bind(simData.EntityId, simulationIndex);
+            OnEnemyAddedToSeparationTemporalBuffers();
+            MarkEnemyTargetSpatialIndexDirty();
             return simulationIndex;
         }
 
@@ -115,6 +122,7 @@ namespace Simulation
             }
 
             _enemies[simulationIndex] = simData;
+            MarkEnemyTargetSpatialIndexDirty();
             return simulationIndex;
         }
 
@@ -134,7 +142,9 @@ namespace Simulation
             }
 
             _enemies.RemoveAt(lastIndex);
+            OnEnemyRemovedFromSeparationTemporalBuffers(simulationIndex);
             EnemyBinding.UnbindByEntityId(entityId);
+            MarkEnemyTargetSpatialIndexDirty();
             return true;
         }
 
@@ -288,6 +298,7 @@ namespace Simulation
                 {
                     TickEnemiesJobified(in context);
                 }
+
                 return;
             }
 
@@ -455,6 +466,8 @@ namespace Simulation
 
         private void WriteBackEnemyTickResults()
         {
+            bool hasPositionChanged = false;
+
             for (int i = 0; i < _enemyTickWorkItems.Count; i++)
             {
                 EnemySimData enemy = _enemies[i];
@@ -468,10 +481,17 @@ namespace Simulation
                     {
                         enemy.Rotation = workItem.Rotation;
                     }
+
+                    hasPositionChanged = true;
                 }
 
                 enemy.State = workItem.NextState;
                 _enemies[i] = enemy;
+            }
+
+            if (hasPositionChanged)
+            {
+                MarkEnemyTargetSpatialIndexDirty();
             }
         }
 

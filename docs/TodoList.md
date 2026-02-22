@@ -136,7 +136,7 @@
   - 保留 A/B 路径：可切换 Job 与旧逻辑对比。
   - 完成标准：开启 Job 后敌人追踪行为视觉一致；`TickEnemies` 主线程耗时明显下降。
 
-- [ ] Checkpoint 4：目标选择加速（空间哈希/网格分桶）
+- [x] Checkpoint 4：目标选择加速（空间哈希/网格分桶）
   - 建立敌人/目标的空间索引容器（建议 `NativeParallelMultiHashMap` 或等价结构）。
   - 拆分为两个阶段：
     - 构建分桶（Build Buckets）

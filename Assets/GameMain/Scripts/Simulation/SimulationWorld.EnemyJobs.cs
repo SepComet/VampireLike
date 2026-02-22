@@ -1,5 +1,4 @@
-using CustomDebugger;
-using CustomUtility;
+﻿using CustomDebugger;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
@@ -10,6 +9,21 @@ namespace Simulation
 {
     public sealed partial class SimulationWorld
     {
+        [Header("敌人互斥参数")] [Tooltip("敌人互斥分桶使用的网格尺寸。小于等于 0 时，将根据敌人体积半径自动计算。")] [SerializeField]
+        private float _enemySeparationCellSize = 0f;
+
+        [Tooltip("每次迭代对互斥推力累积值的阻尼系数。数值越大，分离速度越快。")] [SerializeField]
+        private float _enemySeparationPushDamping = 0.75f;
+
+        [Tooltip("每次迭代允许的最大互斥位移步长（按敌人体积半径倍率计算）。")] [SerializeField]
+        private float _enemySeparationMaxStepScale = 1f;
+
+        [Tooltip("敌人进入攻击范围后，互斥位移是否保持为相对玩家方向的切向分量（避免被径向推离玩家）。")] [SerializeField]
+        private bool _enemySeparationUseTangentialInAttackRange = true;
+
+        [Tooltip("互斥推力方向突变时的时间平滑系数。越大越稳定，但响应越慢。")] [SerializeField]
+        private float _enemySeparationPushSmoothing = 0.55f;
+
         [BurstCompile]
         private struct EnemyMovementBurstJob : IJobParallelFor
         {
@@ -37,6 +51,78 @@ namespace Simulation
             }
         }
 
+        [BurstCompile]
+        private struct BuildEnemySeparationBucketsBurstJob : IJobParallelFor
+        {
+            [ReadOnly] public NativeArray<EnemyJobOutputData> Inputs;
+            public NativeParallelMultiHashMap<long, int>.ParallelWriter Buckets;
+            public float CellSize;
+
+            public void Execute(int index)
+            {
+                BuildEnemySeparationBucket(index, Inputs, Buckets, CellSize);
+            }
+        }
+
+        private struct BuildEnemySeparationBucketsJob : IJobParallelFor
+        {
+            [ReadOnly] public NativeArray<EnemyJobOutputData> Inputs;
+            public NativeParallelMultiHashMap<long, int>.ParallelWriter Buckets;
+            public float CellSize;
+
+            public void Execute(int index)
+            {
+                BuildEnemySeparationBucket(index, Inputs, Buckets, CellSize);
+            }
+        }
+
+        [BurstCompile]
+        private struct EnemySeparationBurstJob : IJobParallelFor
+        {
+            [ReadOnly] public NativeArray<EnemyJobOutputData> Inputs;
+            [ReadOnly] public NativeParallelMultiHashMap<long, int> Buckets;
+            [ReadOnly] public NativeArray<float2> PreviousPushes;
+            public NativeArray<EnemyJobOutputData> Outputs;
+            public NativeArray<float2> CurrentPushes;
+            public float CellSize;
+            public float MaxRadius;
+            public float3 PlayerPosition;
+            public float PushDamping;
+            public float MaxStepScale;
+            public bool UseTangentialInAttackRange;
+            public float PushSmoothing;
+
+            public void Execute(int index)
+            {
+                ExecuteEnemySeparation(index, Inputs, Buckets, Outputs, CellSize, MaxRadius, PlayerPosition,
+                    PushDamping, MaxStepScale, UseTangentialInAttackRange, PreviousPushes, CurrentPushes,
+                    PushSmoothing);
+            }
+        }
+
+        private struct EnemySeparationJob : IJobParallelFor
+        {
+            [ReadOnly] public NativeArray<EnemyJobOutputData> Inputs;
+            [ReadOnly] public NativeParallelMultiHashMap<long, int> Buckets;
+            [ReadOnly] public NativeArray<float2> PreviousPushes;
+            public NativeArray<EnemyJobOutputData> Outputs;
+            public NativeArray<float2> CurrentPushes;
+            public float CellSize;
+            public float MaxRadius;
+            public float3 PlayerPosition;
+            public float PushDamping;
+            public float MaxStepScale;
+            public bool UseTangentialInAttackRange;
+            public float PushSmoothing;
+
+            public void Execute(int index)
+            {
+                ExecuteEnemySeparation(index, Inputs, Buckets, Outputs, CellSize, MaxRadius, PlayerPosition,
+                    PushDamping, MaxStepScale, UseTangentialInAttackRange, PreviousPushes, CurrentPushes,
+                    PushSmoothing);
+            }
+        }
+
         private void TickEnemiesJobified(in SimulationTickContext context)
         {
             using (CustomProfilerMarker.TickEnemies_BuildInput.Auto())
@@ -51,7 +137,7 @@ namespace Simulation
 
             using (CustomProfilerMarker.TickEnemies_MoveSeparation.Auto())
             {
-                ApplyEnemySeparationForJobOutput();
+                ApplyEnemySeparationForJobOutput(in context);
             }
 
             using (CustomProfilerMarker.TickEnemies_WriteBack.Auto())
@@ -59,6 +145,9 @@ namespace Simulation
                 SyncProjectilesToJobOutput();
                 ApplyJobOutputToSimulation();
             }
+
+            MarkEnemyTargetSpatialIndexDirty();
+            BuildEnemyTargetSpatialIndexIfNeeded();
         }
 
         private void ExecuteEnemyMovementJob(in SimulationTickContext context)
@@ -130,15 +219,17 @@ namespace Simulation
             }
         }
 
-        private void ApplyEnemySeparationForJobOutput()
+        private void ApplyEnemySeparationForJobOutput(in SimulationTickContext context)
         {
-            if (_enemyJobOutputs.Length == 0)
+            int enemyCount = _enemyJobOutputs.Length;
+            if (enemyCount == 0)
             {
                 return;
             }
 
-            _enemySeparationAgents.Clear();
-            for (int i = 0; i < _enemyJobOutputs.Length; i++)
+            bool hasSeparationCandidates = false;
+            float maxRadius = 0.45f;
+            for (int i = 0; i < enemyCount; i++)
             {
                 EnemyJobOutputData output = _enemyJobOutputs[i];
                 if (!output.AvoidEnemyOverlap)
@@ -146,39 +237,295 @@ namespace Simulation
                     continue;
                 }
 
-                Vector3 position = output.Position;
-                position.y = 0f;
-                _enemySeparationAgents.Add(new EnemySeparationAgent
+                hasSeparationCandidates = true;
+                float radius = output.EnemyBodyRadius > 0f ? output.EnemyBodyRadius : 0.45f;
+                if (radius > maxRadius)
                 {
-                    AgentId = output.EntityId,
-                    Position = position,
-                    Radius = output.EnemyBodyRadius > 0f ? output.EnemyBodyRadius : 0.45f
-                });
+                    maxRadius = radius;
+                }
             }
 
-            if (_enemySeparationAgents.Count == 0)
+            if (!hasSeparationCandidates)
             {
                 return;
             }
 
-            EnemySeparationSolverProvider.SetSimulationAgents(_enemySeparationAgents);
-            for (int i = 0; i < _enemyJobOutputs.Length; i++)
+            float autoCellSize = maxRadius * 2f;
+            float configuredCellSize = _enemySeparationCellSize > 0f ? _enemySeparationCellSize : autoCellSize;
+            float cellSize = Mathf.Max(0.1f, configuredCellSize);
+            int bucketCapacity = Mathf.Max(128, enemyCount * 2);
+            PrepareEnemySeparationJobBuffers(enemyCount, bucketCapacity);
+            float3 playerPosition = new float3(context.PlayerPosition.x, 0f, context.PlayerPosition.z);
+            float pushDamping = Mathf.Clamp(_enemySeparationPushDamping, 0f, 2f);
+            float maxStepScale = Mathf.Max(0.1f, _enemySeparationMaxStepScale);
+            bool useTangentialInAttackRange = _enemySeparationUseTangentialInAttackRange;
+            float pushSmoothing = Mathf.Clamp01(_enemySeparationPushSmoothing);
+
+            NativeArray<EnemyJobOutputData> inputArray = _enemyJobOutputs.AsArray();
+            NativeArray<EnemyJobOutputData> separatedOutputArray = _enemyJobSeparationOutputs.AsArray();
+            NativeArray<float2> previousPushes = _enemySeparationPreviousPushes.AsArray();
+            NativeArray<float2> currentPushes = _enemySeparationCurrentPushes.AsArray();
+            JobHandle buildHandle;
+
+            if (_useBurstJobs)
             {
-                EnemyJobOutputData output = _enemyJobOutputs[i];
-                if (!output.AvoidEnemyOverlap || output.State != EnemyStateChasing)
+                BuildEnemySeparationBucketsBurstJob buildJob = new BuildEnemySeparationBucketsBurstJob
+                {
+                    Inputs = inputArray,
+                    Buckets = _enemySeparationBuckets.AsParallelWriter(),
+                    CellSize = cellSize
+                };
+                buildHandle = buildJob.Schedule(enemyCount, 64);
+            }
+            else
+            {
+                BuildEnemySeparationBucketsJob buildJob = new BuildEnemySeparationBucketsJob
+                {
+                    Inputs = inputArray,
+                    Buckets = _enemySeparationBuckets.AsParallelWriter(),
+                    CellSize = cellSize
+                };
+                buildHandle = buildJob.Schedule(enemyCount, 64);
+            }
+
+            JobHandle separationHandle;
+            if (_useBurstJobs)
+            {
+                EnemySeparationBurstJob separationJob = new EnemySeparationBurstJob
+                {
+                    Inputs = inputArray,
+                    Buckets = _enemySeparationBuckets,
+                    PreviousPushes = previousPushes,
+                    Outputs = separatedOutputArray,
+                    CurrentPushes = currentPushes,
+                    CellSize = cellSize,
+                    MaxRadius = maxRadius,
+                    PlayerPosition = playerPosition,
+                    PushDamping = pushDamping,
+                    MaxStepScale = maxStepScale,
+                    UseTangentialInAttackRange = useTangentialInAttackRange,
+                    PushSmoothing = pushSmoothing
+                };
+                separationHandle = separationJob.Schedule(enemyCount, 64, buildHandle);
+            }
+            else
+            {
+                EnemySeparationJob separationJob = new EnemySeparationJob
+                {
+                    Inputs = inputArray,
+                    Buckets = _enemySeparationBuckets,
+                    PreviousPushes = previousPushes,
+                    Outputs = separatedOutputArray,
+                    CurrentPushes = currentPushes,
+                    CellSize = cellSize,
+                    MaxRadius = maxRadius,
+                    PlayerPosition = playerPosition,
+                    PushDamping = pushDamping,
+                    MaxStepScale = maxStepScale,
+                    UseTangentialInAttackRange = useTangentialInAttackRange,
+                    PushSmoothing = pushSmoothing
+                };
+                separationHandle = separationJob.Schedule(enemyCount, 64, buildHandle);
+            }
+
+            separationHandle.Complete();
+            CommitEnemySeparationTemporalBuffers(enemyCount);
+            for (int i = 0; i < enemyCount; i++)
+            {
+                _enemyJobOutputs[i] = _enemyJobSeparationOutputs[i];
+            }
+        }
+
+        private static void BuildEnemySeparationBucket(int index, NativeArray<EnemyJobOutputData> inputs,
+            NativeParallelMultiHashMap<long, int>.ParallelWriter buckets, float cellSize)
+        {
+            EnemyJobOutputData output = inputs[index];
+            if (!output.AvoidEnemyOverlap)
+            {
+                return;
+            }
+
+            float3 position = new float3(output.Position.x, 0f, output.Position.z);
+            int cellX = (int)math.floor(position.x / cellSize);
+            int cellZ = (int)math.floor(position.z / cellSize);
+            buckets.Add(SeparationCellKey(cellX, cellZ), index);
+        }
+
+        private static void ExecuteEnemySeparation(int index, NativeArray<EnemyJobOutputData> inputs,
+            NativeParallelMultiHashMap<long, int> buckets, NativeArray<EnemyJobOutputData> outputs,
+            float cellSize, float maxRadius, float3 playerPosition, float pushDamping, float maxStepScale,
+            bool useTangentialInAttackRange, NativeArray<float2> previousPushes,
+            NativeArray<float2> currentPushes, float pushSmoothing)
+        {
+            currentPushes[index] = float2.zero;
+            EnemyJobOutputData self = inputs[index];
+            if (!self.AvoidEnemyOverlap)
+            {
+                outputs[index] = self;
+                return;
+            }
+
+            float3 candidate = new float3(self.Position.x, 0f, self.Position.z);
+            float3 original = candidate;
+            float3 fallback =
+                math.normalizesafe(new float3(self.Forward.x, 0f, self.Forward.z), new float3(1f, 0f, 0f));
+            float selfRadius = self.EnemyBodyRadius > 0f ? self.EnemyBodyRadius : 0.45f;
+            int iterations = self.SeparationIterations > 0 ? self.SeparationIterations : 1;
+            int queryRange = math.max(1, (int)math.ceil((selfRadius + maxRadius) / cellSize));
+
+            for (int iter = 0; iter < iterations; iter++)
+            {
+                int cellX = (int)math.floor(candidate.x / cellSize);
+                int cellZ = (int)math.floor(candidate.z / cellSize);
+                float3 pushAccumulation = float3.zero;
+
+                for (int dx = -queryRange; dx <= queryRange; dx++)
+                {
+                    for (int dz = -queryRange; dz <= queryRange; dz++)
+                    {
+                        long key = SeparationCellKey(cellX + dx, cellZ + dz);
+                        if (!buckets.TryGetFirstValue(key, out int otherIndex,
+                                out NativeParallelMultiHashMapIterator<long> iterator))
+                        {
+                            continue;
+                        }
+
+                        do
+                        {
+                            if (otherIndex == index)
+                            {
+                                continue;
+                            }
+
+                            EnemyJobOutputData other = inputs[otherIndex];
+                            if (!other.AvoidEnemyOverlap)
+                            {
+                                continue;
+                            }
+
+                            float otherRadius = other.EnemyBodyRadius > 0f ? other.EnemyBodyRadius : 0.45f;
+                            float minDistance = selfRadius + otherRadius;
+                            float minDistanceSqr = minDistance * minDistance;
+
+                            float3 otherPosition = new float3(other.Position.x, 0f, other.Position.z);
+                            float3 toSelf = candidate - otherPosition;
+                            float sqrDistance = math.lengthsq(toSelf);
+
+                            if (sqrDistance <= float.Epsilon)
+                            {
+                                continue;
+                            }
+
+                            if (sqrDistance >= minDistanceSqr)
+                            {
+                                continue;
+                            }
+
+                            float distance = math.sqrt(sqrDistance);
+                            float penetration = minDistance - distance;
+                            pushAccumulation += (toSelf / distance) * penetration;
+                        } while (buckets.TryGetNextValue(out otherIndex, ref iterator));
+                    }
+                }
+
+                if (math.lengthsq(pushAccumulation) <= float.Epsilon)
                 {
                     continue;
                 }
 
-                Vector3 resolvedPosition = EnemySeparationSolverProvider.ResolveSimulation(
-                    output.EntityId,
-                    output.Position,
-                    output.Forward,
-                    output.SeparationIterations > 0 ? output.SeparationIterations : 1);
+                float3 resolvedPush = pushAccumulation * pushDamping;
 
-                output.Position = resolvedPosition;
-                _enemyJobOutputs[i] = output;
+                float maxStep = selfRadius * maxStepScale;
+                float pushLength = math.length(resolvedPush);
+                if (pushLength > maxStep && pushLength > float.Epsilon)
+                {
+                    resolvedPush = resolvedPush / pushLength * maxStep;
+                }
+
+                candidate += resolvedPush;
             }
+
+            float3 framePush = candidate - original;
+            float2 previousPush2 = previousPushes[index];
+            float3 previousPush = new float3(previousPush2.x, 0f, previousPush2.y);
+            float3 smoothedPush = SmoothSeparationPush(framePush, previousPush, pushSmoothing);
+
+            if (useTangentialInAttackRange && self.State == EnemyStateInAttackRange)
+            {
+                smoothedPush = ProjectToTangential(smoothedPush, playerPosition, original);
+            }
+
+            float maxTotalStep = selfRadius * maxStepScale * iterations;
+            float smoothedLength = math.length(smoothedPush);
+            if (smoothedLength > maxTotalStep && smoothedLength > float.Epsilon)
+            {
+                smoothedPush = smoothedPush / smoothedLength * maxTotalStep;
+            }
+
+            float3 finalPosition = original + smoothedPush;
+            currentPushes[index] = new float2(smoothedPush.x, smoothedPush.z);
+            self.Position = new Vector3(finalPosition.x, self.Position.y, finalPosition.z);
+            if (math.lengthsq(smoothedPush) > float.Epsilon)
+            {
+                self.Forward = new Vector3(fallback.x, self.Forward.y, fallback.z);
+            }
+
+            outputs[index] = self;
+        }
+
+        private static float3 SmoothSeparationPush(float3 framePush, float3 previousPush, float pushSmoothing)
+        {
+            float frameLengthSqr = math.lengthsq(framePush);
+            float previousLengthSqr = math.lengthsq(previousPush);
+
+            if (frameLengthSqr <= float.Epsilon)
+            {
+                return float3.zero;
+            }
+
+            if (previousLengthSqr <= float.Epsilon || pushSmoothing <= 0f)
+            {
+                return framePush;
+            }
+
+            float frameLength = math.sqrt(frameLengthSqr);
+            float previousLength = math.sqrt(previousLengthSqr);
+            float3 frameDirection = framePush / frameLength;
+            float3 previousDirection = previousPush / previousLength;
+            float directionAlignment = math.dot(frameDirection, previousDirection);
+
+            if (directionAlignment >= 0.35f)
+            {
+                return framePush;
+            }
+
+            float directionalFactor = math.saturate((0.35f - directionAlignment) / 1.35f);
+            float smoothingStrength = pushSmoothing * directionalFactor;
+            return math.lerp(framePush, previousPush, smoothingStrength);
+        }
+
+        private static float3 ProjectToTangential(float3 push, float3 playerPosition, float3 currentPosition)
+        {
+            if (math.lengthsq(push) <= float.Epsilon)
+            {
+                return push;
+            }
+
+            float3 toPlayer = playerPosition - currentPosition;
+            float toPlayerSqr = math.lengthsq(toPlayer);
+            if (toPlayerSqr <= float.Epsilon)
+            {
+                return push;
+            }
+
+            float3 radialDirection = toPlayer / math.sqrt(toPlayerSqr);
+            float radialOffset = math.dot(push, radialDirection);
+            return push - radialDirection * radialOffset;
+        }
+
+        private static long SeparationCellKey(int x, int z)
+        {
+            return ((long)x << 32) ^ (uint)z;
         }
 
         private static void ExecuteEnemyMovement(int index, NativeArray<EnemyJobInputData> inputs,
@@ -197,7 +544,8 @@ namespace Simulation
 
             float3 forward = new float3(input.Forward.x, input.Forward.y, input.Forward.z);
             float3 desiredPosition = currentPosition;
-            quaternion rotation = new quaternion(input.Rotation.x, input.Rotation.y, input.Rotation.z, input.Rotation.w);
+            quaternion rotation =
+                new quaternion(input.Rotation.x, input.Rotation.y, input.Rotation.z, input.Rotation.w);
 
             if (canChase)
             {

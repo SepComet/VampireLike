@@ -35,6 +35,9 @@ namespace Simulation.Tests.Editor
         private static readonly MethodInfo TickMethod =
             SimulationWorldType?.GetMethod("Tick", PublicInstance);
 
+        private static readonly MethodInfo TryGetNearestEnemyEntityIdMethod =
+            SimulationWorldType?.GetMethod("TryGetNearestEnemyEntityId", PublicInstance);
+
         private static readonly MethodInfo SetUseSimulationMovementMethod =
             SimulationWorldType?.GetMethod("SetUseSimulationMovement", PublicInstance);
 
@@ -67,6 +70,7 @@ namespace Simulation.Tests.Editor
             Assert.NotNull(RemoveEnemyByEntityIdMethod, "RemoveEnemyByEntityId reflection lookup failed.");
             Assert.NotNull(TryGetEnemyDataMethod, "TryGetEnemyData reflection lookup failed.");
             Assert.NotNull(TickMethod, "Tick reflection lookup failed.");
+            Assert.NotNull(TryGetNearestEnemyEntityIdMethod, "TryGetNearestEnemyEntityId reflection lookup failed.");
             Assert.NotNull(SetUseSimulationMovementMethod, "SetUseSimulationMovement reflection lookup failed.");
             Assert.NotNull(SetUseJobSimulationMethod, "SetUseJobSimulation reflection lookup failed.");
             Assert.NotNull(UseGridBucketSolverMethod, "UseGridBucketSolver reflection lookup failed.");
@@ -164,7 +168,70 @@ namespace Simulation.Tests.Editor
             Assert.That(forward.x, Is.EqualTo(1f).Within(0.0001f));
         }
 
-        private object CreateEnemy(int entityId, Vector3 position, float speed, float attackRange)
+        [Test]
+        public void TryGetNearestEnemyEntityId_SelectsNearestBucketCandidate_WhenJobSimulationEnabled()
+        {
+            SetUseJobSimulationMethod.Invoke(_worldComponent, new object[] { true });
+            UpsertEnemy(CreateEnemy(entityId: 1201, position: new Vector3(1f, 0f, 0f), speed: 0f, attackRange: 1f));
+            UpsertEnemy(CreateEnemy(entityId: 1202, position: new Vector3(6f, 0f, 0f), speed: 0f, attackRange: 1f));
+
+            InvokeTick(deltaTime: 0.016f, realDeltaTime: 0.016f, playerPosition: Vector3.zero);
+
+            object[] parameters = { Vector3.zero, 100f, 0 };
+            bool found = (bool)TryGetNearestEnemyEntityIdMethod.Invoke(_worldComponent, parameters);
+            int nearestEntityId = (int)parameters[2];
+
+            Assert.IsTrue(found);
+            Assert.That(nearestEntityId, Is.EqualTo(1201));
+        }
+
+        [Test]
+        public void TickEnemies_SeparatesOverlappedEnemies_WhenJobSimulationEnabled()
+        {
+            SetUseJobSimulationMethod.Invoke(_worldComponent, new object[] { true });
+            UpsertEnemy(CreateEnemy(entityId: 1301, position: new Vector3(0f, 0f, 0f), speed: 1f, attackRange: 0.1f,
+                avoidEnemyOverlap: true, enemyBodyRadius: 0.45f, separationIterations: 2));
+            UpsertEnemy(CreateEnemy(entityId: 1302, position: new Vector3(0.1f, 0f, 0f), speed: 1f, attackRange: 0.1f,
+                avoidEnemyOverlap: true, enemyBodyRadius: 0.45f, separationIterations: 2));
+
+            InvokeTick(deltaTime: 0.1f, realDeltaTime: 0.1f, playerPosition: new Vector3(10f, 0f, 0f));
+
+            object enemyA = GetEnemyAt(0);
+            object enemyB = GetEnemyAt(1);
+            Vector3 posA = (Vector3)GetField(enemyA, "Position");
+            Vector3 posB = (Vector3)GetField(enemyB, "Position");
+            posA.y = 0f;
+            posB.y = 0f;
+            float distance = Vector3.Distance(posA, posB);
+            Assert.That(distance, Is.GreaterThanOrEqualTo(0.89f));
+        }
+
+        [Test]
+        public void TickEnemies_SeparatesOverlappedEnemies_WhenPlayerIsStaticAndInRange()
+        {
+            SetUseJobSimulationMethod.Invoke(_worldComponent, new object[] { true });
+            UpsertEnemy(CreateEnemy(entityId: 1311, position: new Vector3(0f, 0f, 0f), speed: 1f, attackRange: 10f,
+                avoidEnemyOverlap: true, enemyBodyRadius: 0.45f, separationIterations: 3));
+            UpsertEnemy(CreateEnemy(entityId: 1312, position: new Vector3(0.05f, 0f, 0f), speed: 1f, attackRange: 10f,
+                avoidEnemyOverlap: true, enemyBodyRadius: 0.45f, separationIterations: 3));
+
+            InvokeTick(deltaTime: 0.1f, realDeltaTime: 0.1f, playerPosition: Vector3.zero);
+
+            object enemyA = GetEnemyAt(0);
+            object enemyB = GetEnemyAt(1);
+            Assert.That((int)GetField(enemyA, "State"), Is.EqualTo(2));
+            Assert.That((int)GetField(enemyB, "State"), Is.EqualTo(2));
+
+            Vector3 posA = (Vector3)GetField(enemyA, "Position");
+            Vector3 posB = (Vector3)GetField(enemyB, "Position");
+            posA.y = 0f;
+            posB.y = 0f;
+            float distance = Vector3.Distance(posA, posB);
+            Assert.That(distance, Is.GreaterThanOrEqualTo(0.5f));
+        }
+
+        private object CreateEnemy(int entityId, Vector3 position, float speed, float attackRange,
+            bool avoidEnemyOverlap = false, float enemyBodyRadius = 0.45f, int separationIterations = 1)
         {
             object enemy = System.Activator.CreateInstance(EnemySimDataType);
             SetField(ref enemy, "EntityId", entityId);
@@ -173,9 +240,9 @@ namespace Simulation.Tests.Editor
             SetField(ref enemy, "Rotation", Quaternion.identity);
             SetField(ref enemy, "Speed", speed);
             SetField(ref enemy, "AttackRange", attackRange);
-            SetField(ref enemy, "AvoidEnemyOverlap", false);
-            SetField(ref enemy, "EnemyBodyRadius", 0.45f);
-            SetField(ref enemy, "SeparationIterations", 1);
+            SetField(ref enemy, "AvoidEnemyOverlap", avoidEnemyOverlap);
+            SetField(ref enemy, "EnemyBodyRadius", enemyBodyRadius);
+            SetField(ref enemy, "SeparationIterations", separationIterations);
             SetField(ref enemy, "TargetType", 0);
             SetField(ref enemy, "State", 0);
             return enemy;

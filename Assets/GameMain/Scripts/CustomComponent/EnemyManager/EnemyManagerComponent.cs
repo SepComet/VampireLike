@@ -20,6 +20,7 @@ namespace CustomComponent
         private EntityComponent _entity;
 
         private List<EntityBase> _enemies;
+        private Dictionary<int, EntityBase> _enemyById;
 
         public List<EntityBase> Enemies => _enemies;
 
@@ -58,6 +59,7 @@ namespace CustomComponent
         {
             _entity = GameEntry.Entity;
             _enemies = new List<EntityBase>();
+            _enemyById = new Dictionary<int, EntityBase>();
 
             GameEntry.Event.Subscribe(ShowEntitySuccessEventArgs.EventId, OnShowEntitySuccess);
             GameEntry.Event.Subscribe(HideEntityCompleteEventArgs.EventId, OnHideEntityComplete);
@@ -69,6 +71,7 @@ namespace CustomComponent
             GameEntry.Event.Unsubscribe(HideEntityCompleteEventArgs.EventId, OnHideEntityComplete);
 
             _enemies = null;
+            _enemyById = null;
             _entity = null;
         }
 
@@ -157,6 +160,25 @@ namespace CustomComponent
             }
 
             _enemies.Clear();
+            _enemyById?.Clear();
+        }
+
+        public bool TryGetEnemy(int entityId, out EntityBase enemy)
+        {
+            enemy = null;
+            if (_enemyById == null || !_enemyById.TryGetValue(entityId, out EntityBase cachedEnemy))
+            {
+                return false;
+            }
+
+            if (cachedEnemy == null || !cachedEnemy.Available)
+            {
+                _enemyById.Remove(entityId);
+                return false;
+            }
+
+            enemy = cachedEnemy;
+            return true;
         }
 
         public void SetSpawnRateScale(float scale)
@@ -218,6 +240,7 @@ namespace CustomComponent
                 enemy.SetTarget(_player);
                 RemoveEnemyFromCache(enemy.Id);
                 _enemies.Add(enemy);
+                _enemyById[enemy.Id] = enemy;
             }
 
             if (ne.EntityLogicType == typeof(Player))
@@ -245,11 +268,21 @@ namespace CustomComponent
 
         private void RemoveEnemyFromCache(int entityId)
         {
+            if (_enemyById != null)
+            {
+                _enemyById.Remove(entityId);
+            }
+
             for (int i = _enemies.Count - 1; i >= 0; i--)
             {
                 EntityBase cachedEnemy = _enemies[i];
                 if (cachedEnemy == null || cachedEnemy.Id == entityId)
                 {
+                    if (cachedEnemy != null && _enemyById != null)
+                    {
+                        _enemyById.Remove(cachedEnemy.Id);
+                    }
+
                     _enemies.RemoveAt(i);
                 }
             }
