@@ -1,14 +1,18 @@
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
+using Object = UnityEngine.Object;
 
 namespace Simulation.Tests.PlayMode
 {
     public class SimulationWorldPlayModeTests
     {
         private const string GameAssemblyName = "Assembly-CSharp";
+        private const string RuntimeAssemblyName = "UnityGameFramework.Runtime";
         private const BindingFlags PublicStatic = BindingFlags.Public | BindingFlags.Static;
         private const BindingFlags PublicInstance = BindingFlags.Public | BindingFlags.Instance;
         private const BindingFlags NonPublicInstance = BindingFlags.NonPublic | BindingFlags.Instance;
@@ -40,6 +44,36 @@ namespace Simulation.Tests.PlayMode
         private static readonly System.Type EnemySeparationSolverProviderType =
             System.Type.GetType($"CustomUtility.EnemySeparationSolverProvider, {GameAssemblyName}");
 
+        private static readonly System.Type EnemyManagerComponentType =
+            System.Type.GetType($"CustomComponent.EnemyManagerComponent, {GameAssemblyName}");
+
+        private static readonly System.Type PlayerType =
+            System.Type.GetType($"Entity.Player, {GameAssemblyName}");
+
+        private static readonly System.Type EntityBaseType =
+            System.Type.GetType($"Entity.EntityBase, {GameAssemblyName}");
+
+        private static readonly System.Type HealthComponentType =
+            System.Type.GetType($"Components.HealthComponent, {GameAssemblyName}");
+
+        private static readonly System.Type ProcedureComponentType =
+            System.Type.GetType($"UnityGameFramework.Runtime.ProcedureComponent, {RuntimeAssemblyName}");
+
+        private static readonly System.Type ProcedureGameType =
+            System.Type.GetType($"Procedure.ProcedureGame, {GameAssemblyName}");
+
+        private static readonly System.Type GameStateTypeType =
+            System.Type.GetType($"Procedure.GameStateType, {GameAssemblyName}");
+
+        private static readonly System.Type ProcedureManagerType =
+            System.Type.GetType("GameFramework.Procedure.ProcedureManager, GameFramework");
+
+        private static readonly System.Type ProcedureManagerInterfaceType =
+            System.Type.GetType("GameFramework.Procedure.IProcedureManager, GameFramework");
+
+        private static readonly System.Type FsmOpenGenericType =
+            System.Type.GetType("GameFramework.Fsm.Fsm`1, GameFramework");
+
         private static readonly MethodInfo UpsertEnemyMethod =
             SimulationWorldType?.GetMethod("UpsertEnemy", NonPublicInstance);
 
@@ -60,6 +94,9 @@ namespace Simulation.Tests.PlayMode
 
         private static readonly MethodInfo TryGetNearestEnemyEntityIdMethod =
             SimulationWorldType?.GetMethod("TryGetNearestEnemyEntityId", PublicInstance);
+
+        private static readonly MethodInfo TryEnqueueAreaCollisionQueryMethod =
+            SimulationWorldType?.GetMethod("TryEnqueueAreaCollisionQuery", PublicInstance);
 
         private static readonly MethodInfo SetUseSimulationMovementMethod =
             SimulationWorldType?.GetMethod("SetUseSimulationMovement", PublicInstance);
@@ -91,6 +128,21 @@ namespace Simulation.Tests.PlayMode
         private static readonly PropertyInfo CollisionCandidateCountProperty =
             SimulationWorldType?.GetProperty("CollisionCandidateCount", PublicInstance);
 
+        private static readonly PropertyInfo UseSimulationMovementProperty =
+            SimulationWorldType?.GetProperty("UseSimulationMovement", PublicInstance);
+
+        private static readonly PropertyInfo UseJobSimulationProperty =
+            SimulationWorldType?.GetProperty("UseJobSimulation", PublicInstance);
+
+        private static readonly PropertyInfo LastResolvedAreaHitCountProperty =
+            SimulationWorldType?.GetProperty("LastResolvedAreaHitCount", PublicInstance);
+
+        private static readonly FieldInfo CollisionQueryInputsField =
+            SimulationWorldType?.GetField("_collisionQueryInputs", NonPublicInstance);
+
+        private static readonly FieldInfo AreaCollisionRequestsField =
+            SimulationWorldType?.GetField("_areaCollisionRequests", NonPublicInstance);
+
         private static readonly MethodInfo EnemyProjectileOnUpdateMethod =
             EnemyProjectileType?.GetMethod("OnUpdate", NonPublicInstance);
 
@@ -111,6 +163,27 @@ namespace Simulation.Tests.PlayMode
 
         private static readonly MethodInfo GameEntrySetSimulationWorldMethod =
             GameEntrySimulationWorldProperty?.GetSetMethod(true);
+
+        private static readonly PropertyInfo GameEntryEnemyManagerProperty =
+            GameEntryType?.GetProperty("EnemyManager", PublicStatic);
+
+        private static readonly MethodInfo GameEntryGetEnemyManagerMethod =
+            GameEntryEnemyManagerProperty?.GetGetMethod(true);
+
+        private static readonly MethodInfo GameEntrySetEnemyManagerMethod =
+            GameEntryEnemyManagerProperty?.GetSetMethod(true);
+
+        private static readonly PropertyInfo GameEntryProcedureProperty =
+            GameEntryType?.GetProperty("Procedure", PublicStatic);
+
+        private static readonly MethodInfo GameEntryGetProcedureMethod =
+            GameEntryProcedureProperty?.GetGetMethod(true);
+
+        private static readonly MethodInfo GameEntrySetProcedureMethod =
+            GameEntryProcedureProperty?.GetSetMethod(true);
+
+        private static readonly MethodInfo HealthComponentOnInitMethod =
+            HealthComponentType?.GetMethod("OnInit", PublicInstance);
 
         private static readonly FieldInfo ProjectileMaxDistanceFromPlayerField =
             SimulationWorldType?.GetField("_projectileMaxDistanceFromPlayer", NonPublicInstance);
@@ -133,6 +206,16 @@ namespace Simulation.Tests.PlayMode
             Assert.NotNull(CampTypeType, "CampType type lookup failed.");
             Assert.NotNull(GameEntryType, "GameEntry type lookup failed.");
             Assert.NotNull(EnemySeparationSolverProviderType, "EnemySeparationSolverProvider type lookup failed.");
+            Assert.NotNull(EnemyManagerComponentType, "EnemyManagerComponent type lookup failed.");
+            Assert.NotNull(PlayerType, "Player type lookup failed.");
+            Assert.NotNull(EntityBaseType, "EntityBase type lookup failed.");
+            Assert.NotNull(HealthComponentType, "HealthComponent type lookup failed.");
+            Assert.NotNull(ProcedureComponentType, "ProcedureComponent type lookup failed.");
+            Assert.NotNull(ProcedureGameType, "ProcedureGame type lookup failed.");
+            Assert.NotNull(GameStateTypeType, "GameStateType type lookup failed.");
+            Assert.NotNull(ProcedureManagerType, "ProcedureManager type lookup failed.");
+            Assert.NotNull(ProcedureManagerInterfaceType, "IProcedureManager type lookup failed.");
+            Assert.NotNull(FsmOpenGenericType, "Fsm`1 type lookup failed.");
             Assert.NotNull(UpsertEnemyMethod, "UpsertEnemy reflection lookup failed.");
             Assert.NotNull(RemoveEnemyByEntityIdMethod, "RemoveEnemyByEntityId reflection lookup failed.");
             Assert.NotNull(UpsertProjectileMethod, "UpsertProjectile reflection lookup failed.");
@@ -140,6 +223,7 @@ namespace Simulation.Tests.PlayMode
             Assert.NotNull(TryGetEnemyDataMethod, "TryGetEnemyData reflection lookup failed.");
             Assert.NotNull(TickMethod, "Tick reflection lookup failed.");
             Assert.NotNull(TryGetNearestEnemyEntityIdMethod, "TryGetNearestEnemyEntityId reflection lookup failed.");
+            Assert.NotNull(TryEnqueueAreaCollisionQueryMethod, "TryEnqueueAreaCollisionQuery reflection lookup failed.");
             Assert.NotNull(SetUseSimulationMovementMethod, "SetUseSimulationMovement reflection lookup failed.");
             Assert.NotNull(SetUseJobSimulationMethod, "SetUseJobSimulation reflection lookup failed.");
             Assert.NotNull(SetUseBurstJobsMethod, "SetUseBurstJobs reflection lookup failed.");
@@ -148,6 +232,11 @@ namespace Simulation.Tests.PlayMode
             Assert.NotNull(EnemiesProperty, "Enemies property reflection lookup failed.");
             Assert.NotNull(ProjectilesProperty, "Projectiles property reflection lookup failed.");
             Assert.NotNull(CollisionCandidateCountProperty, "CollisionCandidateCount property reflection lookup failed.");
+            Assert.NotNull(UseSimulationMovementProperty, "UseSimulationMovement property reflection lookup failed.");
+            Assert.NotNull(UseJobSimulationProperty, "UseJobSimulation property reflection lookup failed.");
+            Assert.NotNull(LastResolvedAreaHitCountProperty, "LastResolvedAreaHitCount property reflection lookup failed.");
+            Assert.NotNull(CollisionQueryInputsField, "Collision query inputs field reflection lookup failed.");
+            Assert.NotNull(AreaCollisionRequestsField, "Area collision requests field reflection lookup failed.");
             Assert.NotNull(ProjectileMaxDistanceFromPlayerField,
                 "Projectile max distance field reflection lookup failed.");
             Assert.NotNull(ProjectileMaxVerticalOffsetFromPlayerField,
@@ -162,6 +251,13 @@ namespace Simulation.Tests.PlayMode
                 "GameEntry.SimulationWorld getter reflection lookup failed.");
             Assert.NotNull(GameEntrySetSimulationWorldMethod,
                 "GameEntry.SimulationWorld setter reflection lookup failed.");
+            Assert.NotNull(GameEntryEnemyManagerProperty, "GameEntry.EnemyManager property lookup failed.");
+            Assert.NotNull(GameEntryGetEnemyManagerMethod, "GameEntry.EnemyManager getter reflection lookup failed.");
+            Assert.NotNull(GameEntrySetEnemyManagerMethod, "GameEntry.EnemyManager setter reflection lookup failed.");
+            Assert.NotNull(GameEntryProcedureProperty, "GameEntry.Procedure property lookup failed.");
+            Assert.NotNull(GameEntryGetProcedureMethod, "GameEntry.Procedure getter reflection lookup failed.");
+            Assert.NotNull(GameEntrySetProcedureMethod, "GameEntry.Procedure setter reflection lookup failed.");
+            Assert.NotNull(HealthComponentOnInitMethod, "HealthComponent.OnInit reflection lookup failed.");
 
             _worldGameObject = new GameObject("SimulationWorldPlayModeTests");
             _worldComponent = _worldGameObject.AddComponent(SimulationWorldType);
@@ -595,6 +691,117 @@ namespace Simulation.Tests.PlayMode
             yield break;
         }
 
+        [UnityTest]
+        public IEnumerator TickProjectiles_LimitsCandidatesToMaxTargets_IncludingPlayerCandidate()
+        {
+            SetUseJobSimulationMethod.Invoke(_worldComponent, new object[] { true });
+            object previousEnemyManager = GetGameEntryEnemyManager();
+            GameObject enemyManagerObject = new GameObject("EnemyManagerMaxTargetsPlayMode");
+            GameObject playerObject = new GameObject("PlayerTargetMaxTargetsPlayMode");
+            try
+            {
+                Component enemyManager = enemyManagerObject.AddComponent(EnemyManagerComponentType);
+                Component player = playerObject.AddComponent(PlayerType);
+                Component healthComponent = playerObject.AddComponent(HealthComponentType);
+                HealthComponentOnInitMethod.Invoke(healthComponent, new object[] { 100, null });
+                SetPrivateField(player, "_healthComponent", healthComponent);
+                SetPrivateField(player, "m_CachedTransform", playerObject.transform);
+                SetPrivateField(player, "m_Available", true);
+
+                object enemyById = Activator.CreateInstance(typeof(Dictionary<,>).MakeGenericType(typeof(int), EntityBaseType));
+                enemyById.GetType().GetMethod("Add")?.Invoke(enemyById, new object[] { -1, player });
+                object enemies = Activator.CreateInstance(typeof(List<>).MakeGenericType(EntityBaseType));
+                enemies.GetType().GetMethod("Add")?.Invoke(enemies, new object[] { player });
+                SetPrivateField(enemyManager, "_enemyById", enemyById);
+                SetPrivateField(enemyManager, "_enemies", enemies);
+                SetGameEntryEnemyManager(enemyManager);
+
+                UpsertEnemy(CreateEnemy(entityId: 5521, position: Vector3.zero, speed: 0f, attackRange: 1f));
+                UpsertProjectile(CreateProjectile(entityId: 5522, position: Vector3.zero, forward: Vector3.forward,
+                    velocity: Vector3.zero, speed: 0f, lifeTime: 1f, age: 0f, active: true, remainingLifetime: 1f,
+                    state: 0));
+
+                InvokeTick(deltaTime: 0.016f, realDeltaTime: 0.016f, playerPosition: Vector3.zero);
+
+                Assert.That(GetCollisionCandidateCount(), Is.EqualTo(1));
+            }
+            finally
+            {
+                SetGameEntryEnemyManager(previousEnemyManager);
+                Object.Destroy(enemyManagerObject);
+                Object.Destroy(playerObject);
+            }
+
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator SetUseSimulationAndJob_AreIgnored_WhenBattleStateIsActive()
+        {
+            SetUseSimulationMovementMethod.Invoke(_worldComponent, new object[] { true });
+            SetUseJobSimulationMethod.Invoke(_worldComponent, new object[] { false });
+
+            object previousProcedure = GetGameEntryProcedure();
+            GameObject procedureObject = new GameObject("ProcedureGuardPlayMode");
+            try
+            {
+                Component procedureComponent = procedureObject.AddComponent(ProcedureComponentType);
+                object procedureManager = Activator.CreateInstance(ProcedureManagerType);
+                Type fsmType = FsmOpenGenericType.MakeGenericType(ProcedureManagerInterfaceType);
+                object fsm = Activator.CreateInstance(fsmType);
+                object procedureGame = Activator.CreateInstance(ProcedureGameType);
+                object battleState = Enum.Parse(GameStateTypeType, "Battle");
+
+                SetPrivateField(procedureGame, "_currentGameState", battleState);
+                SetPrivateField(fsm, "m_CurrentState", procedureGame);
+                SetPrivateField(procedureManager, "m_ProcedureFsm", fsm);
+                SetPrivateField(procedureComponent, "m_ProcedureManager", procedureManager);
+                SetGameEntryProcedure(procedureComponent);
+
+                SetUseSimulationMovementMethod.Invoke(_worldComponent, new object[] { false });
+                SetUseJobSimulationMethod.Invoke(_worldComponent, new object[] { true });
+
+                Assert.IsTrue((bool)UseSimulationMovementProperty.GetValue(_worldComponent));
+                Assert.IsFalse((bool)UseJobSimulationProperty.GetValue(_worldComponent));
+            }
+            finally
+            {
+                SetGameEntryProcedure(previousProcedure);
+                Object.Destroy(procedureObject);
+            }
+
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator EnqueueAreaQuery_CapturesInactiveSourceSnapshot_WhenSourceEntityUnavailable()
+        {
+            SetUseJobSimulationMethod.Invoke(_worldComponent, new object[] { true });
+            UpsertEnemy(CreateEnemy(entityId: 5531, position: Vector3.zero, speed: 0f, attackRange: 1f));
+
+            object[] enqueueArgs = { 99999, 99999, Vector3.zero, 1f, 1 };
+            bool enqueueResult = (bool)TryEnqueueAreaCollisionQueryMethod.Invoke(_worldComponent, enqueueArgs);
+            Assert.IsTrue(enqueueResult);
+
+            object areaCollisionRequests = AreaCollisionRequestsField.GetValue(_worldComponent);
+            Assert.NotNull(areaCollisionRequests);
+            PropertyInfo requestCountProperty = areaCollisionRequests.GetType().GetProperty("Count", PublicInstance);
+            int requestCount = (int)requestCountProperty.GetValue(areaCollisionRequests);
+            Assert.That(requestCount, Is.GreaterThan(0));
+
+            PropertyInfo requestItemProperty = areaCollisionRequests.GetType().GetProperty("Item", PublicInstance);
+            object firstRequest = requestItemProperty.GetValue(areaCollisionRequests, new object[] { 0 });
+            FieldInfo requestSnapshotField =
+                firstRequest.GetType().GetField("SourceWasActiveAtQueryTime", PublicInstance);
+            Assert.NotNull(requestSnapshotField);
+            bool requestSnapshot = (bool)requestSnapshotField.GetValue(firstRequest);
+            Assert.IsFalse(requestSnapshot);
+
+            InvokeTick(deltaTime: 0.016f, realDeltaTime: 0.016f, playerPosition: Vector3.zero);
+            Assert.That(GetLastResolvedAreaHitCount(), Is.EqualTo(0));
+            yield break;
+        }
+
         private object CreateEnemy(int entityId, Vector3 position, float speed, float attackRange,
             bool avoidEnemyOverlap = false, float enemyBodyRadius = 0.45f, int separationIterations = 1)
         {
@@ -673,6 +880,26 @@ namespace Simulation.Tests.PlayMode
             GameEntrySetSimulationWorldMethod.Invoke(null, new[] { simulationWorld });
         }
 
+        private static object GetGameEntryEnemyManager()
+        {
+            return GameEntryGetEnemyManagerMethod.Invoke(null, null);
+        }
+
+        private static void SetGameEntryEnemyManager(object enemyManager)
+        {
+            GameEntrySetEnemyManagerMethod.Invoke(null, new[] { enemyManager });
+        }
+
+        private static object GetGameEntryProcedure()
+        {
+            return GameEntryGetProcedureMethod.Invoke(null, null);
+        }
+
+        private static void SetGameEntryProcedure(object procedureComponent)
+        {
+            GameEntrySetProcedureMethod.Invoke(null, new[] { procedureComponent });
+        }
+
         private static void InvokeEnemyProjectileUpdate(Component projectileComponent, float elapseSeconds,
             float realElapseSeconds)
         {
@@ -721,6 +948,11 @@ namespace Simulation.Tests.PlayMode
             return (int)CollisionCandidateCountProperty.GetValue(_worldComponent);
         }
 
+        private int GetLastResolvedAreaHitCount()
+        {
+            return (int)LastResolvedAreaHitCountProperty.GetValue(_worldComponent);
+        }
+
         private static object GetField(object target, string fieldName)
         {
             FieldInfo field = target.GetType().GetField(fieldName, PublicInstance);
@@ -731,6 +963,24 @@ namespace Simulation.Tests.PlayMode
         {
             FieldInfo field = target.GetType().GetField(fieldName, PublicInstance);
             field.SetValue(target, value);
+        }
+
+        private static void SetPrivateField(object target, string fieldName, object value)
+        {
+            Type type = target.GetType();
+            while (type != null)
+            {
+                FieldInfo field = type.GetField(fieldName, NonPublicInstance);
+                if (field != null)
+                {
+                    field.SetValue(target, value);
+                    return;
+                }
+
+                type = type.BaseType;
+            }
+
+            Assert.Fail($"Field '{fieldName}' was not found on type '{target.GetType().FullName}'.");
         }
     }
 }
