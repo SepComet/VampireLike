@@ -148,20 +148,18 @@ namespace Simulation
             return expectedCount;
         }
 
-        private void ExecuteProjectileMovementJob(in SimulationTickContext context)
+        private JobHandle ExecuteProjectileMovementJob(in SimulationTickContext context)
         {
             int projectileCount = _projectileJobInputs.Length;
-            PrepareProjectileJobOutputBuffer(projectileCount);
-
             if (projectileCount == 0)
             {
-                return;
+                return default;
             }
 
             if (context.DeltaTime <= 0f)
             {
                 CopyProjectileInputToOutput();
-                return;
+                return default;
             }
 
             float maxDistance = Mathf.Max(0f, _projectileMaxDistanceFromPlayer);
@@ -172,7 +170,6 @@ namespace Simulation
             NativeArray<ProjectileJobInputData> inputArray = _projectileJobInputs.AsArray();
             NativeArray<ProjectileJobOutputData> outputArray = _projectileJobOutputs.AsArray();
 
-            JobHandle handle;
             if (_useBurstJobs)
             {
                 ProjectileMovementBurstJob burstJob = new ProjectileMovementBurstJob
@@ -184,23 +181,19 @@ namespace Simulation
                     MaxSqrDistanceFromPlayer = maxSqrDistanceFromPlayer,
                     MaxVerticalOffsetFromPlayer = maxVerticalOffsetFromPlayer
                 };
-                handle = burstJob.Schedule(projectileCount, 64);
-            }
-            else
-            {
-                ProjectileMovementJob job = new ProjectileMovementJob
-                {
-                    Inputs = inputArray,
-                    Outputs = outputArray,
-                    DeltaTime = context.DeltaTime,
-                    PlayerPosition = playerPosition,
-                    MaxSqrDistanceFromPlayer = maxSqrDistanceFromPlayer,
-                    MaxVerticalOffsetFromPlayer = maxVerticalOffsetFromPlayer
-                };
-                handle = job.Schedule(projectileCount, 64);
+                return burstJob.Schedule(projectileCount, 64);
             }
 
-            handle.Complete();
+            ProjectileMovementJob job = new ProjectileMovementJob
+            {
+                Inputs = inputArray,
+                Outputs = outputArray,
+                DeltaTime = context.DeltaTime,
+                PlayerPosition = playerPosition,
+                MaxSqrDistanceFromPlayer = maxSqrDistanceFromPlayer,
+                MaxVerticalOffsetFromPlayer = maxVerticalOffsetFromPlayer
+            };
+            return job.Schedule(projectileCount, 64);
         }
 
         private void BuildProjectileCollisionCandidates()

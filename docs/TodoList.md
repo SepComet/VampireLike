@@ -156,13 +156,13 @@
   - 建立命中事件缓冲区，统一在主线程提交表现层事件。
   - 完成标准：命中结果与现有逻辑一致，候选数量与耗时显著下降。
 
-- [ ] Checkpoint 7：Burst 策略落地与热路径约束
+- [x] Checkpoint 7：Burst 策略落地与热路径约束
   - 热路径 Job 全部添加 `[BurstCompile]`，并在 Burst Inspector 确认已生效。
   - 清理 Job 内不兼容写法：托管分配、虚调用、LINQ、异常路径热调用。
   - 数学计算统一迁移到 `Unity.Mathematics`。
   - 完成标准：核心 Job 均由 Burst 编译，且无安全检查错误/降级回 Mono 的关键路径。
 
-- [ ] Checkpoint 8：主线程职责收口与调度稳定
+- [x] Checkpoint 8：主线程职责收口与调度稳定
   - 明确主线程只做：输入采样、状态切换、UI 同步、实体显隐、最终写回。
   - 统一 `Schedule -> Dependency Combine -> Complete` 位置，防止隐式同步抖动。
   - 清理战斗帧中不必要的主线程循环（尤其逐实体逻辑）。

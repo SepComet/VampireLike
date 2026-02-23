@@ -8,6 +8,9 @@ namespace CustomDebugger
         public static readonly ProfilerMarker TickEnemies_BuildInput = new ProfilerMarker("TickEnemies.BuildInput");
         public static readonly ProfilerMarker TickEnemies_MoveSeparation = new ProfilerMarker("TickEnemies.MoveSeparation");
         public static readonly ProfilerMarker TickEnemies_StateUpdate = new ProfilerMarker("TickEnemies.StateUpdate");
+        public static readonly ProfilerMarker TickEnemies_Schedule = new ProfilerMarker("TickEnemies.Schedule");
+        public static readonly ProfilerMarker TickEnemies_Complete = new ProfilerMarker("TickEnemies.Complete");
+        public static readonly ProfilerMarker TickEnemies_MainThreadCommit = new ProfilerMarker("TickEnemies.MainThreadCommit");
         public static readonly ProfilerMarker TickEnemies_WriteBack = new ProfilerMarker("TickEnemies.WriteBack");
         public static readonly ProfilerMarker Collision_BuildQueries = new("Collision.BuildQueries");
         public static readonly ProfilerMarker Collision_BuildBuckets = new("Collision.BuildBuckets");

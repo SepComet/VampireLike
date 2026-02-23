@@ -133,9 +133,45 @@ namespace Simulation
                 return;
             }
 
+            JobHandle enemyMovementHandle = default;
+            JobHandle projectileMovementHandle = default;
+            JobHandle enemySeparationHandle = default;
+            bool hasEnemySeparationJob = false;
+            bool hasEnemySeparationCandidates = false;
+            int enemySeparationCount = 0;
+            float enemySeparationMaxRadius = 0.45f;
+
             using (CustomProfilerMarker.TickEnemies_BuildInput.Auto())
             {
                 SyncSimulationToJobInput();
+                int enemyCount = _enemyJobInputs.Length;
+                int projectileCount = _projectileJobInputs.Length;
+                PrepareEnemyJobOutputBuffer(enemyCount);
+                PrepareProjectileJobOutputBuffer(projectileCount);
+
+                enemySeparationCount = enemyCount;
+                for (int i = 0; i < enemyCount; i++)
+                {
+                    EnemyJobInputData input = _enemyJobInputs[i];
+                    if (!input.AvoidEnemyOverlap)
+                    {
+                        continue;
+                    }
+
+                    hasEnemySeparationCandidates = true;
+                    float radius = input.EnemyBodyRadius > 0f ? input.EnemyBodyRadius : 0.45f;
+                    if (radius > enemySeparationMaxRadius)
+                    {
+                        enemySeparationMaxRadius = radius;
+                    }
+                }
+
+                if (hasEnemySeparationCandidates)
+                {
+                    int separationBucketCapacity = Mathf.Max(128, enemyCount * 2);
+                    PrepareEnemySeparationJobBuffers(enemyCount, separationBucketCapacity);
+                }
+
                 int projectileQueryCount = _projectiles.Count;
                 int areaQueryCount = GetPendingAreaCollisionQueryCount();
                 int queryCount = projectileQueryCount + areaQueryCount;
@@ -148,48 +184,71 @@ namespace Simulation
 
             using (CustomProfilerMarker.TickEnemies_StateUpdate.Auto())
             {
-                ExecuteEnemyMovementJob(in context);
-                ExecuteProjectileMovementJob(in context);
+                enemyMovementHandle = ExecuteEnemyMovementJob(in context);
+                projectileMovementHandle = ExecuteProjectileMovementJob(in context);
+            }
+
+            JobHandle simulationHandle;
+            using (CustomProfilerMarker.TickEnemies_Schedule.Auto())
+            {
+                hasEnemySeparationJob = TryScheduleEnemySeparationForJobOutput(
+                    in context,
+                    enemyMovementHandle,
+                    hasEnemySeparationCandidates,
+                    enemySeparationCount,
+                    enemySeparationMaxRadius,
+                    out enemySeparationHandle);
+                JobHandle enemyHandle = hasEnemySeparationJob ? enemySeparationHandle : enemyMovementHandle;
+                simulationHandle = JobHandle.CombineDependencies(enemyHandle, projectileMovementHandle);
+            }
+
+            using (CustomProfilerMarker.TickEnemies_Complete.Auto())
+            {
+                simulationHandle.Complete();
             }
 
             using (CustomProfilerMarker.TickEnemies_MoveSeparation.Auto())
             {
-                ApplyEnemySeparationForJobOutput(in context);
+                if (hasEnemySeparationJob)
+                {
+                    CommitEnemySeparationForJobOutput(enemySeparationCount);
+                }
+
                 BuildProjectileCollisionCandidates();
             }
 
             using (CustomProfilerMarker.TickEnemies_WriteBack.Auto())
             {
-                ApplyJobOutputToSimulation();
-                ResolveProjectileCollisionCandidatesMainThread();
-                RecycleInactiveProjectiles();
+                using (CustomProfilerMarker.TickEnemies_MainThreadCommit.Auto())
+                {
+                    ApplyJobOutputToSimulation();
+                    ResolveProjectileCollisionCandidatesMainThread();
+                    RecycleInactiveProjectiles();
+                }
             }
 
             MarkEnemyTargetSpatialIndexDirty();
             BuildEnemyTargetSpatialIndexIfNeeded();
         }
 
-        private void ExecuteEnemyMovementJob(in SimulationTickContext context)
+        private JobHandle ExecuteEnemyMovementJob(in SimulationTickContext context)
         {
             int enemyCount = _enemyJobInputs.Length;
-            PrepareEnemyJobOutputBuffer(enemyCount);
-
             if (enemyCount == 0)
             {
-                return;
+                return default;
             }
 
             if (context.DeltaTime <= 0f)
             {
                 CopyEnemyInputToOutput();
-                return;
+                return default;
             }
 
             float3 playerPosition = new float3(context.PlayerPosition.x, 0f, context.PlayerPosition.z);
             NativeArray<EnemyJobInputData> inputArray = _enemyJobInputs.AsArray();
             NativeArray<EnemyJobOutputData> outputArray = _enemyJobOutputs.AsArray();
 
-            JobHandle handle;
             if (_useBurstJobs)
             {
                 EnemyMovementBurstJob burstJob = new EnemyMovementBurstJob
@@ -199,21 +258,17 @@ namespace Simulation
                     DeltaTime = context.DeltaTime,
                     PlayerPosition = playerPosition
                 };
-                handle = burstJob.Schedule(enemyCount, 64);
-            }
-            else
-            {
-                EnemyMovementJob job = new EnemyMovementJob
-                {
-                    Inputs = inputArray,
-                    Outputs = outputArray,
-                    DeltaTime = context.DeltaTime,
-                    PlayerPosition = playerPosition
-                };
-                handle = job.Schedule(enemyCount, 64);
+                return burstJob.Schedule(enemyCount, 64);
             }
 
-            handle.Complete();
+            EnemyMovementJob job = new EnemyMovementJob
+            {
+                Inputs = inputArray,
+                Outputs = outputArray,
+                DeltaTime = context.DeltaTime,
+                PlayerPosition = playerPosition
+            };
+            return job.Schedule(enemyCount, 64);
         }
 
         private void CopyEnemyInputToOutput()
@@ -238,42 +293,18 @@ namespace Simulation
             }
         }
 
-        private void ApplyEnemySeparationForJobOutput(in SimulationTickContext context)
+        private bool TryScheduleEnemySeparationForJobOutput(in SimulationTickContext context, JobHandle dependency,
+            bool hasSeparationCandidates, int enemyCount, float maxRadius, out JobHandle separationHandle)
         {
-            int enemyCount = _enemyJobOutputs.Length;
-            if (enemyCount == 0)
+            separationHandle = dependency;
+            if (enemyCount <= 0 || !hasSeparationCandidates)
             {
-                return;
-            }
-
-            bool hasSeparationCandidates = false;
-            float maxRadius = 0.45f;
-            for (int i = 0; i < enemyCount; i++)
-            {
-                EnemyJobOutputData output = _enemyJobOutputs[i];
-                if (!output.AvoidEnemyOverlap)
-                {
-                    continue;
-                }
-
-                hasSeparationCandidates = true;
-                float radius = output.EnemyBodyRadius > 0f ? output.EnemyBodyRadius : 0.45f;
-                if (radius > maxRadius)
-                {
-                    maxRadius = radius;
-                }
-            }
-
-            if (!hasSeparationCandidates)
-            {
-                return;
+                return false;
             }
 
             float autoCellSize = maxRadius * 2f;
             float configuredCellSize = _enemySeparationCellSize > 0f ? _enemySeparationCellSize : autoCellSize;
             float cellSize = Mathf.Max(0.1f, configuredCellSize);
-            int bucketCapacity = Mathf.Max(128, enemyCount * 2);
-            PrepareEnemySeparationJobBuffers(enemyCount, bucketCapacity);
             float3 playerPosition = new float3(context.PlayerPosition.x, 0f, context.PlayerPosition.z);
             float pushDamping = Mathf.Clamp(_enemySeparationPushDamping, 0f, 2f);
             float maxStepScale = Mathf.Max(0.1f, _enemySeparationMaxStepScale);
@@ -284,8 +315,6 @@ namespace Simulation
             NativeArray<EnemyJobOutputData> separatedOutputArray = _enemyJobSeparationOutputs.AsArray();
             NativeArray<float2> previousPushes = _enemySeparationPreviousPushes.AsArray();
             NativeArray<float2> currentPushes = _enemySeparationCurrentPushes.AsArray();
-            JobHandle buildHandle;
-
             if (_useBurstJobs)
             {
                 BuildEnemySeparationBucketsBurstJob buildJob = new BuildEnemySeparationBucketsBurstJob
@@ -294,22 +323,7 @@ namespace Simulation
                     Buckets = _enemySeparationBuckets.AsParallelWriter(),
                     CellSize = cellSize
                 };
-                buildHandle = buildJob.Schedule(enemyCount, 64);
-            }
-            else
-            {
-                BuildEnemySeparationBucketsJob buildJob = new BuildEnemySeparationBucketsJob
-                {
-                    Inputs = inputArray,
-                    Buckets = _enemySeparationBuckets.AsParallelWriter(),
-                    CellSize = cellSize
-                };
-                buildHandle = buildJob.Schedule(enemyCount, 64);
-            }
-
-            JobHandle separationHandle;
-            if (_useBurstJobs)
-            {
+                JobHandle buildHandle = buildJob.Schedule(enemyCount, 64, dependency);
                 EnemySeparationBurstJob separationJob = new EnemySeparationBurstJob
                 {
                     Inputs = inputArray,
@@ -326,28 +340,42 @@ namespace Simulation
                     PushSmoothing = pushSmoothing
                 };
                 separationHandle = separationJob.Schedule(enemyCount, 64, buildHandle);
-            }
-            else
-            {
-                EnemySeparationJob separationJob = new EnemySeparationJob
-                {
-                    Inputs = inputArray,
-                    Buckets = _enemySeparationBuckets,
-                    PreviousPushes = previousPushes,
-                    Outputs = separatedOutputArray,
-                    CurrentPushes = currentPushes,
-                    CellSize = cellSize,
-                    MaxRadius = maxRadius,
-                    PlayerPosition = playerPosition,
-                    PushDamping = pushDamping,
-                    MaxStepScale = maxStepScale,
-                    UseTangentialInAttackRange = useTangentialInAttackRange,
-                    PushSmoothing = pushSmoothing
-                };
-                separationHandle = separationJob.Schedule(enemyCount, 64, buildHandle);
+                return true;
             }
 
-            separationHandle.Complete();
+            BuildEnemySeparationBucketsJob nonBurstBuildJob = new BuildEnemySeparationBucketsJob
+            {
+                Inputs = inputArray,
+                Buckets = _enemySeparationBuckets.AsParallelWriter(),
+                CellSize = cellSize
+            };
+            JobHandle nonBurstBuildHandle = nonBurstBuildJob.Schedule(enemyCount, 64, dependency);
+            EnemySeparationJob nonBurstSeparationJob = new EnemySeparationJob
+            {
+                Inputs = inputArray,
+                Buckets = _enemySeparationBuckets,
+                PreviousPushes = previousPushes,
+                Outputs = separatedOutputArray,
+                CurrentPushes = currentPushes,
+                CellSize = cellSize,
+                MaxRadius = maxRadius,
+                PlayerPosition = playerPosition,
+                PushDamping = pushDamping,
+                MaxStepScale = maxStepScale,
+                UseTangentialInAttackRange = useTangentialInAttackRange,
+                PushSmoothing = pushSmoothing
+            };
+            separationHandle = nonBurstSeparationJob.Schedule(enemyCount, 64, nonBurstBuildHandle);
+            return true;
+        }
+
+        private void CommitEnemySeparationForJobOutput(int enemyCount)
+        {
+            if (enemyCount <= 0)
+            {
+                return;
+            }
+
             CommitEnemySeparationTemporalBuffers(enemyCount);
             for (int i = 0; i < enemyCount; i++)
             {

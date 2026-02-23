@@ -536,6 +536,20 @@ namespace Simulation.Tests.Editor
         }
 
         [Test]
+        public void TickProjectiles_BuildsCollisionCandidates_WithLatestEnemyMovement_WhenJobSimulationEnabled()
+        {
+            SetUseJobSimulationMethod.Invoke(_worldComponent, new object[] { true });
+            UpsertEnemy(CreateEnemy(entityId: 5211, position: new Vector3(2f, 0f, 0f), speed: 1f, attackRange: 0.1f));
+            UpsertProjectile(CreateProjectile(entityId: 5212, position: new Vector3(1f, 0f, 0f),
+                forward: Vector3.forward, velocity: Vector3.zero, speed: 0f, lifeTime: 2f, age: 0f, active: true,
+                remainingLifetime: 2f, state: 0));
+
+            InvokeTick(deltaTime: 1f, realDeltaTime: 1f, playerPosition: Vector3.zero);
+
+            Assert.That(GetCollisionCandidateCount(), Is.GreaterThan(0));
+        }
+
+        [Test]
         public void TickProjectiles_ExpiresAfterCollisionCandidateConsumed_WhenJobSimulationEnabled()
         {
             SetUseJobSimulationMethod.Invoke(_worldComponent, new object[] { true });
