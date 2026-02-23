@@ -453,7 +453,7 @@ namespace Simulation
                 return false;
             }
 
-            damage = CalculateProjectileDamage(sourceImpact.AttackBase, sourceImpact.AttackStat,
+            damage = AIUtility.CalcDamageHP(sourceImpact.AttackBase, sourceImpact.AttackStat,
                 targetImpact.DefenseStat,
                 targetImpact.DodgeStat);
             shouldDispatchPresentation = true;
@@ -535,36 +535,6 @@ namespace Simulation
 
             impactData = default;
             return false;
-        }
-
-        private static int CalculateProjectileDamage(int attack, StatProperty attackStat, StatProperty defenseStat,
-            StatProperty dodgeStat)
-        {
-            if (dodgeStat != null)
-            {
-                if (UnityEngine.Random.value < Mathf.Clamp(dodgeStat.Percent, 0f, 0.9f))
-                {
-                    return 0;
-                }
-            }
-
-            float damage = attack;
-            if (attackStat != null)
-            {
-                damage = (attack + attackStat.Value) * attackStat.Percent;
-            }
-
-            if (defenseStat != null)
-            {
-                damage = (damage - defenseStat.Value) / defenseStat.Percent;
-            }
-
-            if (damage < 1f)
-            {
-                return 1;
-            }
-
-            return Mathf.CeilToInt(damage);
         }
 
         private static bool TryGetTargetableEntity(int entityId, out TargetableObject target)

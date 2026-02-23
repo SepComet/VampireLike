@@ -8,7 +8,6 @@ namespace Simulation
     {
         private NativeParallelMultiHashMap<long, int> _enemyTargetBuckets;
         private bool _enemyTargetBucketsDirty = true;
-        private int _enemyTargetBucketsFrame = -1;
 
         [SerializeField] private float _targetSelectionCellSize = 2f;
 
@@ -85,7 +84,6 @@ namespace Simulation
 
             _enemyTargetBuckets = new NativeParallelMultiHashMap<long, int>(256, Allocator.Persistent);
             _enemyTargetBucketsDirty = true;
-            _enemyTargetBucketsFrame = -1;
         }
 
         private void DisposeEnemyTargetSpatialIndex()
@@ -97,7 +95,6 @@ namespace Simulation
 
             _enemyTargetBuckets = default;
             _enemyTargetBucketsDirty = true;
-            _enemyTargetBucketsFrame = -1;
         }
 
         private void ClearEnemyTargetSpatialIndex()
@@ -108,20 +105,18 @@ namespace Simulation
             }
 
             _enemyTargetBucketsDirty = true;
-            _enemyTargetBucketsFrame = -1;
         }
 
         private void MarkEnemyTargetSpatialIndexDirty()
         {
             _enemyTargetBucketsDirty = true;
-            _enemyTargetBucketsFrame = -1;
         }
 
         private void BuildEnemyTargetSpatialIndexIfNeeded()
         {
             InitializeEnemyTargetSpatialIndex();
 
-            if (!_enemyTargetBucketsDirty && _enemyTargetBucketsFrame == Time.frameCount)
+            if (!_enemyTargetBucketsDirty)
             {
                 return;
             }
@@ -148,7 +143,6 @@ namespace Simulation
             }
 
             _enemyTargetBucketsDirty = false;
-            _enemyTargetBucketsFrame = Time.frameCount;
         }
 
         private float GetTargetSelectionCellSize()

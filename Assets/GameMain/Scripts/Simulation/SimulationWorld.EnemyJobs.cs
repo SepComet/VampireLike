@@ -226,9 +226,6 @@ namespace Simulation
                     RecycleInactiveProjectiles();
                 }
             }
-
-            MarkEnemyTargetSpatialIndexDirty();
-            BuildEnemyTargetSpatialIndexIfNeeded();
         }
 
         private JobHandle ExecuteEnemyMovementJob(in SimulationTickContext context)
