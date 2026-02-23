@@ -35,6 +35,7 @@ namespace Procedure
         public Player Player;
 
         public GameStateBase CurrentGameState => _gameStates[_currentGameState];
+        public GameStateType CurrentGameStateType => _currentGameState;
 
         private void InitGameState()
         {

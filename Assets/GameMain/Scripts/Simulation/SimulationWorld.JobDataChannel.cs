@@ -75,6 +75,7 @@ namespace Simulation
             public int SourceType;
             public int SourceEntityId;
             public int SourceOwnerEntityId;
+            public bool SourceWasActiveAtQueryTime;
             public float3 Position;
             public float Radius;
             public int MaxTargets;
@@ -98,6 +99,7 @@ namespace Simulation
         {
             public int SourceEntityId;
             public int SourceOwnerEntityId;
+            public bool SourceWasActiveAtQueryTime;
             public Vector3 Center;
             public float Radius;
             public int MaxTargets;
@@ -474,6 +476,7 @@ namespace Simulation
                 SourceType = CollisionSourceTypeProjectile,
                 SourceEntityId = projectile.EntityId,
                 SourceOwnerEntityId = projectile.OwnerEntityId,
+                SourceWasActiveAtQueryTime = true,
                 Position = projectile.Position,
                 Radius = radius,
                 MaxTargets = math.max(1, maxTargets),
@@ -483,8 +486,9 @@ namespace Simulation
             });
         }
 
-        private void AddAreaCollisionQuery(int queryId, int sourceEntityId, int sourceOwnerEntityId, in Vector3 center,
-            float radius, int maxTargets, int shapeType, in Vector3 direction, float halfAngleDeg)
+        private void AddAreaCollisionQuery(int queryId, int sourceEntityId, int sourceOwnerEntityId,
+            bool sourceWasActiveAtQueryTime, in Vector3 center, float radius, int maxTargets, int shapeType,
+            in Vector3 direction, float halfAngleDeg)
         {
             if (!_collisionQueryInputs.IsCreated || radius <= 0f)
             {
@@ -508,6 +512,7 @@ namespace Simulation
                 SourceType = CollisionSourceTypeArea,
                 SourceEntityId = sourceEntityId,
                 SourceOwnerEntityId = sourceOwnerEntityId,
+                SourceWasActiveAtQueryTime = sourceWasActiveAtQueryTime,
                 Position = new float3(center.x, center.y, center.z),
                 Radius = radius,
                 MaxTargets = math.max(1, maxTargets),

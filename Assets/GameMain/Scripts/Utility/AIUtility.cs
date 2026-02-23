@@ -160,6 +160,11 @@ namespace CustomUtility
 
         public static void PerformCollision(TargetableObject entity, EntityBase other)
         {
+            PerformCollision(entity, other, false);
+        }
+
+        public static void PerformCollision(TargetableObject entity, EntityBase other, bool ignoreRuntimeState)
+        {
             if (entity == null || other == null)
             {
                 return;
@@ -204,7 +209,7 @@ namespace CustomUtility
             EnemyProjectile enemyProjectile = other as EnemyProjectile;
             if (enemyProjectile != null)
             {
-                if (!enemyProjectile.IsActive) return;
+                if (!ignoreRuntimeState && !enemyProjectile.IsActive) return;
 
                 ImpactData entityImpactData = entity.GetImpactData();
                 ImpactData projectileImpactData = enemyProjectile.GetImpactData();
@@ -224,7 +229,7 @@ namespace CustomUtility
             WeaponBase weapon = other as WeaponBase;
             if (weapon != null)
             {
-                if (!weapon.IsAttacking) return;
+                if (!ignoreRuntimeState && !weapon.IsAttacking) return;
                 ImpactData entityImpactData = entity.GetImpactData();
                 ImpactData weaponImpactData = weapon.GetImpactData();
                 if (GetRelation(entityImpactData.Camp, weaponImpactData.Camp) == RelationType.Friendly)

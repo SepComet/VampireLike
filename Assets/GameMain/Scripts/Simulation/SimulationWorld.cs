@@ -4,6 +4,7 @@ using CustomDebugger;
 using CustomUtility;
 using Entity;
 using Entity.EntityData;
+using Procedure;
 using UnityEngine;
 using UnityGameFramework.Runtime;
 
@@ -69,17 +70,41 @@ namespace Simulation
 
         public void SetUseSimulationMovement(bool enabled)
         {
+            if (IsBattleStateActive())
+            {
+                Log.Warning("SetUseSimulationMovement is ignored during Battle. Change this switch outside Battle.");
+                return;
+            }
+
             _useSimulationMovement = enabled;
         }
 
         public void SetUseJobSimulation(bool enabled)
         {
+            if (IsBattleStateActive())
+            {
+                Log.Warning("SetUseJobSimulation is ignored during Battle. Change this switch outside Battle.");
+                return;
+            }
+
             _useJobSimulation = enabled;
         }
 
         public void SetUseBurstJobs(bool enabled)
         {
             _useBurstJobs = enabled;
+        }
+
+        private static bool IsBattleStateActive()
+        {
+            var procedureComponent = GameEntry.Procedure;
+            if (procedureComponent == null ||
+                procedureComponent.CurrentProcedure is not ProcedureGame procedureGame)
+            {
+                return false;
+            }
+
+            return procedureGame.CurrentGameStateType == GameStateType.Battle;
         }
 
         protected override void Awake()

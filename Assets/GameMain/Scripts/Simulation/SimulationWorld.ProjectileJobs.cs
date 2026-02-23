@@ -106,6 +106,7 @@ namespace Simulation
             }
 
             int resolvedOwnerEntityId = sourceOwnerEntityId != 0 ? sourceOwnerEntityId : sourceEntityId;
+            bool sourceWasActiveAtQueryTime = IsCollisionSourceActiveAtQueryTime(sourceEntityId);
             Vector3 normalizedDirection = direction;
             normalizedDirection.y = 0f;
             if (normalizedDirection.sqrMagnitude <= Mathf.Epsilon)
@@ -121,6 +122,7 @@ namespace Simulation
             {
                 SourceEntityId = sourceEntityId,
                 SourceOwnerEntityId = resolvedOwnerEntityId,
+                SourceWasActiveAtQueryTime = sourceWasActiveAtQueryTime,
                 Center = center,
                 Radius = Mathf.Max(0.01f, radius),
                 MaxTargets = Mathf.Max(1, maxTargets),
@@ -238,8 +240,9 @@ namespace Simulation
                 for (int i = 0; i < areaQueryCount; i++)
                 {
                     AreaCollisionRequestData request = _areaCollisionRequests[i];
-                    AddAreaCollisionQuery(queryId, request.SourceEntityId, request.SourceOwnerEntityId, in request.Center,
-                        request.Radius, request.MaxTargets, request.ShapeType, in request.Direction, request.HalfAngleDeg);
+                    AddAreaCollisionQuery(queryId, request.SourceEntityId, request.SourceOwnerEntityId,
+                        request.SourceWasActiveAtQueryTime, in request.Center, request.Radius, request.MaxTargets,
+                        request.ShapeType, in request.Direction, request.HalfAngleDeg);
                     queryId++;
                     builtAreaQueryCount++;
                     if (request.Radius > maxQueryRadius)
@@ -628,6 +631,11 @@ namespace Simulation
                     continue;
                 }
 
+                if (!query.SourceWasActiveAtQueryTime)
+                {
+                    continue;
+                }
+
                 EntityBase sourceEntity = TryGetEntityById(hitEvent.SourceEntityId);
                 if (sourceEntity == null || !sourceEntity.Available)
                 {
@@ -644,7 +652,7 @@ namespace Simulation
                     continue;
                 }
 
-                AIUtility.PerformCollision(target, sourceEntity);
+                AIUtility.PerformCollision(target, sourceEntity, true);
                 resolvedHitCount++;
             }
 
@@ -787,10 +795,16 @@ namespace Simulation
                         {
                             areaCandidateCount++;
                         }
+
+                        selectedCount++;
+                        if (selectedCount >= query.MaxTargets)
+                        {
+                            reachedLimit = true;
+                        }
                     }
                 }
 
-                if (!hasEnemyTargets)
+                if (!hasEnemyTargets || reachedLimit)
                 {
                     continue;
                 }
@@ -891,6 +905,27 @@ namespace Simulation
             }
 
             return projectile.LifeTime > 0f && projectile.Age >= projectile.LifeTime;
+        }
+
+        private static bool IsCollisionSourceActiveAtQueryTime(int sourceEntityId)
+        {
+            EntityBase sourceEntity = TryGetEntityById(sourceEntityId);
+            if (sourceEntity == null || !sourceEntity.Available)
+            {
+                return false;
+            }
+
+            if (sourceEntity is WeaponBase weapon)
+            {
+                return weapon.IsAttacking;
+            }
+
+            if (sourceEntity is EnemyProjectile projectile)
+            {
+                return projectile.IsActive;
+            }
+
+            return true;
         }
 
         private static void ExecuteProjectileMovement(int index, NativeArray<ProjectileJobInputData> inputs,
