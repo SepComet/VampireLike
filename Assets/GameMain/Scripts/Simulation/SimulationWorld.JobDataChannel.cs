@@ -11,9 +11,9 @@ namespace Simulation
         private struct EnemyJobInputData
         {
             public int EntityId;
-            public Vector3 Position;
-            public Vector3 Forward;
-            public Quaternion Rotation;
+            public float3 Position;
+            public float3 Forward;
+            public quaternion Rotation;
             public float Speed;
             public float AttackRange;
             public bool AvoidEnemyOverlap;
@@ -26,9 +26,9 @@ namespace Simulation
         private struct EnemyJobOutputData
         {
             public int EntityId;
-            public Vector3 Position;
-            public Vector3 Forward;
-            public Quaternion Rotation;
+            public float3 Position;
+            public float3 Forward;
+            public quaternion Rotation;
             public float Speed;
             public float AttackRange;
             public bool AvoidEnemyOverlap;
@@ -42,9 +42,9 @@ namespace Simulation
         {
             public int EntityId;
             public int OwnerEntityId;
-            public Vector3 Position;
-            public Vector3 Forward;
-            public Vector3 Velocity;
+            public float3 Position;
+            public float3 Forward;
+            public float3 Velocity;
             public float Speed;
             public float LifeTime;
             public float Age;
@@ -57,9 +57,9 @@ namespace Simulation
         {
             public int EntityId;
             public int OwnerEntityId;
-            public Vector3 Position;
-            public Vector3 Forward;
-            public Vector3 Velocity;
+            public float3 Position;
+            public float3 Forward;
+            public float3 Velocity;
             public float Speed;
             public float LifeTime;
             public float Age;
@@ -474,7 +474,7 @@ namespace Simulation
                 SourceType = CollisionSourceTypeProjectile,
                 SourceEntityId = projectile.EntityId,
                 SourceOwnerEntityId = projectile.OwnerEntityId,
-                Position = new float3(projectile.Position.x, projectile.Position.y, projectile.Position.z),
+                Position = projectile.Position,
                 Radius = radius,
                 MaxTargets = math.max(1, maxTargets),
                 ShapeType = CollisionShapeCircle,
@@ -700,9 +700,9 @@ namespace Simulation
             return new EnemyJobInputData
             {
                 EntityId = enemy.EntityId,
-                Position = enemy.Position,
-                Forward = enemy.Forward,
-                Rotation = enemy.Rotation,
+                Position = new float3(enemy.Position.x, enemy.Position.y, enemy.Position.z),
+                Forward = new float3(enemy.Forward.x, enemy.Forward.y, enemy.Forward.z),
+                Rotation = new quaternion(enemy.Rotation.x, enemy.Rotation.y, enemy.Rotation.z, enemy.Rotation.w),
                 Speed = enemy.Speed,
                 AttackRange = enemy.AttackRange,
                 AvoidEnemyOverlap = enemy.AvoidEnemyOverlap,
@@ -718,9 +718,9 @@ namespace Simulation
             return new EnemyJobOutputData
             {
                 EntityId = enemy.EntityId,
-                Position = enemy.Position,
-                Forward = enemy.Forward,
-                Rotation = enemy.Rotation,
+                Position = new float3(enemy.Position.x, enemy.Position.y, enemy.Position.z),
+                Forward = new float3(enemy.Forward.x, enemy.Forward.y, enemy.Forward.z),
+                Rotation = new quaternion(enemy.Rotation.x, enemy.Rotation.y, enemy.Rotation.z, enemy.Rotation.w),
                 Speed = enemy.Speed,
                 AttackRange = enemy.AttackRange,
                 AvoidEnemyOverlap = enemy.AvoidEnemyOverlap,
@@ -736,9 +736,10 @@ namespace Simulation
             return new EnemySimData
             {
                 EntityId = enemy.EntityId,
-                Position = enemy.Position,
-                Forward = enemy.Forward,
-                Rotation = enemy.Rotation,
+                Position = new Vector3(enemy.Position.x, enemy.Position.y, enemy.Position.z),
+                Forward = new Vector3(enemy.Forward.x, enemy.Forward.y, enemy.Forward.z),
+                Rotation = new Quaternion(enemy.Rotation.value.x, enemy.Rotation.value.y, enemy.Rotation.value.z,
+                    enemy.Rotation.value.w),
                 Speed = enemy.Speed,
                 AttackRange = enemy.AttackRange,
                 AvoidEnemyOverlap = enemy.AvoidEnemyOverlap,
@@ -755,9 +756,9 @@ namespace Simulation
             {
                 EntityId = projectile.EntityId,
                 OwnerEntityId = projectile.OwnerEntityId,
-                Position = projectile.Position,
-                Forward = projectile.Forward,
-                Velocity = projectile.Velocity,
+                Position = new float3(projectile.Position.x, projectile.Position.y, projectile.Position.z),
+                Forward = new float3(projectile.Forward.x, projectile.Forward.y, projectile.Forward.z),
+                Velocity = new float3(projectile.Velocity.x, projectile.Velocity.y, projectile.Velocity.z),
                 Speed = projectile.Speed,
                 LifeTime = projectile.LifeTime,
                 Age = projectile.Age,
@@ -773,9 +774,9 @@ namespace Simulation
             {
                 EntityId = projectile.EntityId,
                 OwnerEntityId = projectile.OwnerEntityId,
-                Position = projectile.Position,
-                Forward = projectile.Forward,
-                Velocity = projectile.Velocity,
+                Position = new float3(projectile.Position.x, projectile.Position.y, projectile.Position.z),
+                Forward = new float3(projectile.Forward.x, projectile.Forward.y, projectile.Forward.z),
+                Velocity = new float3(projectile.Velocity.x, projectile.Velocity.y, projectile.Velocity.z),
                 Speed = projectile.Speed,
                 LifeTime = projectile.LifeTime,
                 Age = projectile.Age,
@@ -791,9 +792,9 @@ namespace Simulation
             {
                 EntityId = projectile.EntityId,
                 OwnerEntityId = projectile.OwnerEntityId,
-                Position = projectile.Position,
-                Forward = projectile.Forward,
-                Velocity = projectile.Velocity,
+                Position = new Vector3(projectile.Position.x, projectile.Position.y, projectile.Position.z),
+                Forward = new Vector3(projectile.Forward.x, projectile.Forward.y, projectile.Forward.z),
+                Velocity = new Vector3(projectile.Velocity.x, projectile.Velocity.y, projectile.Velocity.z),
                 Speed = projectile.Speed,
                 LifeTime = projectile.LifeTime,
                 Age = projectile.Age,

@@ -957,9 +957,9 @@ namespace Simulation
                 return;
             }
 
-            float3 position = new float3(input.Position.x, input.Position.y, input.Position.z);
-            float3 forward = new float3(input.Forward.x, input.Forward.y, input.Forward.z);
-            float3 velocity = new float3(input.Velocity.x, input.Velocity.y, input.Velocity.z);
+            float3 position = input.Position;
+            float3 forward = input.Forward;
+            float3 velocity = input.Velocity;
             if (math.lengthsq(velocity) <= float.Epsilon && input.Speed > 0f)
             {
                 float3 moveDirection = math.normalizesafe(forward, new float3(0f, 0f, 1f));
@@ -994,8 +994,8 @@ namespace Simulation
                 shouldExpire = math.abs(nextPosition.y - playerPosition.y) > maxVerticalOffsetFromPlayer;
             }
 
-            output.Position = new Vector3(nextPosition.x, nextPosition.y, nextPosition.z);
-            output.Velocity = new Vector3(velocity.x, velocity.y, velocity.z);
+            output.Position = nextPosition;
+            output.Velocity = velocity;
             output.Age = nextAge;
             output.RemainingLifetime = nextRemainingLifetime;
             output.Active = !shouldExpire;
@@ -1004,7 +1004,7 @@ namespace Simulation
             if (math.lengthsq(velocity) > float.Epsilon)
             {
                 float3 moveForward = math.normalizesafe(velocity, forward);
-                output.Forward = new Vector3(moveForward.x, moveForward.y, moveForward.z);
+                output.Forward = moveForward;
             }
 
             outputs[index] = output;

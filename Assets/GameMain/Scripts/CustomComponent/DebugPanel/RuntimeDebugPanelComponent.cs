@@ -20,7 +20,7 @@ namespace CustomComponent
         private const float CornerTapWindow = 0.6f;
         private const int RequiredCornerTapCount = 3;
 
-        private Rect _windowRect = new Rect(20f, 60f, 460f, 620f);
+        private Rect _windowRect = new Rect(20f, 60f, 460f, 800f);
         private bool _isPanelVisible;
         private int _windowId;
 
@@ -178,6 +178,15 @@ namespace CustomComponent
                     $"Area Resolve: hits {simulationWorld.LastResolvedAreaHitCount}");
                 GUILayout.Label(
                     $"Broad Phase: cell {simulationWorld.LastCollisionCellSize:F2}, hasEnemyTargets {(simulationWorld.LastCollisionHasEnemyTargets ? "Yes" : "No")}");
+                if (simulationWorld.LastCollisionCandidateCount != 0)
+                {
+                    Log.Info($"LastCollisionCandidateCount:{simulationWorld.LastCollisionCandidateCount}");
+                }
+
+                if (simulationWorld.LastResolvedAreaHitCount != 0)
+                {
+                    Log.Info($"LastResolvedAreaHitCount:{simulationWorld.LastResolvedAreaHitCount}");
+                }
             }
 
             GUILayout.BeginHorizontal();

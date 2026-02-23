@@ -65,6 +65,12 @@ namespace Simulation.Tests.Editor
         private static readonly MethodInfo SetUseJobSimulationMethod =
             SimulationWorldType?.GetMethod("SetUseJobSimulation", PublicInstance);
 
+        private static readonly MethodInfo SetUseBurstJobsMethod =
+            SimulationWorldType?.GetMethod("SetUseBurstJobs", PublicInstance);
+
+        private static readonly MethodInfo ClearMethod =
+            SimulationWorldType?.GetMethod("Clear", PublicInstance);
+
         private static readonly MethodInfo UseGridBucketSolverMethod =
             EnemySeparationSolverProviderType?.GetMethod("UseGridBucketSolver", PublicStatic);
 
@@ -134,6 +140,8 @@ namespace Simulation.Tests.Editor
             Assert.NotNull(TryGetNearestEnemyEntityIdMethod, "TryGetNearestEnemyEntityId reflection lookup failed.");
             Assert.NotNull(SetUseSimulationMovementMethod, "SetUseSimulationMovement reflection lookup failed.");
             Assert.NotNull(SetUseJobSimulationMethod, "SetUseJobSimulation reflection lookup failed.");
+            Assert.NotNull(SetUseBurstJobsMethod, "SetUseBurstJobs reflection lookup failed.");
+            Assert.NotNull(ClearMethod, "Clear reflection lookup failed.");
             Assert.NotNull(UseGridBucketSolverMethod, "UseGridBucketSolver reflection lookup failed.");
             Assert.NotNull(EnemiesProperty, "Enemies property reflection lookup failed.");
             Assert.NotNull(ProjectilesProperty, "Projectiles property reflection lookup failed.");
@@ -243,6 +251,37 @@ namespace Simulation.Tests.Editor
             Assert.That(position.x, Is.EqualTo(2f).Within(0.0001f));
             Assert.That(position.z, Is.EqualTo(0f).Within(0.0001f));
             Assert.That(forward.x, Is.EqualTo(1f).Within(0.0001f));
+        }
+
+        [Test]
+        public void TickEnemies_MatchesOutput_WhenBurstJobsToggled()
+        {
+            SetUseJobSimulationMethod.Invoke(_worldComponent, new object[] { true });
+            SetUseBurstJobsMethod.Invoke(_worldComponent, new object[] { false });
+            UpsertEnemy(CreateEnemy(entityId: 1151, position: Vector3.zero, speed: 2f, attackRange: 1f));
+            InvokeTick(deltaTime: 1f, realDeltaTime: 1f, playerPosition: new Vector3(10f, 0f, 0f));
+
+            object nonBurstEnemy = GetEnemyAt(0);
+            int nonBurstState = (int)GetField(nonBurstEnemy, "State");
+            Vector3 nonBurstPosition = (Vector3)GetField(nonBurstEnemy, "Position");
+            Vector3 nonBurstForward = (Vector3)GetField(nonBurstEnemy, "Forward");
+
+            ClearMethod.Invoke(_worldComponent, null);
+
+            SetUseSimulationMovementMethod.Invoke(_worldComponent, new object[] { true });
+            SetUseJobSimulationMethod.Invoke(_worldComponent, new object[] { true });
+            SetUseBurstJobsMethod.Invoke(_worldComponent, new object[] { true });
+            UpsertEnemy(CreateEnemy(entityId: 1151, position: Vector3.zero, speed: 2f, attackRange: 1f));
+            InvokeTick(deltaTime: 1f, realDeltaTime: 1f, playerPosition: new Vector3(10f, 0f, 0f));
+
+            object burstEnemy = GetEnemyAt(0);
+            int burstState = (int)GetField(burstEnemy, "State");
+            Vector3 burstPosition = (Vector3)GetField(burstEnemy, "Position");
+            Vector3 burstForward = (Vector3)GetField(burstEnemy, "Forward");
+
+            Assert.That(burstState, Is.EqualTo(nonBurstState));
+            Assert.That((burstPosition - nonBurstPosition).sqrMagnitude, Is.LessThanOrEqualTo(1e-8f));
+            Assert.That((burstForward - nonBurstForward).sqrMagnitude, Is.LessThanOrEqualTo(1e-8f));
         }
 
         [Test]

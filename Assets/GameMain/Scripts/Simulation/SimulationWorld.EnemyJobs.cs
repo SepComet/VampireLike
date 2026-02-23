@@ -364,7 +364,8 @@ namespace Simulation
                 return;
             }
 
-            float3 position = new float3(output.Position.x, 0f, output.Position.z);
+            float3 position = output.Position;
+            position.y = 0f;
             int cellX = (int)math.floor(position.x / cellSize);
             int cellZ = (int)math.floor(position.z / cellSize);
             buckets.Add(SeparationCellKey(cellX, cellZ), index);
@@ -384,7 +385,8 @@ namespace Simulation
                 return;
             }
 
-            float3 candidate = new float3(self.Position.x, 0f, self.Position.z);
+            float3 candidate = self.Position;
+            candidate.y = 0f;
             float3 original = candidate;
             float3 fallback =
                 math.normalizesafe(new float3(self.Forward.x, 0f, self.Forward.z), new float3(1f, 0f, 0f));
@@ -426,7 +428,8 @@ namespace Simulation
                             float minDistance = selfRadius + otherRadius;
                             float minDistanceSqr = minDistance * minDistance;
 
-                            float3 otherPosition = new float3(other.Position.x, 0f, other.Position.z);
+                            float3 otherPosition = other.Position;
+                            otherPosition.y = 0f;
                             float3 toSelf = candidate - otherPosition;
                             float sqrDistance = math.lengthsq(toSelf);
 
@@ -486,10 +489,10 @@ namespace Simulation
 
             float3 finalPosition = original + smoothedPush;
             currentPushes[index] = new float2(smoothedPush.x, smoothedPush.z);
-            self.Position = new Vector3(finalPosition.x, self.Position.y, finalPosition.z);
+            self.Position = new float3(finalPosition.x, self.Position.y, finalPosition.z);
             if (math.lengthsq(smoothedPush) > float.Epsilon)
             {
-                self.Forward = new Vector3(fallback.x, self.Forward.y, fallback.z);
+                self.Forward = new float3(fallback.x, self.Forward.y, fallback.z);
             }
 
             outputs[index] = self;
@@ -569,17 +572,16 @@ namespace Simulation
             float attackRange = input.AttackRange > 0f ? input.AttackRange : DefaultAttackRange;
             float attackRangeSqr = attackRange * attackRange;
 
-            float3 currentPosition = new float3(input.Position.x, input.Position.y, input.Position.z);
+            float3 currentPosition = input.Position;
             float3 horizontalPosition = new float3(currentPosition.x, 0f, currentPosition.z);
             float3 toPlayer = playerPosition - horizontalPosition;
             float sqrDistance = math.lengthsq(toPlayer);
             bool isInAttackRange = sqrDistance <= attackRangeSqr;
             bool canChase = !isInAttackRange && input.Speed > 0f && sqrDistance > float.Epsilon;
 
-            float3 forward = new float3(input.Forward.x, input.Forward.y, input.Forward.z);
+            float3 forward = input.Forward;
             float3 desiredPosition = currentPosition;
-            quaternion rotation =
-                new quaternion(input.Rotation.x, input.Rotation.y, input.Rotation.z, input.Rotation.w);
+            quaternion rotation = input.Rotation;
 
             if (canChase)
             {
@@ -608,9 +610,9 @@ namespace Simulation
             outputs[index] = new EnemyJobOutputData
             {
                 EntityId = input.EntityId,
-                Position = new Vector3(desiredPosition.x, desiredPosition.y, desiredPosition.z),
-                Forward = new Vector3(forward.x, forward.y, forward.z),
-                Rotation = new Quaternion(rotation.value.x, rotation.value.y, rotation.value.z, rotation.value.w),
+                Position = desiredPosition,
+                Forward = forward,
+                Rotation = rotation,
                 Speed = input.Speed,
                 AttackRange = attackRange,
                 AvoidEnemyOverlap = input.AvoidEnemyOverlap,
