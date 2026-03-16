@@ -1,6 +1,8 @@
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
 using System;
 using System.Linq;
+using Components;
+using CustomEvent;
 using DataTable;
 using Definition.DataStruct;
 using Entity;
@@ -19,6 +21,7 @@ namespace CustomComponent
         private const float MinSpawnRate = 0.1f;
         private const float CornerTapWindow = 0.6f;
         private const int RequiredCornerTapCount = 3;
+        private const int DebugHealAmount = 200;
 
         private Rect _windowRect = new Rect(20f, 60f, 460f, 800f);
         private bool _isPanelVisible;
@@ -38,6 +41,7 @@ namespace CustomComponent
 
         private int _cornerTapCount;
         private float _lastCornerTapTime = -10f;
+        private bool _lockPlayerHealthToMax;
 
         protected override void Awake()
         {
@@ -54,6 +58,10 @@ namespace CustomComponent
             }
 
             HandleCornerTapGesture();
+            if (_lockPlayerHealthToMax)
+            {
+                KeepPlayerHealthAtMax();
+            }
         }
 
         private void OnGUI()
@@ -147,6 +155,7 @@ namespace CustomComponent
             ProcedureGame procedure = GameEntry.Procedure.CurrentProcedure as ProcedureGame;
             EnemyManagerComponent enemyManager = GameEntry.EnemyManager;
             Player player = FindPlayer();
+            HealthComponent playerHealth = player != null ? player.GetComponent<HealthComponent>() : null;
 
             if (enemyManager == null)
             {
@@ -168,8 +177,6 @@ namespace CustomComponent
             if (simulationWorld != null)
             {
                 GUILayout.Space(4f);
-                GUILayout.Label(
-                    $"Sim Switch: Move={(simulationWorld.UseSimulationMovement ? "On" : "Off")} Job={(simulationWorld.UseJobSimulation ? "On" : "Off")} Burst={(simulationWorld.UseBurstJobs ? "On" : "Off")}");
                 GUILayout.Label(
                     $"Collision Queries: total {simulationWorld.LastCollisionQueryCount} (Projectile {simulationWorld.LastProjectileCollisionQueryCount} / Area {simulationWorld.LastAreaCollisionQueryCount})");
                 GUILayout.Label(
@@ -265,6 +272,28 @@ namespace CustomComponent
 
             GUI.enabled = true;
             GUILayout.EndHorizontal();
+
+            GUILayout.Space(4f);
+            GUILayout.Label(
+                $"Player HP: {(playerHealth == null ? "Unavailable" : $"{playerHealth.CurrentHealth}/{playerHealth.MaxHealth}")}");
+            GUILayout.BeginHorizontal();
+            GUI.enabled = playerHealth != null;
+            if (GUILayout.Button($"+{DebugHealAmount} HP", GUILayout.Height(24f)))
+            {
+                AddPlayerHealth(playerHealth, DebugHealAmount);
+            }
+
+            if (GUILayout.Button(_lockPlayerHealthToMax ? "GodMode: ON" : "GodMode: OFF", GUILayout.Height(24f)))
+            {
+                _lockPlayerHealthToMax = !_lockPlayerHealthToMax;
+                if (_lockPlayerHealthToMax)
+                {
+                    RestorePlayerHealthToMax(playerHealth);
+                }
+            }
+
+            GUI.enabled = true;
+            GUILayout.EndHorizontal();
         }
 
         private void EnsurePropList(bool force = false)
@@ -322,6 +351,52 @@ namespace CustomComponent
         private static Player FindPlayer()
         {
             return UnityEngine.Object.FindObjectOfType<Player>();
+        }
+
+        private void KeepPlayerHealthAtMax()
+        {
+            Player player = FindPlayer();
+            if (player == null) return;
+
+            HealthComponent playerHealth = player.GetComponent<HealthComponent>();
+            if (playerHealth == null) return;
+
+            RestorePlayerHealthToMax(playerHealth);
+        }
+
+        private static void AddPlayerHealth(HealthComponent playerHealth, int amount)
+        {
+            if (playerHealth == null || amount <= 0) return;
+            if (playerHealth.CurrentHealth <= 0) return;
+
+            int maxHealth = playerHealth.MaxHealth;
+            if (maxHealth <= 0) return;
+
+            int nextHealth = Mathf.Clamp(playerHealth.CurrentHealth + amount, 0, maxHealth);
+            if (nextHealth == playerHealth.CurrentHealth) return;
+
+            playerHealth.CurrentHealth = nextHealth;
+            PublishPlayerHealthChanged(playerHealth);
+        }
+
+        private static void RestorePlayerHealthToMax(HealthComponent playerHealth)
+        {
+            if (playerHealth == null) return;
+            if (playerHealth.CurrentHealth <= 0) return;
+
+            int maxHealth = playerHealth.MaxHealth;
+            if (maxHealth <= 0 || playerHealth.CurrentHealth >= maxHealth) return;
+
+            playerHealth.CurrentHealth = maxHealth;
+            PublishPlayerHealthChanged(playerHealth);
+        }
+
+        private static void PublishPlayerHealthChanged(HealthComponent playerHealth)
+        {
+            if (playerHealth == null || GameEntry.Event == null) return;
+
+            GameEntry.Event.Fire(null,
+                PlayerHealthChangeEventArgs.Create(0, playerHealth.CurrentHealth, playerHealth.MaxHealth));
         }
 
         private static void AddSelectedBuffToPlayer(DRProp prop, int count)

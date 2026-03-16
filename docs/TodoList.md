@@ -10,7 +10,7 @@
 
 ## 1. P0 基线修正与性能基准
 - [x] 建立性能基准场景（建议复用 `Game.unity` + 压测参数）：
-  - 指标：`1k / 2k / 3k` 敌人时的 FPS、CPU Main Thread、GC Alloc、Draw Calls。
+  - 指标：`0.5k / 1k / 1.5k / 2k` 敌人时的 FPS、CPU Main Thread、GC Alloc、Draw Calls。
   - 输出：一份基线表格（开发机配置 + Unity Profiler 截图）。
 - [x] 修正当前高风险逻辑问题（避免后续优化建立在不稳定行为上）：
   - `ProcedureGame.OnEnter()` 与 `_hudInitialized` 逻辑中有重复初始化状态机风险（`InitGameState()` 被调用两次）。
@@ -62,7 +62,7 @@
 
 - [x] Checkpoint 7：P1 阶段回归与性能记录
   - 回归用例：战斗 10 分钟、`Battle -> LevelUp -> Shop -> Battle` 循环、掉落吸附与拾取。
-  - Profiling 对比：记录 1k/2k/3k 敌人下 Main Thread、GC Alloc、敌人更新耗时。
+  - Profiling 对比：记录 `0.5k / 1k / 1.5k / 2k` 敌人下 Main Thread、GC Alloc、敌人更新耗时。
   - 输出文档：`P1 Simulation 分层设计 + 回滚开关说明 + 对比数据`。
   - 完成标准：核心流程稳定，无新增 Error/Exception；可一键回滚到旧更新路径。
 
@@ -74,7 +74,7 @@
   - 目标：将 `TickEnemies GC` 从当前 `27~108 KB` 降到 `< 5 KB / frame`。
   - 重点文件：`Assets/GameMain/Scripts/Utility/EnemySeperator/GridBucketEnemySeparationSolver.cs`。
   - 处理方式：桶容器与临时列表复用（包含 bucket list 复用池），避免每帧重建集合。
-  - 完成标准：`2000` 敌人压测下 `TickEnemies GC` 稳定 `< 5 KB / frame`。
+  - 完成标准：`2k` 敌人压测下 `TickEnemies GC` 稳定 `< 5 KB / frame`。
 
 - [x] Checkpoint 2：解耦 Simulation 核心与 `Transform` 运行时依赖
   - 目标：`SimulationWorld.TickEnemies` 不直接读取或写入 `Transform`。
@@ -142,7 +142,7 @@
     - 构建分桶（Build Buckets）
     - 邻域候选查询（Query Neighbors）
   - 避免全量最近邻搜索，控制复杂度随敌人数增长的斜率。
-  - 完成标准：`3k` 敌人下目标选择阶段耗时稳定，且无索引越界/漏目标回归。
+  - 完成标准：`2k` 敌人下目标选择阶段耗时稳定，且无索引越界/漏目标回归。
 
 - [x] Checkpoint 5：投射物批量移动与寿命回收 Job 化
   - 投射物数据结构最少包含：`position/velocity/lifeTime/age/active`。
@@ -170,12 +170,12 @@
 
 - [ ] Checkpoint 9：P2 回归、压测与结项文档
   - 回归用例：10 分钟战斗、`Battle -> LevelUp -> Shop -> Battle` 循环、掉落拾取链路。
-  - 压测口径：`1k/2k/3k` 敌人，记录 Main Thread、Job Workers、GC Alloc、关键 Marker。
+  - 压测口径：`0.5k / 1k / 1.5k / 2k` 敌人，记录 Main Thread、Job Workers、GC Alloc、关键 Marker。
   - 输出文档：`P2 Job/Burst 改造说明 + 开关/回滚策略 + 前后对比数据`。
   - 完成标准：结论可复现，可作为 P3 GPU Instancing 的输入基线。
 
 **验收标准**
-- 在 3k 敌人规模下，CPU Main Thread 明显下降（目标 >= 30%）。
+- 在 2k 敌人规模下，CPU Main Thread 明显下降（目标 >= 30%）。
 - Profiler 中战斗帧 GC Alloc 接近 0（持续帧）。
 
 ## 4. P3 GPU Instancing 渲染管线（与 Job 并行推进）

@@ -4,8 +4,9 @@ using UnityGameFramework.Runtime;
 
 namespace Simulation
 {
-    public partial class SimulationWorld
+    public sealed partial class SimulationWorld
     {
+        // Bridges entity show/hide events into simulation state registration.
         public sealed class EntitySync
         {
             private const string EnemyGroupName = "Enemy";

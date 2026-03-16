@@ -117,7 +117,7 @@ namespace Entity
         private static bool IsDrivenBySimulationWorld()
         {
             var simulationWorld = GameEntry.SimulationWorld;
-            return simulationWorld != null && simulationWorld.UseSimulationMovement && simulationWorld.UseJobSimulation;
+            return simulationWorld != null && simulationWorld.UseSimulationMovement;
         }
 
         private void SetColliderEnabled(bool enabled)

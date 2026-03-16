@@ -1,159 +1,200 @@
-﻿# Simulation Development Skill（VampireLike）
+﻿# Simulation Development Skill (VampireLike)
 
 ## 目标
-本文件是 `Simulation` 分层的开发规范与速查手册。  
-后续调整敌人移动、补齐投射物/掉落物逻辑、推进 Job/Burst 改造时，优先按本文档执行，避免反复通读全部代码。
+本文件是 SimulationWorld 的正式设计说明和扩展开发规范。
+后续在 Simulation 相关模块做功能扩展、性能优化、回归修复时，统一按本规范执行。
 
-## 当前架构总览（P1.5 已落地）
-- Simulation 主目录：`Assets/GameMain/Scripts/Simulation/`
-- 核心组件：`SimulationWorld`（`GameFrameworkComponent`）
-- 数据容器：
-  - `List<EnemySimData> _enemies`
-  - `List<ProjectileSimData> _projectiles`
-  - `List<PickupSimData> _pickups`
-- Tick 临时缓冲：
-  - `List<EnemyTickWorkItem> _enemyTickWorkItems`
-  - `List<EnemySeparationAgent> _enemySeparationAgents`
-- 索引绑定：`EntityBinding`（`EntityId <-> SimulationIndex` 双向映射）
-- 生命周期同步：`SimulationWorld.EntitySync`（监听实体 Show/Hide 事件）
-- 表现层回写：`SimulationWorld.Presentation`（`LateUpdate` 写回 `Transform`）
-- Tick 上下文：`SimulationTickContext`（`DeltaTime`、`RealDeltaTime`、`PlayerPosition`）
+## 适用范围
+- Assets/GameMain/Scripts/Simulation/*
+- Assets/GameMain/Scripts/Procedure/Game/GameStateBattle.cs
+- Assets/GameMain/Scripts/Procedure/Game/ProcedureGame.cs
+- Assets/GameMain/Scripts/Utility/AIUtility.cs
+- Assets/Tests/Simulation/EditMode/*
+- Assets/Tests/Simulation/PlayMode/*
 
-## 运行时主链路（按帧）
-1. `GameEntry.InitCustomComponents()` 获取或自动挂载 `SimulationWorld`  
-   文件：`Assets/GameMain/Scripts/Base/GameEntry.Custom.cs`
-2. `ProcedureGame.OnEnter()` 清理旧 Simulation 数据  
-   文件：`Assets/GameMain/Scripts/Procedure/Game/ProcedureGame.cs`
-3. `GameStateBattle.OnUpdate()` 中先执行刷怪，再执行 `SimulationWorld.Tick(...)`  
-   文件：`Assets/GameMain/Scripts/Procedure/Game/GameStateBattle.cs`
-4. `SimulationWorld.Tick()` 仅在 `UseSimulationMovement == true` 时执行敌人 Tick
-5. `SimulationWorld.LateUpdate()` 执行 `Presentation.OnLateUpdate()`，将仿真结果写回敌人 `Transform`
+当前状态：P2 Job/Burst 主体已完成，SimulationWorld 已是战斗核心调度层。
 
-## 生命周期与数据同步设计
-`EntitySync` 通过事件驱动保持 Simulation 容器与实体生命周期一致：
+## 模块分层
+SimulationWorld 使用 partial 拆分，职责如下：
 
-| 事件                            | 组名                      | 行为                                                             |
-|-------------------------------|-------------------------|----------------------------------------------------------------|
-| `ShowEntitySuccessEventArgs`  | `Enemy`                 | `RegisterEnemyLifecycle` + `UpsertEnemy`                       |
-| `HideEntityCompleteEventArgs` | `Enemy`                 | `UnregisterEnemyLifecycle` + `RemoveEnemyByEntityId`           |
-| `ShowEntitySuccessEventArgs`  | `Drop`                  | `RegisterPickupLifecycle` + `UpsertPickup`                     |
-| `HideEntityCompleteEventArgs` | `Drop`                  | `UnregisterPickupLifecycle` + `RemovePickupByEntityId`         |
-| `ShowEntitySuccessEventArgs`  | `Bullet` / `Projectile` | `RegisterProjectileLifecycle` + `UpsertProjectile`             |
-| `HideEntityCompleteEventArgs` | `Bullet` / `Projectile` | `UnregisterProjectileLifecycle` + `RemoveProjectileByEntityId` |
+- SimulationWorld.cs
+  - 开关、主容器、绑定、主 Tick 入口。
+- SimulationWorld.EntitySync.cs
+  - 实体 Show/Hide 到仿真容器的生命周期同步。
+- SimulationWorld.EnemyJobs.cs
+  - 敌人移动和互斥分离的 Job/Burst 链路。
+- SimulationWorld.ProjectileJobs.cs
+  - 投射物移动、寿命、碰撞候选、主线程结算。
+- SimulationWorld.JobDataChannel.cs
+  - Native 容器、拷贝转换、容量管理、运行时统计。
+- SimulationWorld.TargetSelectionSpatialIndex.cs
+  - 目标选择空间索引（最近敌人查询）。
+- SimulationWorld.Presentation.cs
+  - 表现层写回（Transform）和命中表现事件消费。
 
-关键规则：
-- 删除容器元素统一使用“末尾覆盖 + `RemoveAt(lastIndex)` + `EntityBinding.RemapIndex`”。
-- `Upsert` 语义：`EntityId` 已存在则覆盖，不存在则追加。
+## 运行时执行链路
+1. GameStateBattle.OnUpdate
+- 先执行 EnemyManager.OnUpdate
+- 再执行 SimulationWorld.Tick
 
-## EnemySimData 合约（当前实现）
-文件：`Assets/GameMain/Scripts/Simulation/SimData/EnemySimData.cs`
+2. SimulationWorld.Tick
+- UseSimulationMovement = false：直接返回（完全回退旧链路）
+- UseSimulationMovement = true 且 UseJobSimulation = false：走主线程敌人仿真
+- UseSimulationMovement = true 且 UseJobSimulation = true：走 Job/Burst 总链路
 
-- `EntityId`：实体唯一标识
-- `Position / Forward / Rotation`：逻辑输出与表现层写回字段
-- `Speed`：来自 `EnemyData.SpeedBase`
-- `AttackRange`：当前固定初始化为 `1f`
-- `AvoidEnemyOverlap / EnemyBodyRadius / SeparationIterations`：从 `MovementComponent` 读取
-- `TargetType / State`：状态扩展预留
+3. SimulationWorld.LateUpdate
+- 调用 Presentation.OnLateUpdate
+- 统一写回 Enemy/Projectile 表现
 
-当前状态值（`SimulationWorld` 常量）：
-- `0`：Idle
-- `1`：Chasing
-- `2`：InAttackRange
+## 核心数据契约
+### 主容器
+- List<EnemySimData> _enemies
+- List<ProjectileSimData> _projectiles
+- List<PickupSimData> _pickups
 
-## TickEnemies 当前算法（P1.5 分阶段）
-文件：`Assets/GameMain/Scripts/Simulation/SimulationWorld.cs`
+### 绑定关系
+- EntityBinding 维护 EntityId <-> SimulationIndex 双向映射。
+- 删除必须使用 swap-back：
+  - 尾元素覆盖删除位
+  - RemapIndex
+  - RemoveAt(last)
 
-`TickEnemies` 入口保持纯数据热路径，不直接读写 `Transform`，按四阶段执行：
-1. `BuildInput`
-   - 计算到玩家平面距离
-   - 产出 `EnemyTickWorkItem`
-   - 生成分离输入 `EnemySeparationAgent`
-2. `Move/Separation`
-   - 计算追踪位移与朝向
-   - 通过 `EnemySeparationSolverProvider.ResolveSimulation(...)` 做互斥求解
-3. `StateUpdate`
-   - 按距离与可追逐状态更新 `Idle/Chasing/InAttackRange`
-4. `WriteBack`
-   - 回写 `EnemySimData`（`Position/Forward/Rotation/State`）
+### Job 通道
+- EnemyJobInput/Output
+- ProjectileJobInput/Output
+- CollisionQuery/CollisionCandidate
+- NativeParallelMultiHashMap（互斥桶、碰撞桶、目标桶）
 
-## 互斥求解器双通道（Legacy + Simulation）
-文件：
-- `Assets/GameMain/Scripts/Utility/EnemySeperator/IEnemySeparationSolver.cs`
-- `Assets/GameMain/Scripts/Utility/EnemySeperator/EnemySeparationSolverProvider.cs`
-- `Assets/GameMain/Scripts/Utility/EnemySeperator/GridBucketEnemySeparationSolver.cs`
+统一规则：
+- Allocator.Persistent 分配
+- Initialize/Dispose 集中管理
+- Clear 只清容器，不破坏生命周期
 
-说明：
-- `SetSimulationAgents/ResolveSimulation`：供 Simulation 纯数据路径调用。
-- `Register/Unregister/Resolve(Transform, ...)`：保留旧路径兼容与回滚能力。
-- `GridBucketEnemySeparationSolver` 已加入桶列表复用池（`_bucketListPool`）以降低 GC。
+## 不可破坏的设计约束
+### 生命周期单入口
+仿真容器增删只能由 EntitySync 驱动。
+禁止在 Enemy/Weapon/Projectile 业务代码中直接改仿真容器。
 
-## 表现层回写（Presentation）规则
-文件：`Assets/GameMain/Scripts/Simulation/SimulationWorld.Presentation.cs`
+### 逻辑与表现边界
+- Simulation 只产出逻辑数据，不直接写 Transform。
+- Transform 写回只能在 Presentation。
+- 命中表现通过事件缓冲在主线程提交。
 
-- 仅在 `UseSimulationMovement == true` 时执行
-- 遍历 `EnemyManager.Enemies`，按 `EntityId` 查找 `EnemySimData`
-- 写回顺序：
-  - 始终写回 `position`
-  - 优先使用 `rotation`
-  - 若 `rotation` 无效，则回退到 `forward`
+### 开关和回滚
+- UseSimulationMovement：总开关，支持一键回滚。
+- UseJobSimulation：Job 开关，支持 P1.5/ P2 对照。
+- UseBurstJobs：Burst 开关。
 
-## 与旧移动系统的关系（重要）
-- `MeleeEnemy` / `RemoteEnemy` 在 `OnUpdate` 开头门控：
-  - 开启 Simulation：直接 `return`
-  - 关闭 Simulation：走旧 `MovementComponent`
-- 回滚能力来自同一构建内的 `UseSimulationMovement` A/B 开关。
+### 生效时机约束（重要）
+- SetUseSimulationMovement / SetUseJobSimulation 在 Battle 中会被忽略。
+- 这两个开关不支持战斗内热切换，只允许战斗外修改生效。
 
-## Projectile / Pickup 现状
-- `ProjectileSimData`、`PickupSimData` 已具备容器、绑定与生命周期同步通道
-- 当前仍未接入独立 Tick 行为，仅完成“创建/回收/索引同步”占位目标
+## 敌人和投射物执行模型
+### 敌人（Job）
+固定阶段：
+- BuildInput
+- Move
+- Separation
+- Commit
 
-## P1.5 实测基线（P2 输入）
-基线文档：`docs/P1.5 Simulation-Supplement.md`
+约束：
+- 热路径禁止 LINQ 和托管分配
+- 不读写 Transform
+- 阶段必须可独立 Profile
 
-关键结论：
-- `TickEnemies GC` 在 `500/1000/1500/2000` 敌人数下均为 `0 KB`
-- `GC Allocated In Frame` 从 P1 的 `29.5~109.7 KB` 降至 `2.1 KB`
-- `TickEnemies` 热路径耗时（四阶段合计）对比 P1 降幅约 `22.8%~26.8%`
-- Android 端评估以 CPU `ms` 为主，`fps` 受 60 上限影响
+### 投射物（Job）
+包含：
+- 移动更新
+- 寿命和越界回收
+- Broad Phase 候选构建
+- 主线程命中结算和回收
 
-## 自动化回归（P1.5 已补）
-目录：
-    - `Assets/Tests/Simulation/EditMode/SimulationWorldTickTests.cs`
-    - `Assets/Tests/Simulation/PlayMode/SimulationWorldPlayModeTests.cs`
+## 碰撞和伤害结算规范
+### Broad Phase
+候选由 _collisionQueryInputs + _enemyCollisionBuckets 计算。
+MaxTargets 必须覆盖“玩家候选 + 敌人候选”的总量。
 
-覆盖点：
-- 敌人追踪玩家
-- 进入攻击距离后停止移动
-- 实体移除后的索引 remap 稳定性
+### Area Query 快照语义
+- 入队时记录 SourceWasActiveAtQueryTime。
+- 结算按快照判定来源有效性，避免查询后状态变化导致误判。
 
-## 后续扩展规范（必须遵守）
-1. 先扩数据，再扩行为  
-先在 `SimData` 增字段，再改 `EntitySync` 初始化与 `Tick` 逻辑，最后改表现层消费。
+### 主线程结算
+- Projectile 命中：按 ImpactData + AIUtility.CalcDamageHP。
+- Area 命中：调用 AIUtility.PerformCollision(target, source, true)。
 
-2. 保留 A/B 路径  
-任何迁移都必须可在同一构建内通过开关回退到旧路径。
+### 伤害公式约束
+AIUtility.CalcDamageHP：
+- 闪避使用 dodgeStat.Value（加算语义），不使用 Percent。
+- 攻击： (attack + AttackStat.Value) * AttackStat.Percent
+- 防御： (damage - DefenseStat.Value) / DefenseStat.Percent
+- 最终伤害最小值为 1。
 
-3. 生命周期只走 EntitySync  
-禁止在敌人业务代码中手动改写 Simulation 容器，避免双写导致索引错乱。
+## 已修复问题（纳入长期约束）
+1. 闪避语义修正：使用 Value 而非 Percent。
+2. UseSimulationMovement / UseJobSimulation 战斗内禁止热切换。
+3. MaxTargets 统计覆盖玩家候选，避免超额候选。
+4. Area 查询引入来源活跃快照并按快照结算。
 
-4. 维持“逻辑输出 / 表现消费”边界  
-Simulation 只产出逻辑结果，不直接触发 UI、特效、音频事件。
+后续改动若触碰这些路径，必须保持行为不回退。
 
-5. 删除策略统一用 swap-back  
-所有 Simulation 容器删除都必须 remap 索引，严禁 `RemoveAt(i)` 直接删中间项。
+## 扩展开发 SOP
+### Step 0：定义模式和回滚
+- 明确功能在哪条路径生效（Simulation / Job / Burst）。
+- 明确开关关闭后的回退行为。
 
-6. 热路径禁用托管分配  
-`TickEnemies`、互斥求解、阶段化循环里禁止 LINQ/临时集合扩张。
+### Step 1：扩数据
+- 先改 SimData 和 JobData。
+- 再改 CreateInitialSimData 与转换函数。
 
-## P2 前的已知技术债
-- `AttackRange` 目前固定值 `1f`，尚未由配置化数值驱动
-- `EnemySimData.TargetType/State` 语义仍偏轻量，未形成完整状态机合约
-- Projectile/Pickup 尚未迁移真实 Tick 行为
+### Step 2：接生命周期
+- 只在 EntitySync 增加注册/反注册。
+- 保持 group 到容器映射清晰。
 
-## 提交前检查清单
-- 是否保持了 `UseSimulationMovement` 关闭时行为不变
-- 是否保持了 `EntityId <-> SimulationIndex` 一致性（含移除 remap）
-- 是否避免在 Tick 热路径引入新 GC
-- 是否将新字段接入了 `EntitySync -> Tick -> Presentation` 全链路
-- 是否补充了最小回归验证（至少 Battle 循环、敌人移除、索引稳定性）
-- 是否同步更新本 Skill 文档与 `docs/P1.5 Simulation-Supplement.md`
+### Step 3：接执行阶段
+- 优先放入现有阶段（Build/Schedule/Commit）。
+- 新阶段必须补 ProfilerMarker。
+
+### Step 4：接结算和表现
+- 逻辑结算收口到主线程。
+- 表现写回放在 Presentation。
+
+### Step 5：补测试
+EditMode 和 PlayMode 同步补回归，至少覆盖：
+- 行为正确性
+- 开关路径
+- 索引稳定性
+- 新增边界条件
+
+### Step 6：更新文档
+- 更新本文件。
+- 需要性能结论时，同步更新 docs/P2 Job System + Burst 落地.md。
+
+## 测试命令
+- PlayMode
+  - Unity -batchmode -nographics -projectPath . -runTests -testPlatform PlayMode -testResults Logs/playmode-test-results.xml -logFile Logs/playmode-tests.log
+- EditMode
+  - Unity -batchmode -nographics -projectPath . -runTests -testPlatform EditMode -testResults Logs/editmode-test-results.xml -logFile Logs/editmode-tests.log
+
+## 关键回归用例（必须保留）
+- TickEnemies_MatchesOutput_WhenBurstJobsToggled
+- TryGetNearestEnemyEntityId_SelectsNearestBucketCandidate_WhenJobSimulationEnabled
+- TickProjectiles_LimitsCandidatesToMaxTargets_IncludingPlayerCandidate
+- SetUseSimulationAndJob_AreIgnored_WhenBattleStateIsActive
+- EnqueueAreaQuery_CapturesInactiveSourceSnapshot_WhenSourceEntityUnavailable
+
+对应文件：
+- Assets/Tests/Simulation/EditMode/SimulationWorldTickTests.cs
+- Assets/Tests/Simulation/PlayMode/SimulationWorldPlayModeTests.cs
+
+## P2 验收口径
+- 3k 敌人下 Main Thread 明显下降（目标 >= 30%）。
+- 战斗持续帧 GC Alloc 接近 0。
+- Battle -> LevelUp -> Shop -> Battle 循环稳定。
+
+## 提交前门禁清单
+- 关闭 UseSimulationMovement 是否完全回退旧链路。
+- EntityBinding 是否保持双向一致，删除后是否正确 remap。
+- Job 容器是否无泄漏（Persistent 都可 Dispose）。
+- 是否引入新热路径 GC（LINQ、临时集合、装箱）。
+- 是否破坏“战斗内不热切换 UseSimulationMovement/UseJobSimulation”。
+- 是否同步更新测试和本设计文档。

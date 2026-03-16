@@ -229,7 +229,7 @@ namespace Entity.Weapon
             }
 
             int ownerEntityId = WeaponData != null ? WeaponData.OwnerId : Id;
-            return simulationWorld.TryEnqueueAreaCollisionQuery(Id, ownerEntityId, in center, radius, maxTargets);
+            return simulationWorld.TryRequestAreaCollision(Id, ownerEntityId, in center, radius, maxTargets);
         }
 
         protected bool TryQueueSectorCollisionQuery(in Vector3 center, float radius, in Vector3 direction,
@@ -242,7 +242,7 @@ namespace Entity.Weapon
             }
 
             int ownerEntityId = WeaponData != null ? WeaponData.OwnerId : Id;
-            return simulationWorld.TryEnqueueSectorCollisionQuery(Id, ownerEntityId, in center, radius, in direction,
+            return simulationWorld.TryRequestSectorCollision(Id, ownerEntityId, in center, radius, in direction,
                 halfAngleDeg, maxTargets);
         }
 

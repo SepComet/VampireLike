@@ -44,7 +44,7 @@ namespace Entity.Weapon
             }
 
             var simulationWorld = GameEntry.SimulationWorld;
-            if (simulationWorld == null || !simulationWorld.UseSimulationMovement || !simulationWorld.UseJobSimulation)
+            if (simulationWorld == null || !simulationWorld.UseSimulationMovement)
             {
                 return false;
             }

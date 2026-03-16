@@ -19,7 +19,7 @@ namespace Simulation
                 return false;
             }
 
-            if (!_useSimulationMovement || !_useJobSimulation)
+            if (!_useSimulationMovement)
             {
                 return false;
             }

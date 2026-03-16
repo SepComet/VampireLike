@@ -1,13 +1,23 @@
+using GameFramework.ObjectPool;
 using UnityEngine;
 
 namespace Entity.Weapon
 {
     public sealed class HandgunHitMarkerAttackEffect : IWeaponAttackEffect
     {
+        private const string PoolName = "Weapon.HandgunHitMarker";
+        private const float PoolAutoReleaseInterval = 60f;
+        private const int PoolCapacity = 128;
+        private const float PoolExpireTime = 120f;
+        private const int PoolPriority = 0;
+
+        private static IObjectPool<HandgunHitMarkerPoolObject> s_Pool;
+
         private readonly float _size;
         private readonly float _yOffset;
         private readonly float _duration;
         private readonly Color _color;
+        private Material _sharedMaterial;
 
         public HandgunHitMarkerAttackEffect(float size, float yOffset, float duration, Color color)
         {
@@ -20,35 +30,95 @@ namespace Entity.Weapon
         public void Play(WeaponBase weapon, Vector3 position, EntityBase target, float radius)
         {
             if (target == null) return;
+            if (!TrySpawnMarker(out HandgunHitMarkerPooledInstance markerInstance))
+            {
+                return;
+            }
 
-            GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            marker.name = "HandgunHitMarker";
+            Transform targetTransform = target.CachedTransform;
+            Vector3 worldPosition = targetTransform != null ? targetTransform.position : position;
+            markerInstance.transform.SetParent(null, false);
+            markerInstance.transform.position = worldPosition + Vector3.up * _yOffset;
+            markerInstance.transform.localScale = Vector3.one * Mathf.Max(0.01f, _size);
+            markerInstance.ApplyMaterial(GetSharedMaterial());
+            markerInstance.Activate(Mathf.Max(0.01f, _duration), s_Pool);
+        }
 
-            Collider collider = marker.GetComponent<Collider>();
+        private bool TrySpawnMarker(out HandgunHitMarkerPooledInstance markerInstance)
+        {
+            markerInstance = null;
+            IObjectPool<HandgunHitMarkerPoolObject> pool = EnsurePool();
+            if (pool == null)
+            {
+                return false;
+            }
+
+            HandgunHitMarkerPoolObject pooledObject = pool.Spawn();
+            if (pooledObject != null)
+            {
+                markerInstance = pooledObject.Target as HandgunHitMarkerPooledInstance;
+                if (markerInstance != null)
+                {
+                    return true;
+                }
+            }
+
+            GameObject markerGameObject = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            markerGameObject.name = "HandgunHitMarker";
+            Collider collider = markerGameObject.GetComponent<Collider>();
             if (collider != null)
             {
                 Object.Destroy(collider);
             }
 
-            marker.transform.SetParent(target.CachedTransform, false);
-            marker.transform.localPosition = new Vector3(0f, _yOffset, 0f);
-            marker.transform.localScale = Vector3.one * Mathf.Max(0.01f, _size);
+            markerInstance = markerGameObject.AddComponent<HandgunHitMarkerPooledInstance>();
+            markerGameObject.SetActive(false);
+            pool.Register(HandgunHitMarkerPoolObject.Create(markerInstance), true);
+            return true;
+        }
 
-            Renderer renderer = marker.GetComponent<Renderer>();
-            if (renderer != null)
+        private static IObjectPool<HandgunHitMarkerPoolObject> EnsurePool()
+        {
+            var poolComponent = GameEntry.ObjectPool;
+            if (poolComponent == null)
             {
-                Shader shader = Shader.Find("Sprites/Default");
-                if (shader == null)
-                {
-                    shader = Shader.Find("Unlit/Color");
-                }
-
-                Material material = new Material(shader);
-                material.color = _color;
-                renderer.material = material;
+                return null;
             }
 
-            Object.Destroy(marker, Mathf.Max(0.01f, _duration));
+            if (s_Pool != null && poolComponent.HasObjectPool<HandgunHitMarkerPoolObject>(PoolName))
+            {
+                return s_Pool;
+            }
+
+            s_Pool = poolComponent.HasObjectPool<HandgunHitMarkerPoolObject>(PoolName)
+                ? poolComponent.GetObjectPool<HandgunHitMarkerPoolObject>(PoolName)
+                : poolComponent.CreateSingleSpawnObjectPool<HandgunHitMarkerPoolObject>(
+                    PoolName,
+                    PoolAutoReleaseInterval,
+                    PoolCapacity,
+                    PoolExpireTime,
+                    PoolPriority);
+            return s_Pool;
+        }
+
+        private Material GetSharedMaterial()
+        {
+            if (_sharedMaterial != null)
+            {
+                return _sharedMaterial;
+            }
+
+            Shader shader = Shader.Find("Sprites/Default");
+            if (shader == null)
+            {
+                shader = Shader.Find("Unlit/Color");
+            }
+
+            _sharedMaterial = new Material(shader)
+            {
+                color = _color
+            };
+            return _sharedMaterial;
         }
     }
 }

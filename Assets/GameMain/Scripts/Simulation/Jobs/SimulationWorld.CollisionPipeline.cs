@@ -1,101 +1,75 @@
+﻿using CustomDebugger;
+using CustomEvent;
+using CustomUtility;
+using Definition.DataStruct;
+using Definition.Enum;
+using Entity;
+using Entity.Weapon;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
-using CustomDebugger;
-using CustomEvent;
-using Definition.DataStruct;
-using Definition.Enum;
-using Entity;
-using Entity.Weapon;
-using CustomUtility;
-using UnityGameFramework.Runtime;
 
 namespace Simulation
 {
     public sealed partial class SimulationWorld
     {
         private const int PlayerEntityId = -1;
+        private JobHandle _collisionCandidateQueryHandle;
+        private bool _collisionCandidateQueryScheduled;
 
-        [Header("投射物模拟参数")] [Tooltip("投射物距离玩家超过该水平半径时回收。小于等于 0 表示不启用该回收条件。")] [SerializeField]
-        private float _projectileMaxDistanceFromPlayer = 120f;
-
-        [Tooltip("投射物与玩家的垂直高度差超过该值时回收。小于等于 0 表示不启用该回收条件。")] [SerializeField]
-        private float _projectileMaxVerticalOffsetFromPlayer = 30f;
-
-        [Tooltip("投射物 Broad Phase 命中查询半径。")] [SerializeField]
+        [Header("Projectile Collision Query")]
+        [Tooltip("Projectile broad-phase collision query radius.")]
+        [SerializeField]
         private float _projectileCollisionQueryRadius = 0.35f;
 
-        [Tooltip("每个投射物最多保留的候选目标数量。")] [SerializeField]
+        [Tooltip("Maximum retained candidates per projectile query.")]
+        [SerializeField]
         private int _projectileMaxCandidatesPerQuery = 1;
 
-        [Tooltip("投射物 Broad Phase 分桶网格尺寸。小于等于 0 时将按查询半径自动推导。")] [SerializeField]
+        [Tooltip("Broad-phase bucket cell size. <=0 derives from query radius.")]
+        [SerializeField]
         private float _projectileCollisionCellSize = 0f;
 
-        [Header("投射物命中事件派发")] [Tooltip("是否派发投射物命中表现事件。")] [SerializeField]
+        [Header("Projectile Hit Event Dispatch")]
+        [Tooltip("Dispatch projectile hit presentation event.")]
+        [SerializeField]
         private bool _dispatchProjectileHitPresentationEvent = true;
 
-        [Tooltip("命中时是否请求命中标记表现。")] [SerializeField]
+        [Tooltip("Request hit marker when projectile hits.")]
+        [SerializeField]
         private bool _dispatchProjectileHitMarkerEvent = true;
 
-        [Tooltip("命中时是否请求特效表现。")] [SerializeField]
+        [Tooltip("Request hit effect when projectile hits.")]
+        [SerializeField]
         private bool _dispatchProjectileHitEffectEvent = true;
 
-        [Tooltip("命中事件建议使用的特效实体类型 Id（<=0 表示不指定，由表现层决定）。")] [SerializeField]
+        [Tooltip("Default hit effect entity type id in presentation event. 0 means not specified.")]
+        [SerializeField]
         private int _projectileHitPresentationEffectTypeId = 0;
 
-        [BurstCompile]
-        private struct ProjectileMovementBurstJob : IJobParallelFor
-        {
-            [ReadOnly] public NativeArray<ProjectileJobInputData> Inputs;
-            public NativeArray<ProjectileJobOutputData> Outputs;
-            public float DeltaTime;
-            public float3 PlayerPosition;
-            public float MaxSqrDistanceFromPlayer;
-            public float MaxVerticalOffsetFromPlayer;
+        #region Area Query Request
 
-            public void Execute(int index)
-            {
-                ExecuteProjectileMovement(index, Inputs, Outputs, DeltaTime, PlayerPosition,
-                    MaxSqrDistanceFromPlayer, MaxVerticalOffsetFromPlayer);
-            }
-        }
-
-        private struct ProjectileMovementJob : IJobParallelFor
-        {
-            [ReadOnly] public NativeArray<ProjectileJobInputData> Inputs;
-            public NativeArray<ProjectileJobOutputData> Outputs;
-            public float DeltaTime;
-            public float3 PlayerPosition;
-            public float MaxSqrDistanceFromPlayer;
-            public float MaxVerticalOffsetFromPlayer;
-
-            public void Execute(int index)
-            {
-                ExecuteProjectileMovement(index, Inputs, Outputs, DeltaTime, PlayerPosition,
-                    MaxSqrDistanceFromPlayer, MaxVerticalOffsetFromPlayer);
-            }
-        }
-
-        public bool TryEnqueueAreaCollisionQuery(int sourceEntityId, int sourceOwnerEntityId, in Vector3 center,
+        public bool TryRequestAreaCollision(int sourceEntityId, int sourceOwnerEntityId, in Vector3 center,
             float radius, int maxTargets = 16)
         {
-            return TryEnqueueAreaCollisionQueryInternal(sourceEntityId, sourceOwnerEntityId, in center, radius,
+            return TryRequestAreaCollisionInternal(sourceEntityId, sourceOwnerEntityId, in center, radius,
                 maxTargets, CollisionShapeCircle, Vector3.forward, 180f);
         }
 
-        public bool TryEnqueueSectorCollisionQuery(int sourceEntityId, int sourceOwnerEntityId, in Vector3 center,
+        public bool TryRequestSectorCollision(int sourceEntityId, int sourceOwnerEntityId, in Vector3 center,
             float radius, in Vector3 direction, float halfAngleDeg, int maxTargets = 16)
         {
-            return TryEnqueueAreaCollisionQueryInternal(sourceEntityId, sourceOwnerEntityId, in center, radius,
+            return TryRequestAreaCollisionInternal(sourceEntityId, sourceOwnerEntityId, in center, radius,
                 maxTargets, CollisionShapeSector, direction, halfAngleDeg);
         }
 
-        private bool TryEnqueueAreaCollisionQueryInternal(int sourceEntityId, int sourceOwnerEntityId, in Vector3 center,
+        private bool TryRequestAreaCollisionInternal(int sourceEntityId, int sourceOwnerEntityId,
+            in Vector3 center,
             float radius, int maxTargets, int shapeType, in Vector3 direction, float halfAngleDeg)
         {
-            if (!_useSimulationMovement || !_useJobSimulation)
+            if (!_useSimulationMovement)
             {
                 return false;
             }
@@ -106,7 +80,7 @@ namespace Simulation
             }
 
             int resolvedOwnerEntityId = sourceOwnerEntityId != 0 ? sourceOwnerEntityId : sourceEntityId;
-            bool sourceWasActiveAtQueryTime = IsCollisionSourceActiveAtQueryTime(sourceEntityId);
+            bool sourceWasActiveAtQueryTime = WasCollisionSourceActiveAtQueryTime(sourceEntityId);
             Vector3 normalizedDirection = direction;
             normalizedDirection.y = 0f;
             if (normalizedDirection.sqrMagnitude <= Mathf.Epsilon)
@@ -134,12 +108,12 @@ namespace Simulation
             return true;
         }
 
-        private int GetPendingAreaCollisionQueryCount()
+        private int GetPendingAreaCollisionRequestCount()
         {
             return _areaCollisionRequests.Count;
         }
 
-        private int EstimatePendingAreaCollisionCandidateCount()
+        private int EstimatePendingAreaCollisionCandidateCountFromRequests()
         {
             int expectedCount = 0;
             for (int i = 0; i < _areaCollisionRequests.Count; i++)
@@ -150,61 +124,19 @@ namespace Simulation
             return expectedCount;
         }
 
-        private JobHandle ExecuteProjectileMovementJob(in SimulationTickContext context)
+        #endregion
+
+        #region Collision Pipeline
+
+        private void PrepareCollisionCandidatesForFrame()
         {
-            int projectileCount = _projectileJobInputs.Length;
-            if (projectileCount == 0)
-            {
-                return default;
-            }
+            _collisionCandidateQueryScheduled = false;
 
-            if (context.DeltaTime <= 0f)
-            {
-                CopyProjectileInputToOutput();
-                return default;
-            }
-
-            float maxDistance = Mathf.Max(0f, _projectileMaxDistanceFromPlayer);
-            float maxSqrDistanceFromPlayer = maxDistance > 0f ? maxDistance * maxDistance : -1f;
-            float maxVerticalOffsetFromPlayer = Mathf.Max(0f, _projectileMaxVerticalOffsetFromPlayer);
-            float3 playerPosition =
-                new float3(context.PlayerPosition.x, context.PlayerPosition.y, context.PlayerPosition.z);
-            NativeArray<ProjectileJobInputData> inputArray = _projectileJobInputs.AsArray();
-            NativeArray<ProjectileJobOutputData> outputArray = _projectileJobOutputs.AsArray();
-
-            if (_useBurstJobs)
-            {
-                ProjectileMovementBurstJob burstJob = new ProjectileMovementBurstJob
-                {
-                    Inputs = inputArray,
-                    Outputs = outputArray,
-                    DeltaTime = context.DeltaTime,
-                    PlayerPosition = playerPosition,
-                    MaxSqrDistanceFromPlayer = maxSqrDistanceFromPlayer,
-                    MaxVerticalOffsetFromPlayer = maxVerticalOffsetFromPlayer
-                };
-                return burstJob.Schedule(projectileCount, 64);
-            }
-
-            ProjectileMovementJob job = new ProjectileMovementJob
-            {
-                Inputs = inputArray,
-                Outputs = outputArray,
-                DeltaTime = context.DeltaTime,
-                PlayerPosition = playerPosition,
-                MaxSqrDistanceFromPlayer = maxSqrDistanceFromPlayer,
-                MaxVerticalOffsetFromPlayer = maxVerticalOffsetFromPlayer
-            };
-            return job.Schedule(projectileCount, 64);
-        }
-
-        private void BuildProjectileCollisionCandidates()
-        {
             if (!_collisionQueryInputs.IsCreated || !_collisionCandidates.IsCreated ||
                 !_enemyCollisionBuckets.IsCreated)
             {
                 ResetCollisionRuntimeStats();
-                ClearAreaCollisionFrameBuffers();
+                ClearAreaCollisionTransientBuffers();
                 return;
             }
 
@@ -278,29 +210,37 @@ namespace Simulation
             {
                 if (hasEnemyTargets)
                 {
-                    BuildEnemyCollisionBucketsForProjectiles(cellSize);
+                    BuildEnemyCollisionBuckets(cellSize);
                 }
             }
 
-            int projectileCandidateCount;
-            int areaCandidateCount;
             using (CustomProfilerMarker.Collision_QueryCandidates.Auto())
             {
-                QueryProjectileCollisionCandidates(cellSize, hasEnemyTargets, out projectileCandidateCount,
-                    out areaCandidateCount);
+                _collisionCandidateQueryScheduled = ScheduleCollisionCandidateQueryJob(cellSize, hasEnemyTargets,
+                    out _collisionCandidateQueryHandle);
+            }
+        }
+
+        private void CompleteCollisionCandidatesForFrame()
+        {
+            if (_collisionCandidateQueryScheduled)
+            {
+                _collisionCandidateQueryHandle.Complete();
+                _collisionCandidateQueryScheduled = false;
             }
 
+            CountCollisionCandidatesBySourceType(out int projectileCandidateCount, out int areaCandidateCount);
             _lastProjectileCollisionCandidateCount = projectileCandidateCount;
             _lastAreaCollisionCandidateCount = areaCandidateCount;
             _lastCollisionCandidateCount = projectileCandidateCount + areaCandidateCount;
         }
 
-        private void ResolveProjectileCollisionCandidatesMainThread()
+        private void ResolveCollisionCandidatesOnMainThread()
         {
             if (!_collisionCandidates.IsCreated)
             {
                 _lastResolvedAreaHitCount = 0;
-                ClearAreaCollisionFrameBuffers();
+                ClearAreaCollisionTransientBuffers();
                 return;
             }
 
@@ -311,7 +251,7 @@ namespace Simulation
             if (_collisionCandidates.Length == 0)
             {
                 _lastResolvedAreaHitCount = 0;
-                ClearAreaCollisionFrameBuffers();
+                ClearAreaCollisionTransientBuffers();
                 return;
             }
 
@@ -328,7 +268,7 @@ namespace Simulation
                             continue;
                         }
 
-                        if (!TryGetActiveProjectileData(projectileEntityId, out _, out ProjectileSimData projectile))
+                        if (!TryGetActiveProjectileSimData(projectileEntityId, out _, out ProjectileSimData projectile))
                         {
                             _projectileResolvedEntityIds.Add(projectileEntityId);
                             continue;
@@ -338,11 +278,13 @@ namespace Simulation
                         bool shouldDispatchPresentation = false;
                         int damage = 0;
                         Vector3 hitPosition = projectile.Position;
-                        if (TryGetTargetableEntity(candidate.TargetEntityId, out TargetableObject target))
+                        if (TryGetAliveTargetableEntity(candidate.TargetEntityId, out TargetableObject target))
                         {
                             EntityBase sourceEntity = TryGetEntityById(candidate.SourceEntityId);
                             EntityBase ownerEntity = TryGetEntityById(candidate.SourceOwnerEntityId);
-                            shouldExpireProjectile = ResolveProjectileHit(target, sourceEntity, ownerEntity, in projectile,
+                            shouldExpireProjectile = ResolveProjectileHitAgainstTarget(target, sourceEntity,
+                                ownerEntity,
+                                in projectile,
                                 out damage, out hitPosition, out shouldDispatchPresentation);
                         }
 
@@ -354,9 +296,10 @@ namespace Simulation
 
                         if (shouldExpireProjectile)
                         {
-                            MarkProjectileExpired(projectileEntityId);
+                            MarkProjectileAsExpired(projectileEntityId);
                             _projectileResolvedEntityIds.Add(projectileEntityId);
                         }
+
                         continue;
                     }
 
@@ -383,49 +326,20 @@ namespace Simulation
             int resolvedAreaHitCount;
             using (CustomProfilerMarker.Collision_ResolveArea.Auto())
             {
-                resolvedAreaHitCount = ResolveAreaCollisionHitsMainThread();
+                resolvedAreaHitCount = ResolveAreaCollisionHitsOnMainThread();
             }
 
             _lastResolvedAreaHitCount = resolvedAreaHitCount;
             _projectileResolvedEntityIds.Clear();
-            ClearAreaCollisionFrameBuffers();
+            ClearAreaCollisionTransientBuffers();
         }
 
-        private void RecycleInactiveProjectiles()
-        {
-            _projectileRecycleEntityIds.Clear();
-            for (int i = 0; i < _projectiles.Count; i++)
-            {
-                ProjectileSimData projectile = _projectiles[i];
-                if (!ShouldRecycleProjectile(projectile))
-                {
-                    continue;
-                }
+        #endregion
 
-                _projectileRecycleEntityIds.Add(projectile.EntityId);
-            }
+        #region Collision Resolve Helpers
 
-            if (_projectileRecycleEntityIds.Count == 0)
-            {
-                return;
-            }
-
-            var entityComponent = GameEntry.Entity;
-            for (int i = 0; i < _projectileRecycleEntityIds.Count; i++)
-            {
-                int entityId = _projectileRecycleEntityIds[i];
-                if (entityComponent != null)
-                {
-                    entityComponent.HideEntity(entityId);
-                }
-
-                RemoveProjectileByEntityId(entityId);
-            }
-
-            _projectileRecycleEntityIds.Clear();
-        }
-
-        private bool ResolveProjectileHit(TargetableObject target, EntityBase sourceEntity, EntityBase ownerEntity,
+        private bool ResolveProjectileHitAgainstTarget(TargetableObject target, EntityBase sourceEntity,
+            EntityBase ownerEntity,
             in ProjectileSimData projectile, out int damage, out Vector3 hitPosition,
             out bool shouldDispatchPresentation)
         {
@@ -540,7 +454,7 @@ namespace Simulation
             return false;
         }
 
-        private static bool TryGetTargetableEntity(int entityId, out TargetableObject target)
+        private static bool TryGetAliveTargetableEntity(int entityId, out TargetableObject target)
         {
             target = null;
 
@@ -570,7 +484,7 @@ namespace Simulation
             return entityComponent != null ? entityComponent.GetGameEntity(entityId) : null;
         }
 
-        private bool TryGetActiveProjectileData(int projectileEntityId, out int simulationIndex,
+        private bool TryGetActiveProjectileSimData(int projectileEntityId, out int simulationIndex,
             out ProjectileSimData projectile)
         {
             simulationIndex = -1;
@@ -593,7 +507,7 @@ namespace Simulation
             return true;
         }
 
-        private bool MarkProjectileExpired(int projectileEntityId)
+        private bool MarkProjectileAsExpired(int projectileEntityId)
         {
             if (!ProjectileBinding.TryGetSimulationIndex(projectileEntityId, out int simulationIndex) ||
                 simulationIndex < 0 || simulationIndex >= _projectiles.Count)
@@ -614,7 +528,7 @@ namespace Simulation
             return true;
         }
 
-        private int ResolveAreaCollisionHitsMainThread()
+        private int ResolveAreaCollisionHitsOnMainThread()
         {
             if (_areaCollisionHitEvents.Count == 0)
             {
@@ -625,7 +539,7 @@ namespace Simulation
             for (int i = 0; i < _areaCollisionHitEvents.Count; i++)
             {
                 AreaCollisionHitEventData hitEvent = _areaCollisionHitEvents[i];
-                if (!TryGetCollisionQueryById(hitEvent.QueryId, out CollisionQueryData query) ||
+                if (!TryGetCollisionQueryByQueryId(hitEvent.QueryId, out CollisionQueryData query) ||
                     query.SourceType != CollisionSourceTypeArea)
                 {
                     continue;
@@ -642,7 +556,7 @@ namespace Simulation
                     continue;
                 }
 
-                if (!TryGetTargetableEntity(hitEvent.TargetEntityId, out TargetableObject target))
+                if (!TryGetAliveTargetableEntity(hitEvent.TargetEntityId, out TargetableObject target))
                 {
                     continue;
                 }
@@ -659,7 +573,7 @@ namespace Simulation
             return resolvedHitCount;
         }
 
-        private bool TryGetCollisionQueryById(int queryId, out CollisionQueryData query)
+        private bool TryGetCollisionQueryByQueryId(int queryId, out CollisionQueryData query)
         {
             query = default;
             if (!_collisionQueryInputs.IsCreated || queryId < 0 || queryId >= _collisionQueryInputs.Length)
@@ -734,139 +648,107 @@ namespace Simulation
             return angle <= halfAngle;
         }
 
-        private void ClearAreaCollisionFrameBuffers()
+        private void ClearAreaCollisionTransientBuffers()
         {
             _areaCollisionRequests.Clear();
             _areaCollisionHitEvents.Clear();
             _areaCollisionHitDedupKeys.Clear();
         }
 
-        private void BuildEnemyCollisionBucketsForProjectiles(float cellSize)
+        private void BuildEnemyCollisionBuckets(float cellSize)
         {
             _enemyCollisionBuckets.Clear();
-            for (int i = 0; i < _enemyJobOutputs.Length; i++)
+            int enemyCount = _enemyJobOutputs.Length;
+            if (enemyCount <= 0)
             {
-                EnemyJobOutputData enemy = _enemyJobOutputs[i];
-                int cellX = (int)math.floor(enemy.Position.x / cellSize);
-                int cellZ = (int)math.floor(enemy.Position.z / cellSize);
-                _enemyCollisionBuckets.Add(SeparationCellKey(cellX, cellZ), i);
+                return;
+            }
+
+            BuildCollisionBucketsBurstJob job = new BuildCollisionBucketsBurstJob
+            {
+                EnemyOutputs = _enemyJobOutputs.AsArray(),
+                Buckets = _enemyCollisionBuckets.AsParallelWriter(),
+                CellSize = cellSize
+            };
+
+            using (CustomProfilerMarker.TickEnemies_Complete.Auto())
+            {
+                JobHandle handle = job.Schedule(enemyCount, 64);
+                handle.Complete();
             }
         }
 
-        private void QueryProjectileCollisionCandidates(float cellSize, bool hasEnemyTargets,
-            out int projectileCandidateCount, out int areaCandidateCount)
+        [BurstCompile]
+        private struct BuildCollisionBucketsBurstJob : IJobParallelFor
+        {
+            [ReadOnly] public NativeArray<EnemyJobOutputData> EnemyOutputs;
+            public NativeParallelMultiHashMap<long, int>.ParallelWriter Buckets;
+            public float CellSize;
+
+            public void Execute(int index)
+            {
+                EnemyJobOutputData enemy = EnemyOutputs[index];
+                int cellX = (int)math.floor(enemy.Position.x / CellSize);
+                int cellZ = (int)math.floor(enemy.Position.z / CellSize);
+                Buckets.Add(SeparationCellKey(cellX, cellZ), index);
+            }
+        }
+
+
+
+        private bool ScheduleCollisionCandidateQueryJob(float cellSize, bool hasEnemyTargets, out JobHandle handle)
+        {
+            handle = default;
+            if (!_collisionQueryInputs.IsCreated || !_collisionCandidates.IsCreated)
+            {
+                return false;
+            }
+
+            _collisionCandidates.Clear();
+            int queryCount = _collisionQueryInputs.Length;
+            if (queryCount == 0)
+            {
+                return false;
+            }
+
+            bool hasPlayerTarget = TryGetPlayerCollisionTarget(out int playerTargetEntityId, out float3 playerPosition);
+            QueryCollisionCandidatesBurstJob job = new QueryCollisionCandidatesBurstJob
+            {
+                Queries = _collisionQueryInputs.AsArray(),
+                EnemyBuckets = _enemyCollisionBuckets,
+                EnemyOutputs = _enemyJobOutputs.AsArray(),
+                Candidates = _collisionCandidates.AsParallelWriter(),
+                HasEnemyTargets = hasEnemyTargets,
+                HasPlayerTarget = hasPlayerTarget,
+                PlayerTargetEntityId = playerTargetEntityId,
+                PlayerPosition = playerPosition,
+                CellSize = cellSize
+            };
+
+            handle = job.Schedule(queryCount, 64);
+            return true;
+        }
+
+        private void CountCollisionCandidatesBySourceType(out int projectileCandidateCount, out int areaCandidateCount)
         {
             projectileCandidateCount = 0;
             areaCandidateCount = 0;
-            bool hasPlayerTarget = TryGetPlayerCollisionTarget(out int playerTargetEntityId, out float3 playerPosition);
 
-            for (int i = 0; i < _collisionQueryInputs.Length; i++)
+            if (!_collisionCandidates.IsCreated)
             {
-                CollisionQueryData query = _collisionQueryInputs[i];
-                float radiusSqr = query.Radius * query.Radius;
-                int centerCellX = (int)math.floor(query.Position.x / cellSize);
-                int centerCellZ = (int)math.floor(query.Position.z / cellSize);
-                int queryRange = math.max(1, (int)math.ceil(query.Radius / cellSize));
-                int selectedCount = 0;
-                bool reachedLimit = false;
+                return;
+            }
 
-                if (hasPlayerTarget && query.SourceEntityId != playerTargetEntityId &&
-                    query.SourceOwnerEntityId != playerTargetEntityId)
+            for (int i = 0; i < _collisionCandidates.Length; i++)
+            {
+                CollisionCandidateData candidate = _collisionCandidates[i];
+                if (candidate.SourceType == CollisionSourceTypeProjectile)
                 {
-                    playerPosition.y = query.Position.y;
-                    float3 playerDelta = playerPosition - query.Position;
-                    float playerSqrDistance = math.lengthsq(playerDelta);
-                    // Log.Info(
-                    //     $"playerPos:{playerPosition} - queryPos:{query.Position} = playerSqrDistance:{playerSqrDistance}");
-                    if (playerSqrDistance <= radiusSqr)
-                    {
-                        AddCollisionCandidate(
-                            query.QueryId,
-                            query.SourceType,
-                            query.SourceEntityId,
-                            query.SourceOwnerEntityId,
-                            playerTargetEntityId,
-                            playerSqrDistance);
-                        if (query.SourceType == CollisionSourceTypeProjectile)
-                        {
-                            projectileCandidateCount++;
-                        }
-                        else if (query.SourceType == CollisionSourceTypeArea)
-                        {
-                            areaCandidateCount++;
-                        }
-
-                        selectedCount++;
-                        if (selectedCount >= query.MaxTargets)
-                        {
-                            reachedLimit = true;
-                        }
-                    }
+                    projectileCandidateCount++;
                 }
-
-                if (!hasEnemyTargets || reachedLimit)
+                else if (candidate.SourceType == CollisionSourceTypeArea)
                 {
-                    continue;
-                }
-
-                for (int dx = -queryRange; dx <= queryRange && !reachedLimit; dx++)
-                {
-                    for (int dz = -queryRange; dz <= queryRange && !reachedLimit; dz++)
-                    {
-                        long key = SeparationCellKey(centerCellX + dx, centerCellZ + dz);
-                        if (!_enemyCollisionBuckets.TryGetFirstValue(key, out int enemyIndex,
-                                out NativeParallelMultiHashMapIterator<long> iterator))
-                        {
-                            continue;
-                        }
-
-                        do
-                        {
-                            if (enemyIndex < 0 || enemyIndex >= _enemyJobOutputs.Length)
-                            {
-                                continue;
-                            }
-
-                            EnemyJobOutputData enemy = _enemyJobOutputs[enemyIndex];
-                            if (enemy.EntityId == query.SourceOwnerEntityId)
-                            {
-                                continue;
-                            }
-
-                            float3 delta = new float3(
-                                enemy.Position.x - query.Position.x,
-                                enemy.Position.y - query.Position.y,
-                                enemy.Position.z - query.Position.z);
-                            float sqrDistance = math.lengthsq(delta);
-                            if (sqrDistance > radiusSqr)
-                            {
-                                continue;
-                            }
-
-                            AddCollisionCandidate(
-                                query.QueryId,
-                                query.SourceType,
-                                query.SourceEntityId,
-                                query.SourceOwnerEntityId,
-                                enemy.EntityId,
-                                sqrDistance);
-                            if (query.SourceType == CollisionSourceTypeProjectile)
-                            {
-                                projectileCandidateCount++;
-                            }
-                            else if (query.SourceType == CollisionSourceTypeArea)
-                            {
-                                areaCandidateCount++;
-                            }
-                            selectedCount++;
-
-                            if (selectedCount >= query.MaxTargets)
-                            {
-                                reachedLimit = true;
-                                break;
-                            }
-                        } while (_enemyCollisionBuckets.TryGetNextValue(out enemyIndex, ref iterator));
-                    }
+                    areaCandidateCount++;
                 }
             }
         }
@@ -876,7 +758,7 @@ namespace Simulation
             playerEntityId = PlayerEntityId;
             playerPosition = default;
 
-            if (!TryGetTargetableEntity(playerEntityId, out TargetableObject playerTarget))
+            if (!TryGetAliveTargetableEntity(playerEntityId, out TargetableObject playerTarget))
             {
                 return false;
             }
@@ -892,22 +774,7 @@ namespace Simulation
             return true;
         }
 
-        private static bool ShouldRecycleProjectile(in ProjectileSimData projectile)
-        {
-            if (!projectile.Active)
-            {
-                return true;
-            }
-
-            if (projectile.State == ProjectileStateExpired)
-            {
-                return true;
-            }
-
-            return projectile.LifeTime > 0f && projectile.Age >= projectile.LifeTime;
-        }
-
-        private static bool IsCollisionSourceActiveAtQueryTime(int sourceEntityId)
+        private static bool WasCollisionSourceActiveAtQueryTime(int sourceEntityId)
         {
             EntityBase sourceEntity = TryGetEntityById(sourceEntityId);
             if (sourceEntity == null || !sourceEntity.Available)
@@ -928,84 +795,6 @@ namespace Simulation
             return true;
         }
 
-        private static void ExecuteProjectileMovement(int index, NativeArray<ProjectileJobInputData> inputs,
-            NativeArray<ProjectileJobOutputData> outputs, float deltaTime, float3 playerPosition,
-            float maxSqrDistanceFromPlayer, float maxVerticalOffsetFromPlayer)
-        {
-            ProjectileJobInputData input = inputs[index];
-            ProjectileJobOutputData output = new ProjectileJobOutputData
-            {
-                EntityId = input.EntityId,
-                OwnerEntityId = input.OwnerEntityId,
-                Position = input.Position,
-                Forward = input.Forward,
-                Velocity = input.Velocity,
-                Speed = input.Speed,
-                LifeTime = input.LifeTime,
-                Age = input.Age,
-                Active = input.Active,
-                RemainingLifetime = input.RemainingLifetime,
-                State = input.State
-            };
-
-            if (!input.Active)
-            {
-                output.State = ProjectileStateExpired;
-                outputs[index] = output;
-                return;
-            }
-
-            float3 position = input.Position;
-            float3 forward = input.Forward;
-            float3 velocity = input.Velocity;
-            if (math.lengthsq(velocity) <= float.Epsilon && input.Speed > 0f)
-            {
-                float3 moveDirection = math.normalizesafe(forward, new float3(0f, 0f, 1f));
-                velocity = moveDirection * input.Speed;
-            }
-
-            float3 nextPosition = position + velocity * deltaTime;
-            float nextAge = math.max(0f, input.Age + deltaTime);
-            float nextRemainingLifetime = input.RemainingLifetime;
-            bool shouldExpire = false;
-
-            if (input.LifeTime > 0f)
-            {
-                nextRemainingLifetime = math.max(0f, input.LifeTime - nextAge);
-                shouldExpire = nextAge >= input.LifeTime;
-            }
-            else if (input.RemainingLifetime > 0f)
-            {
-                nextRemainingLifetime = math.max(0f, input.RemainingLifetime - deltaTime);
-                shouldExpire = nextRemainingLifetime <= float.Epsilon;
-            }
-
-            if (!shouldExpire && maxSqrDistanceFromPlayer > 0f)
-            {
-                float3 horizontalDelta =
-                    new float3(nextPosition.x - playerPosition.x, 0f, nextPosition.z - playerPosition.z);
-                shouldExpire = math.lengthsq(horizontalDelta) > maxSqrDistanceFromPlayer;
-            }
-
-            if (!shouldExpire && maxVerticalOffsetFromPlayer > 0f)
-            {
-                shouldExpire = math.abs(nextPosition.y - playerPosition.y) > maxVerticalOffsetFromPlayer;
-            }
-
-            output.Position = nextPosition;
-            output.Velocity = velocity;
-            output.Age = nextAge;
-            output.RemainingLifetime = nextRemainingLifetime;
-            output.Active = !shouldExpire;
-            output.State = shouldExpire ? ProjectileStateExpired : ProjectileStateActive;
-
-            if (math.lengthsq(velocity) > float.Epsilon)
-            {
-                float3 moveForward = math.normalizesafe(velocity, forward);
-                output.Forward = moveForward;
-            }
-
-            outputs[index] = output;
-        }
+        #endregion
     }
 }

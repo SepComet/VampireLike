@@ -88,7 +88,7 @@ namespace Procedure
             base.OnEnter(procedureOwner);
 
             _procedureOwner = procedureOwner;
-            GameEntry.SimulationWorld?.Clear();
+            GameEntry.SimulationWorld?.ClearSimulationState();
 
             GameEntry.Event.Subscribe(OpenUIFormSuccessEventArgs.EventId, OpenUIFormSuccess);
             GameEntry.Event.Subscribe(ShowEntitySuccessEventArgs.EventId, ShowEntitySuccess);
@@ -136,7 +136,7 @@ namespace Procedure
             Player = null;
 
             _procedureOwner = null;
-            GameEntry.SimulationWorld?.Clear();
+            GameEntry.SimulationWorld?.ClearSimulationState();
 
             GameEntry.Event.Unsubscribe(OpenUIFormSuccessEventArgs.EventId, OpenUIFormSuccess);
             GameEntry.Event.Unsubscribe(ShowEntitySuccessEventArgs.EventId, ShowEntitySuccess);
