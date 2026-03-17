@@ -2,15 +2,11 @@
 <UnityGameFramework>
   <ResourceBuilder>
     <Settings>
-<<<<<<< Updated upstream
-      <InternalResourceVersion>5</InternalResourceVersion>
-=======
-      <InternalResourceVersion>4</InternalResourceVersion>
->>>>>>> Stashed changes
+      <InternalResourceVersion>0</InternalResourceVersion>
       <Platforms>33</Platforms>
       <AssetBundleCompression>1</AssetBundleCompression>
       <CompressionHelperTypeName>UnityGameFramework.Runtime.DefaultCompressionHelper</CompressionHelperTypeName>
-      <AdditionalCompressionSelected>True</AdditionalCompressionSelected>
+      <AdditionalCompressionSelected>False</AdditionalCompressionSelected>
       <ForceRebuildAssetBundleSelected>False</ForceRebuildAssetBundleSelected>
       <BuildEventHandlerTypeName>StarForce.Editor.StarForceBuildEventHandler</BuildEventHandlerTypeName>
       <OutputDirectory>C:/UnityProjects/VampireLike/bin/AssetBundles</OutputDirectory>

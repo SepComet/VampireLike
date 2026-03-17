@@ -2,28 +2,19 @@
 <UnityGameFramework>
   <ResourceCollection>
     <Resources>
-      <Resource Name="Configs" FileSystem="GameData" LoadType="0" Packed="True"
-        ResourceGroups="Base" />
-      <Resource Name="DataTables" FileSystem="GameData" LoadType="0" Packed="True"
-        ResourceGroups="Base" />
+      <Resource Name="Configs" FileSystem="GameData" LoadType="0" Packed="True" ResourceGroups="Base" />
+      <Resource Name="DataTables" FileSystem="GameData" LoadType="0" Packed="True" ResourceGroups="Base" />
       <Resource Name="Entities" FileSystem="Resources" LoadType="0" Packed="True" />
       <Resource Name="Fonts" FileSystem="UI" LoadType="0" Packed="True" ResourceGroups="Base" />
-      <Resource Name="Localization/Dictionaries" Variant="en-us" FileSystem="UI" LoadType="0"
-        Packed="True" ResourceGroups="Base" />
-      <Resource Name="Localization/Dictionaries" Variant="ko-kr" FileSystem="UI" LoadType="0"
-        Packed="True" ResourceGroups="Base" />
-      <Resource Name="Localization/Dictionaries" Variant="zh-cn" FileSystem="UI" LoadType="0"
-        Packed="True" ResourceGroups="Base" />
-      <Resource Name="Localization/Dictionaries" Variant="zh-tw" FileSystem="UI" LoadType="0"
-        Packed="True" ResourceGroups="Base" />
+      <Resource Name="Localization/Dictionaries" Variant="en-us" FileSystem="UI" LoadType="0" Packed="True" ResourceGroups="Base" />
+      <Resource Name="Localization/Dictionaries" Variant="ko-kr" FileSystem="UI" LoadType="0" Packed="True" ResourceGroups="Base" />
+      <Resource Name="Localization/Dictionaries" Variant="zh-cn" FileSystem="UI" LoadType="0" Packed="True" ResourceGroups="Base" />
+      <Resource Name="Localization/Dictionaries" Variant="zh-tw" FileSystem="UI" LoadType="0" Packed="True" ResourceGroups="Base" />
       <Resource Name="Materials" FileSystem="Resources" LoadType="0" Packed="True" />
       <Resource Name="Meshes" FileSystem="Resources" LoadType="0" Packed="True" />
-      <Resource Name="Music/About" FileSystem="Resources" LoadType="0" Packed="True"
-        ResourceGroups="Music" />
-      <Resource Name="Music/Background" FileSystem="Resources" LoadType="0" Packed="True"
-        ResourceGroups="Music" />
-      <Resource Name="Music/Menu" FileSystem="Resources" LoadType="0" Packed="True"
-        ResourceGroups="Music" />
+      <Resource Name="Music/About" FileSystem="Resources" LoadType="0" Packed="True" ResourceGroups="Music" />
+      <Resource Name="Music/Background" FileSystem="Resources" LoadType="0" Packed="True" ResourceGroups="Music" />
+      <Resource Name="Music/Menu" FileSystem="Resources" LoadType="0" Packed="True" ResourceGroups="Music" />
       <Resource Name="Scenes" FileSystem="Resources" LoadType="0" Packed="True" />
       <Resource Name="SceneSettings" LoadType="0" Packed="False" />
       <Resource Name="Sounds" FileSystem="Resources" LoadType="0" Packed="True" />
@@ -50,11 +41,9 @@
       <Asset Guid="0ed73dc47f4cb38489020d05e9f02c99" ResourceName="Materials" />
       <Asset Guid="0f995b3145e0e7247a42da6cef1dbf23" ResourceName="Materials" />
       <Asset Guid="1046dcb12e547564d8b54bd15419a787" ResourceName="Entities" />
-      <Asset Guid="1053b0070685be347ab58587156842dc" ResourceName="Localization/Dictionaries"
-        ResourceVariant="zh-tw" />
+      <Asset Guid="1053b0070685be347ab58587156842dc" ResourceName="Localization/Dictionaries" ResourceVariant="zh-tw" />
       <Asset Guid="1478894bc9a1ed241b05b0862a7b8bce" ResourceName="Textures" />
-      <Asset Guid="14869ac0d4433f04db1704e39d03412e" ResourceName="Localization/Dictionaries"
-        ResourceVariant="en-us" />
+      <Asset Guid="14869ac0d4433f04db1704e39d03412e" ResourceName="Localization/Dictionaries" ResourceVariant="en-us" />
       <Asset Guid="156d241f796508c4da4fc354a7fbf5a8" ResourceName="UI/UISprites/Common" />
       <Asset Guid="185f97f18bd603a478461ce9c08bd039" ResourceName="Materials" />
       <Asset Guid="18dc0cd2c080841dea60987a38ce93fa" ResourceName="URPAssets" />
@@ -103,8 +92,7 @@
       <Asset Guid="578af1667322bab45b652b79a40bb4fb" ResourceName="Materials" />
       <Asset Guid="583ff7026dac91849b7c7b2468ba456b" ResourceName="Materials" />
       <Asset Guid="5b5a6a737c460eb4abc105d6583d405e" ResourceName="Fonts" />
-      <Asset Guid="5dcd89912e222bf4c87f76db4044bc5e" ResourceName="Localization/Dictionaries"
-        ResourceVariant="ko-kr" />
+      <Asset Guid="5dcd89912e222bf4c87f76db4044bc5e" ResourceName="Localization/Dictionaries" ResourceVariant="ko-kr" />
       <Asset Guid="5ebb46af6f16ae94e87f64a7dc0a49cb" ResourceName="Entities" />
       <Asset Guid="62af9e5c8f39cfa49af9e10ccf42f1da" ResourceName="UI/UISprites/Common" />
       <Asset Guid="638ff8ae4a0d15047839cd265d3bc296" ResourceName="Music/Background" />
@@ -144,8 +132,7 @@
       <Asset Guid="97b1f8b25cca2bc458cb9d6127c8d186" ResourceName="Materials" />
       <Asset Guid="99d811b0183246646a2ce8df996f4bca" ResourceName="Fonts" />
       <Asset Guid="9afa958d6d8235941b9badb42aae4370" ResourceName="Meshes" />
-      <Asset Guid="9be2e1e45f4edd74c8764538ad306b78" ResourceName="Localization/Dictionaries"
-        ResourceVariant="zh-cn" />
+      <Asset Guid="9be2e1e45f4edd74c8764538ad306b78" ResourceName="Localization/Dictionaries" ResourceVariant="zh-cn" />
       <Asset Guid="9d193ac5b4294e0e9ba6e867320944b7" ResourceName="Entities" />
       <Asset Guid="9ddab293e2a8af3499dac05f5fd6169c" ResourceName="Meshes" />
       <Asset Guid="9f5bba6d2f5c95049a59fcb56df2d38f" ResourceName="UI/UIItems" />

@@ -97,20 +97,11 @@ namespace Simulation.Tests.Editor
         private static readonly MethodInfo TryGetNearestEnemyEntityIdMethod =
             SimulationWorldType?.GetMethod("TryGetNearestEnemyEntityId", PublicInstance);
 
-        private static readonly MethodInfo TryEnqueueAreaCollisionQueryMethod =
-            SimulationWorldType?.GetMethod("TryEnqueueAreaCollisionQuery", PublicInstance);
+        private static readonly MethodInfo TryRequestAreaCollisionMethod =
+            SimulationWorldType?.GetMethod("TryRequestAreaCollision", PublicInstance);
 
-        private static readonly MethodInfo SetUseSimulationMovementMethod =
-            SimulationWorldType?.GetMethod("SetUseSimulationMovement", PublicInstance);
-
-        private static readonly MethodInfo SetUseJobSimulationMethod =
-            SimulationWorldType?.GetMethod("SetUseJobSimulation", PublicInstance);
-
-        private static readonly MethodInfo SetUseBurstJobsMethod =
-            SimulationWorldType?.GetMethod("SetUseBurstJobs", PublicInstance);
-
-        private static readonly MethodInfo ClearMethod =
-            SimulationWorldType?.GetMethod("Clear", PublicInstance);
+        private static readonly MethodInfo ClearSimulationStateMethod =
+            SimulationWorldType?.GetMethod("ClearSimulationState", PublicInstance);
 
         private static readonly MethodInfo UseGridBucketSolverMethod =
             EnemySeparationSolverProviderType?.GetMethod("UseGridBucketSolver", PublicStatic);
@@ -118,8 +109,14 @@ namespace Simulation.Tests.Editor
         private static readonly FieldInfo EntitySyncField =
             SimulationWorldType?.GetField("_entitySync", NonPublicInstance);
 
-        private static readonly FieldInfo PresentationField =
-            SimulationWorldType?.GetField("_presentation", NonPublicInstance);
+        private static readonly FieldInfo TransformSyncField =
+            SimulationWorldType?.GetField("_transformSync", NonPublicInstance);
+
+        private static readonly FieldInfo HitPresentationField =
+            SimulationWorldType?.GetField("_hitPresentation", NonPublicInstance);
+
+        private static readonly FieldInfo UseSimulationMovementField =
+            SimulationWorldType?.GetField("_useSimulationMovement", NonPublicInstance);
 
         private static readonly PropertyInfo EnemiesProperty =
             SimulationWorldType?.GetProperty("Enemies", PublicInstance);
@@ -132,9 +129,6 @@ namespace Simulation.Tests.Editor
 
         private static readonly PropertyInfo UseSimulationMovementProperty =
             SimulationWorldType?.GetProperty("UseSimulationMovement", PublicInstance);
-
-        private static readonly PropertyInfo UseJobSimulationProperty =
-            SimulationWorldType?.GetProperty("UseJobSimulation", PublicInstance);
 
         private static readonly PropertyInfo LastResolvedAreaHitCountProperty =
             SimulationWorldType?.GetProperty("LastResolvedAreaHitCount", PublicInstance);
@@ -226,17 +220,14 @@ namespace Simulation.Tests.Editor
             Assert.NotNull(TryGetEnemyDataMethod, "TryGetEnemyData reflection lookup failed.");
             Assert.NotNull(TickMethod, "Tick reflection lookup failed.");
             Assert.NotNull(TryGetNearestEnemyEntityIdMethod, "TryGetNearestEnemyEntityId reflection lookup failed.");
-            Assert.NotNull(TryEnqueueAreaCollisionQueryMethod, "TryEnqueueAreaCollisionQuery reflection lookup failed.");
-            Assert.NotNull(SetUseSimulationMovementMethod, "SetUseSimulationMovement reflection lookup failed.");
-            Assert.NotNull(SetUseJobSimulationMethod, "SetUseJobSimulation reflection lookup failed.");
-            Assert.NotNull(SetUseBurstJobsMethod, "SetUseBurstJobs reflection lookup failed.");
-            Assert.NotNull(ClearMethod, "Clear reflection lookup failed.");
+            Assert.NotNull(TryRequestAreaCollisionMethod, "TryRequestAreaCollision reflection lookup failed.");
+            Assert.NotNull(ClearSimulationStateMethod, "ClearSimulationState reflection lookup failed.");
             Assert.NotNull(UseGridBucketSolverMethod, "UseGridBucketSolver reflection lookup failed.");
             Assert.NotNull(EnemiesProperty, "Enemies property reflection lookup failed.");
             Assert.NotNull(ProjectilesProperty, "Projectiles property reflection lookup failed.");
             Assert.NotNull(CollisionCandidateCountProperty, "CollisionCandidateCount property reflection lookup failed.");
             Assert.NotNull(UseSimulationMovementProperty, "UseSimulationMovement property reflection lookup failed.");
-            Assert.NotNull(UseJobSimulationProperty, "UseJobSimulation property reflection lookup failed.");
+            Assert.NotNull(UseSimulationMovementField, "_useSimulationMovement field reflection lookup failed.");
             Assert.NotNull(LastResolvedAreaHitCountProperty, "LastResolvedAreaHitCount property reflection lookup failed.");
             Assert.NotNull(CollisionQueryInputsField, "Collision query inputs field reflection lookup failed.");
             Assert.NotNull(AreaCollisionRequestsField, "Area collision requests field reflection lookup failed.");
@@ -264,7 +255,7 @@ namespace Simulation.Tests.Editor
 
             _worldGameObject = new GameObject("SimulationWorldTickTests");
             _worldComponent = _worldGameObject.AddComponent(SimulationWorldType);
-            SetUseSimulationMovementMethod.Invoke(_worldComponent, new object[] { true });
+            SetUseSimulationMovement(true);
             UseGridBucketSolverMethod.Invoke(null, new object[] { 1f });
         }
 
@@ -274,7 +265,8 @@ namespace Simulation.Tests.Editor
             if (_worldComponent != null)
             {
                 EntitySyncField?.SetValue(_worldComponent, null);
-                PresentationField?.SetValue(_worldComponent, null);
+                TransformSyncField?.SetValue(_worldComponent, null);
+                HitPresentationField?.SetValue(_worldComponent, null);
             }
 
             if (_worldGameObject != null)
@@ -340,7 +332,6 @@ namespace Simulation.Tests.Editor
         [Test]
         public void TickEnemies_ChasesPlayer_WhenJobSimulationChannelEnabled()
         {
-            SetUseJobSimulationMethod.Invoke(_worldComponent, new object[] { true });
             UpsertEnemy(CreateEnemy(entityId: 1101, position: Vector3.zero, speed: 2f, attackRange: 1f));
 
             InvokeTick(deltaTime: 1f, realDeltaTime: 1f, playerPosition: new Vector3(10f, 0f, 0f));
@@ -355,10 +346,8 @@ namespace Simulation.Tests.Editor
         }
 
         [Test]
-        public void TickEnemies_MatchesOutput_WhenBurstJobsToggled()
+        public void TickEnemies_MatchesOutput_AfterClearSimulationState()
         {
-            SetUseJobSimulationMethod.Invoke(_worldComponent, new object[] { true });
-            SetUseBurstJobsMethod.Invoke(_worldComponent, new object[] { false });
             UpsertEnemy(CreateEnemy(entityId: 1151, position: Vector3.zero, speed: 2f, attackRange: 1f));
             InvokeTick(deltaTime: 1f, realDeltaTime: 1f, playerPosition: new Vector3(10f, 0f, 0f));
 
@@ -367,11 +356,9 @@ namespace Simulation.Tests.Editor
             Vector3 nonBurstPosition = (Vector3)GetField(nonBurstEnemy, "Position");
             Vector3 nonBurstForward = (Vector3)GetField(nonBurstEnemy, "Forward");
 
-            ClearMethod.Invoke(_worldComponent, null);
+            ClearSimulationStateMethod.Invoke(_worldComponent, null);
 
-            SetUseSimulationMovementMethod.Invoke(_worldComponent, new object[] { true });
-            SetUseJobSimulationMethod.Invoke(_worldComponent, new object[] { true });
-            SetUseBurstJobsMethod.Invoke(_worldComponent, new object[] { true });
+            SetUseSimulationMovement(true);
             UpsertEnemy(CreateEnemy(entityId: 1151, position: Vector3.zero, speed: 2f, attackRange: 1f));
             InvokeTick(deltaTime: 1f, realDeltaTime: 1f, playerPosition: new Vector3(10f, 0f, 0f));
 
@@ -388,7 +375,6 @@ namespace Simulation.Tests.Editor
         [Test]
         public void TryGetNearestEnemyEntityId_SelectsNearestBucketCandidate_WhenJobSimulationEnabled()
         {
-            SetUseJobSimulationMethod.Invoke(_worldComponent, new object[] { true });
             UpsertEnemy(CreateEnemy(entityId: 1201, position: new Vector3(1f, 0f, 0f), speed: 0f, attackRange: 1f));
             UpsertEnemy(CreateEnemy(entityId: 1202, position: new Vector3(6f, 0f, 0f), speed: 0f, attackRange: 1f));
 
@@ -405,7 +391,6 @@ namespace Simulation.Tests.Editor
         [Test]
         public void TickEnemies_SeparatesOverlappedEnemies_WhenJobSimulationEnabled()
         {
-            SetUseJobSimulationMethod.Invoke(_worldComponent, new object[] { true });
             UpsertEnemy(CreateEnemy(entityId: 1301, position: new Vector3(0f, 0f, 0f), speed: 1f, attackRange: 0.1f,
                 avoidEnemyOverlap: true, enemyBodyRadius: 0.45f, separationIterations: 2));
             UpsertEnemy(CreateEnemy(entityId: 1302, position: new Vector3(0.1f, 0f, 0f), speed: 1f, attackRange: 0.1f,
@@ -426,7 +411,6 @@ namespace Simulation.Tests.Editor
         [Test]
         public void TickEnemies_SeparatesOverlappedEnemies_WhenPlayerIsStaticAndInRange()
         {
-            SetUseJobSimulationMethod.Invoke(_worldComponent, new object[] { true });
             UpsertEnemy(CreateEnemy(entityId: 1311, position: new Vector3(0f, 0f, 0f), speed: 1f, attackRange: 10f,
                 avoidEnemyOverlap: true, enemyBodyRadius: 0.45f, separationIterations: 3));
             UpsertEnemy(CreateEnemy(entityId: 1312, position: new Vector3(0.05f, 0f, 0f), speed: 1f, attackRange: 10f,
@@ -450,7 +434,6 @@ namespace Simulation.Tests.Editor
         [Test]
         public void TickProjectiles_MovesAndUpdatesLifetime_WhenJobSimulationEnabled()
         {
-            SetUseJobSimulationMethod.Invoke(_worldComponent, new object[] { true });
             UpsertProjectile(CreateProjectile(entityId: 5101, position: Vector3.zero, forward: Vector3.right,
                 velocity: new Vector3(2f, 0f, 0f), speed: 0f, lifeTime: 2f, age: 0f, active: true,
                 remainingLifetime: 2f, state: 0));
@@ -471,9 +454,8 @@ namespace Simulation.Tests.Editor
         }
 
         [Test]
-        public void TickProjectiles_ResumesFromLatestState_AfterTogglingJobSimulation()
+        public void TickProjectiles_ContinuesFromLatestState_AcrossConsecutiveTicks()
         {
-            SetUseJobSimulationMethod.Invoke(_worldComponent, new object[] { true });
             UpsertProjectile(CreateProjectile(entityId: 5110, position: Vector3.zero, forward: Vector3.right,
                 velocity: new Vector3(2f, 0f, 0f), speed: 0f, lifeTime: 5f, age: 0f, active: true,
                 remainingLifetime: 5f, state: 0));
@@ -485,32 +467,23 @@ namespace Simulation.Tests.Editor
             Assert.That(positionAfterJobEnabled.x, Is.EqualTo(1f).Within(0.0001f));
             Assert.That(ageAfterJobEnabled, Is.EqualTo(0.5f).Within(0.0001f));
 
-            SetUseJobSimulationMethod.Invoke(_worldComponent, new object[] { false });
             InvokeTick(deltaTime: 0.5f, realDeltaTime: 0.5f, playerPosition: Vector3.zero);
-            object afterJobDisabled = GetProjectileAt(0);
-            Vector3 positionAfterJobDisabled = (Vector3)GetField(afterJobDisabled, "Position");
-            float ageAfterJobDisabled = (float)GetField(afterJobDisabled, "Age");
-            Assert.That(positionAfterJobDisabled.x, Is.EqualTo(1f).Within(0.0001f));
-            Assert.That(ageAfterJobDisabled, Is.EqualTo(0.5f).Within(0.0001f));
+            object afterSecondTick = GetProjectileAt(0);
+            Vector3 positionAfterSecondTick = (Vector3)GetField(afterSecondTick, "Position");
+            float ageAfterSecondTick = (float)GetField(afterSecondTick, "Age");
+            float remainingLifetimeAfterSecondTick = (float)GetField(afterSecondTick, "RemainingLifetime");
+            bool activeAfterSecondTick = (bool)GetField(afterSecondTick, "Active");
 
-            SetUseJobSimulationMethod.Invoke(_worldComponent, new object[] { true });
-            InvokeTick(deltaTime: 0.5f, realDeltaTime: 0.5f, playerPosition: Vector3.zero);
-            object afterJobReEnabled = GetProjectileAt(0);
-            Vector3 positionAfterJobReEnabled = (Vector3)GetField(afterJobReEnabled, "Position");
-            float ageAfterJobReEnabled = (float)GetField(afterJobReEnabled, "Age");
-            float remainingLifetimeAfterJobReEnabled = (float)GetField(afterJobReEnabled, "RemainingLifetime");
-            bool activeAfterJobReEnabled = (bool)GetField(afterJobReEnabled, "Active");
-
-            Assert.That(positionAfterJobReEnabled.x, Is.EqualTo(2f).Within(0.0001f));
-            Assert.That(ageAfterJobReEnabled, Is.EqualTo(1f).Within(0.0001f));
-            Assert.That(remainingLifetimeAfterJobReEnabled, Is.EqualTo(4f).Within(0.0001f));
-            Assert.IsTrue(activeAfterJobReEnabled);
+            Assert.That(positionAfterSecondTick.x, Is.EqualTo(2f).Within(0.0001f));
+            Assert.That(ageAfterSecondTick, Is.EqualTo(1f).Within(0.0001f));
+            Assert.That(remainingLifetimeAfterSecondTick, Is.EqualTo(4f).Within(0.0001f));
+            Assert.IsTrue(activeAfterSecondTick);
         }
 
         [Test]
-        public void EnemyProjectile_TogglesCollider_WhenJobSimulationSwitchesAtRuntime()
+        public void EnemyProjectile_TogglesCollider_WhenSimulationMovementSwitchesAtRuntime()
         {
-            SetUseJobSimulationMethod.Invoke(_worldComponent, new object[] { false });
+            SetUseSimulationMovement(false);
 
             GameObject projectileObject = new GameObject("EnemyProjectileColliderToggleEditMode");
             try
@@ -538,11 +511,11 @@ namespace Simulation.Tests.Editor
                     InvokeEnemyProjectileUpdate(projectileComponent, 0.016f, 0.016f);
                     Assert.IsTrue(projectileCollider.enabled);
 
-                    SetUseJobSimulationMethod.Invoke(_worldComponent, new object[] { true });
+                    SetUseSimulationMovement(true);
                     InvokeEnemyProjectileUpdate(projectileComponent, 0.016f, 0.016f);
                     Assert.IsFalse(projectileCollider.enabled);
 
-                    SetUseJobSimulationMethod.Invoke(_worldComponent, new object[] { false });
+                    SetUseSimulationMovement(false);
                     InvokeEnemyProjectileUpdate(projectileComponent, 0.016f, 0.016f);
                     Assert.IsTrue(projectileCollider.enabled);
                 }
@@ -582,7 +555,6 @@ namespace Simulation.Tests.Editor
         [Test]
         public void TickProjectiles_RecyclesWhenExceedingPlayerDistance_WhenJobSimulationEnabled()
         {
-            SetUseJobSimulationMethod.Invoke(_worldComponent, new object[] { true });
             ProjectileMaxDistanceFromPlayerField.SetValue(_worldComponent, 5f);
             ProjectileMaxVerticalOffsetFromPlayerField.SetValue(_worldComponent, 1000f);
             UpsertProjectile(CreateProjectile(entityId: 5108, position: new Vector3(6f, 0f, 0f),
@@ -597,7 +569,6 @@ namespace Simulation.Tests.Editor
         [Test]
         public void TickProjectiles_RecyclesWhenExceedingVerticalOffset_WhenJobSimulationEnabled()
         {
-            SetUseJobSimulationMethod.Invoke(_worldComponent, new object[] { true });
             ProjectileMaxDistanceFromPlayerField.SetValue(_worldComponent, 0f);
             ProjectileMaxVerticalOffsetFromPlayerField.SetValue(_worldComponent, 1f);
             UpsertProjectile(CreateProjectile(entityId: 5109, position: new Vector3(0f, 2f, 0f),
@@ -612,7 +583,6 @@ namespace Simulation.Tests.Editor
         [Test]
         public void TickProjectiles_RecyclesExpiredProjectile_WhenJobSimulationEnabled()
         {
-            SetUseJobSimulationMethod.Invoke(_worldComponent, new object[] { true });
             UpsertProjectile(CreateProjectile(entityId: 5102, position: Vector3.zero, forward: Vector3.forward,
                 velocity: Vector3.zero, speed: 0f, lifeTime: 1f, age: 0.95f, active: true, remainingLifetime: 0.05f,
                 state: 0));
@@ -625,7 +595,6 @@ namespace Simulation.Tests.Editor
         [Test]
         public void TickProjectiles_BuildsCollisionCandidatesAgainstEnemies_WhenJobSimulationEnabled()
         {
-            SetUseJobSimulationMethod.Invoke(_worldComponent, new object[] { true });
             UpsertEnemy(CreateEnemy(entityId: 5201, position: Vector3.zero, speed: 0f, attackRange: 1f));
             UpsertProjectile(CreateProjectile(entityId: 5202, position: Vector3.zero, forward: Vector3.forward,
                 velocity: Vector3.zero, speed: 0f, lifeTime: 2f, age: 0f, active: true, remainingLifetime: 2f,
@@ -639,7 +608,6 @@ namespace Simulation.Tests.Editor
         [Test]
         public void TickProjectiles_BuildsCollisionCandidates_WithLatestEnemyMovement_WhenJobSimulationEnabled()
         {
-            SetUseJobSimulationMethod.Invoke(_worldComponent, new object[] { true });
             UpsertEnemy(CreateEnemy(entityId: 5211, position: new Vector3(2f, 0f, 0f), speed: 1f, attackRange: 0.1f));
             UpsertProjectile(CreateProjectile(entityId: 5212, position: new Vector3(1f, 0f, 0f),
                 forward: Vector3.forward, velocity: Vector3.zero, speed: 0f, lifeTime: 2f, age: 0f, active: true,
@@ -653,7 +621,6 @@ namespace Simulation.Tests.Editor
         [Test]
         public void TickProjectiles_ExpiresAfterCollisionCandidateConsumed_WhenJobSimulationEnabled()
         {
-            SetUseJobSimulationMethod.Invoke(_worldComponent, new object[] { true });
             UpsertEnemy(CreateEnemy(entityId: 5203, position: Vector3.zero, speed: 0f, attackRange: 1f));
             UpsertProjectile(CreateProjectile(entityId: 5204, position: Vector3.zero, forward: Vector3.forward,
                 velocity: Vector3.zero, speed: 0f, lifeTime: 10f, age: 0f, active: true, remainingLifetime: 10f,
@@ -667,7 +634,6 @@ namespace Simulation.Tests.Editor
         [Test]
         public void TickProjectiles_LimitsCandidatesToMaxTargets_IncludingPlayerCandidate()
         {
-            SetUseJobSimulationMethod.Invoke(_worldComponent, new object[] { true });
             object previousEnemyManager = GetGameEntryEnemyManager();
             GameObject enemyManagerObject = new GameObject("EnemyManagerMaxTargetsEditMode");
             GameObject playerObject = new GameObject("PlayerTargetMaxTargetsEditMode");
@@ -707,49 +673,23 @@ namespace Simulation.Tests.Editor
         }
 
         [Test]
-        public void SetUseSimulationAndJob_AreIgnored_WhenBattleStateIsActive()
+        public void TryRequestAreaCollision_ReturnsFalse_WhenSimulationMovementDisabled()
         {
-            SetUseSimulationMovementMethod.Invoke(_worldComponent, new object[] { true });
-            SetUseJobSimulationMethod.Invoke(_worldComponent, new object[] { false });
+            SetUseSimulationMovement(false);
+            object[] requestArgs = { 5230, 5230, Vector3.zero, 1f, 1 };
+            bool requestResult = (bool)TryRequestAreaCollisionMethod.Invoke(_worldComponent, requestArgs);
 
-            object previousProcedure = GetGameEntryProcedure();
-            GameObject procedureObject = new GameObject("ProcedureGuardEditMode");
-            try
-            {
-                Component procedureComponent = procedureObject.AddComponent(ProcedureComponentType);
-                object procedureManager = Activator.CreateInstance(ProcedureManagerType);
-                Type fsmType = FsmOpenGenericType.MakeGenericType(ProcedureManagerInterfaceType);
-                object fsm = Activator.CreateInstance(fsmType);
-                object procedureGame = Activator.CreateInstance(ProcedureGameType);
-                object battleState = Enum.Parse(GameStateTypeType, "Battle");
-
-                SetPrivateField(procedureGame, "_currentGameState", battleState);
-                SetPrivateField(fsm, "m_CurrentState", procedureGame);
-                SetPrivateField(procedureManager, "m_ProcedureFsm", fsm);
-                SetPrivateField(procedureComponent, "m_ProcedureManager", procedureManager);
-                SetGameEntryProcedure(procedureComponent);
-
-                SetUseSimulationMovementMethod.Invoke(_worldComponent, new object[] { false });
-                SetUseJobSimulationMethod.Invoke(_worldComponent, new object[] { true });
-
-                Assert.IsTrue((bool)UseSimulationMovementProperty.GetValue(_worldComponent));
-                Assert.IsFalse((bool)UseJobSimulationProperty.GetValue(_worldComponent));
-            }
-            finally
-            {
-                SetGameEntryProcedure(previousProcedure);
-                Object.DestroyImmediate(procedureObject);
-            }
+            Assert.IsFalse(requestResult);
+            Assert.IsFalse((bool)UseSimulationMovementProperty.GetValue(_worldComponent));
         }
 
         [Test]
         public void EnqueueAreaQuery_CapturesInactiveSourceSnapshot_WhenSourceEntityUnavailable()
         {
-            SetUseJobSimulationMethod.Invoke(_worldComponent, new object[] { true });
             UpsertEnemy(CreateEnemy(entityId: 5231, position: Vector3.zero, speed: 0f, attackRange: 1f));
 
             object[] enqueueArgs = { 99999, 99999, Vector3.zero, 1f, 1 };
-            bool enqueueResult = (bool)TryEnqueueAreaCollisionQueryMethod.Invoke(_worldComponent, enqueueArgs);
+            bool enqueueResult = (bool)TryRequestAreaCollisionMethod.Invoke(_worldComponent, enqueueArgs);
             Assert.IsTrue(enqueueResult);
 
             object areaCollisionRequests = AreaCollisionRequestsField.GetValue(_worldComponent);
@@ -816,6 +756,11 @@ namespace Simulation.Tests.Editor
                 null);
 
             TickMethod.Invoke(_worldComponent, new[] { tickContext });
+        }
+
+        private void SetUseSimulationMovement(bool enabled)
+        {
+            UseSimulationMovementField.SetValue(_worldComponent, enabled);
         }
 
         private void UpsertEnemy(object enemy)

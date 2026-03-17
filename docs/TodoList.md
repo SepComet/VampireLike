@@ -240,5 +240,5 @@
 - [ ] 风险与回滚说明（特别是热更新与渲染链路）。
 
 ## 测试命令
-- PlayMode: `Unity -batchmode -nographics -projectPath . -runTests -testPlatform PlayMode -testResults Logs/playmode-test-results.xml -logFile Logs/playmode-tests.log`
-- EditMode: `Unity -batchmode -nographics -projectPath . -runTests -testPlatform EditMode -testResults Logs/editmode-test-results.xml -logFile Logs/editmode-tests.log`
+- PlayMode: `& "C:\UnityProjects\Unity Editor\2022.3.62f3c1\Editor\Unity.exe" -batchmode -nographics -projectPath . -runTests -testPlatform PlayMode -testResults Logs/playmode-test-results.xml -logFile Logs/playmode-tests.log`
+- EditMode: `& "C:\UnityProjects\Unity Editor\2022.3.62f3c1\Editor\Unity.exe" -batchmode -nographics -projectPath . -runTests -testPlatform EditMode -testResults Logs/editmode-test-results.xml -logFile Logs/editmode-tests.log`

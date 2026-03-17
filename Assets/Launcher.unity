@@ -731,7 +731,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 11499388, guid: adb3eb1c35fcff14f89fba7b05c9d71c, type: 3}
       propertyPath: m_EditorResourceMode
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 11499388, guid: adb3eb1c35fcff14f89fba7b05c9d71c, type: 3}
       propertyPath: m_JsonHelperTypeName
@@ -1426,14 +1426,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8a558ebbc9cb4d94946ac9f4f27914d8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _useSimulationMovement: 1
-  _useJobSimulation: 1
-  _useBurstJobs: 1
   _enemySeparationCellSize: 0
   _enemySeparationPushDamping: 0.5
   _enemySeparationMaxStepScale: 0.5
   _enemySeparationUseTangentialInAttackRange: 1
   _enemySeparationPushSmoothing: 0.55
+  _projectileMaxDistanceFromPlayer: 120
+  _projectileMaxVerticalOffsetFromPlayer: 30
   _projectileHitPresentationEnabled: 1
   _projectileHitMarkerEnabled: 1
   _projectileHitMarkerSize: 0.2
@@ -1442,16 +1441,17 @@ MonoBehaviour:
   _projectileHitMarkerColor: {r: 1, g: 0, b: 0, a: 0.95}
   _projectileHitEffectEnabled: 0
   _projectileHitEffectTypeId: 0
-  _projectileMaxDistanceFromPlayer: 120
-  _projectileMaxVerticalOffsetFromPlayer: 30
-  _projectileCollisionQueryRadius: 0.35
-  _projectileMaxCandidatesPerQuery: 1
-  _projectileCollisionCellSize: 0
-  _dispatchProjectileHitPresentationEvent: 1
-  _dispatchProjectileHitMarkerEvent: 1
-  _dispatchProjectileHitEffectEvent: 1
-  _projectileHitPresentationEffectTypeId: 0
-  _targetSelectionCellSize: 2
+  _useSimulationMovement: 1
+  _collisionPipelineSettings:
+    ProjectileCollisionQueryRadius: 0.35
+    ProjectileMaxCandidatesPerQuery: 1
+    ProjectileCollisionCellSize: 0
+    DispatchProjectileHitPresentationEvent: 1
+    DispatchProjectileHitMarkerEvent: 1
+    DispatchProjectileHitEffectEvent: 1
+    ProjectileHitPresentationEffectTypeId: 0
+  _targetSelectionSettings:
+    CellSize: 2
 --- !u!1 &1852670052
 GameObject:
   m_ObjectHideFlags: 0
