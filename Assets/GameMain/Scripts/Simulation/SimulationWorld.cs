@@ -17,7 +17,11 @@ namespace Simulation
         // - DataChannel/SimulationWorld.JobDataChannel.cs:     本地 通道/缓冲区 持有者和数据的相互转换。
         // - Jobs/SimulationWorld.EnemyJobs.cs:                 模拟通道 编排 + 敌人移动/分离 顺序执行
         // - Jobs/SimulationWorld.ProjectileJobs.cs:            投射物移动与回收
-        // - Jobs/SimulationWorld.CollisionPipeline.cs:         碰撞请求的构造、过滤、求解流水线
+        // - Jobs/SimulationWorld.CollisionPipeline.cs:         碰撞管线共享配置和状态
+        // - Jobs/SimulationWorld.CollisionRequests.cs:         area/sector 请求缓冲
+        // - Jobs/SimulationWorld.CollisionBroadPhase.cs:       broad-phase 候选构建和 Job 调度
+        // - Jobs/SimulationWorld.CollisionResolve.cs:          主线程命中结算与 area settle
+        // - Jobs/SimulationWorld.CollisionPresentation.cs:     命中表现事件和实体/impact 解析
         // - JobStruct/*.cs:                                    burst job 内核和面向 job 的数据结构
         private const float DefaultAttackRange = 1f;
         private const int EnemyStateIdle = 0;
