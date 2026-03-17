@@ -2,7 +2,7 @@
 #	Id		EntityTypeId	Title	IconAssetName	Rarity	Price	PriceRandomPercent	Attack	Cooldown	AttackRange	AttackSoundId	Pramas	Modifiers
 #	int		int	string	string	RarityType	int	float	int	float	float	int	string[]	StatModifier[]
 #	武器编号	策划备注	武器实体编号	武器名	图标资源名	道具品质	武器价格	价格浮动	伤害	冷却	范围	攻击音效编号	额外参数	额外属性
-	1	玩家武器	201	小刀	Almighty_Icon	White	120	0.05	100	1.5	5	10000	[hitRadius:2]	[]
-	2		202	手枪	Almighty_Icon	White	130	0.05	120	1	15	10000	[]	[]
-	3		203	斧头	Almighty_Icon	White	100	0.1	150	2	5	10000	[SectorAngle:120]	[]
-	4		204	闪电	Almighty_Icon	White	150	0.08	80	3	12	10000	[hitRadius:3;HoverHeight:10]	[]
+	1	玩家武器	201	小刀	Almighty_Icon	White	120	0.05	100	1.5	5	10000	{"hitRadius":2}	[]
+	2		202	手枪	Almighty_Icon	White	130	0.05	120	1	15	10000	{}	[]
+	3		203	斧头	Almighty_Icon	White	100	0.1	150	2	5	10000	{"SectorAngle":120}	[]
+	4		204	闪电	Almighty_Icon	White	150	0.08	80	3	12	10000	{"hitRadius":3}	[]

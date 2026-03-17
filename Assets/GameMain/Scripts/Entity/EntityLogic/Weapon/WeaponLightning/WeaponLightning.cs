@@ -11,8 +11,6 @@ namespace Entity.Weapon
 {
     public partial class WeaponLightning : WeaponBase
     {
-        private const string HitRadiusParamKey = "HitRadius";
-
         private WeaponLightningData _weaponData;
 
         private Quaternion _cachedRotation;
@@ -178,8 +176,14 @@ namespace Entity.Weapon
             _sqrRange = _weaponData.AttackRange * _weaponData.AttackRange;
             _cachedRotation = CachedTransform.rotation;
 
-            _hitRadius = ReadPositiveParam(HitRadiusParamKey, _weaponData.AttackRange);
+            float configuredHitRadius = _weaponData.ParamsData != null ? _weaponData.ParamsData.HitRadius : 0f;
+            _hitRadius = configuredHitRadius > 0f ? Mathf.Max(0.1f, configuredHitRadius) : _weaponData.AttackRange;
             _hitRadiusSqr = _hitRadius * _hitRadius;
+            float configuredHoverHeight = _weaponData.ParamsData != null ? _weaponData.ParamsData.HoverHeight : 0f;
+            if (configuredHoverHeight > 0f)
+            {
+                _hoverHeight = Mathf.Max(0.1f, configuredHoverHeight);
+            }
 
             int colliderCapacity = Mathf.Max(1, _maxHitColliders);
             if (_hitResults == null || _hitResults.Length != colliderCapacity)
@@ -226,18 +230,6 @@ namespace Entity.Weapon
             {
                 StopAttackTween(true);
             }
-        }
-
-        private float ReadPositiveParam(string paramName, float defaultValue)
-        {
-            if (_weaponData.Params != null &&
-                _weaponData.Params.TryGetValue(paramName.ToLower(), out string rawValue) &&
-                float.TryParse(rawValue, out float parsedValue))
-            {
-                return Mathf.Max(0.1f, parsedValue);
-            }
-
-            return Mathf.Max(0.1f, defaultValue);
         }
 
         private void StopAttackTween(bool resetTransform)

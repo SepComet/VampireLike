@@ -11,8 +11,6 @@ namespace Entity.Weapon
 {
     public partial class WeaponKnife : WeaponBase
     {
-        private const string HitRadiusParamKey = "HitRadius";
-
         private WeaponKnifeData _weaponData;
 
         private Quaternion _cachedRotation;
@@ -157,14 +155,8 @@ namespace Entity.Weapon
             _sqrRange = _weaponData.AttackRange * _weaponData.AttackRange;
             _cachedRotation = CachedTransform.rotation;
 
-            if (_weaponData.TryGetParam(HitRadiusParamKey, out string hitRadiusRaw))
-            {
-                _hitRadius = Mathf.Max(0.1f, float.Parse(hitRadiusRaw));
-            }
-            else
-            {
-                _hitRadius = _weaponData.AttackRange;
-            }
+            float configuredHitRadius = _weaponData.ParamsData != null ? _weaponData.ParamsData.HitRadius : 0f;
+            _hitRadius = configuredHitRadius > 0f ? Mathf.Max(0.1f, configuredHitRadius) : _weaponData.AttackRange;
 
             _hitRadiusSqr = _hitRadius * _hitRadius;
             _attackEffect = new KnifeRangeAttackEffect();

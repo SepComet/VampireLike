@@ -1,6 +1,9 @@
 ﻿import pandas as pd
 import os
-import csv
+def format_cell(value):
+    if value is None:
+        return ''
+    return str(value)
 
 def convert_excel_to_txt(folder_path='.'):
     # 计数器，用于最后汇总
@@ -28,24 +31,15 @@ def convert_excel_to_txt(folder_path='.'):
                 
                 try:
                     # 读取 Excel
-                    df = pd.read_excel(file_path, header=None)
-                    
-                    # 预处理：将 NaN 替换为空字符串，否则导出会变成 "nan"
-                    df = df.fillna('')
-
-                    # 导出设置：
-                    # 1. sep='\t' : 使用制表符分隔
-                    # 2. quoting=csv.QUOTE_NONE : 不使用引号包裹字段，也不会把 " 变成 ""
-                    # 3. escapechar='\\' : 如果单元格内恰好有 Tab 键，会用反斜杠转义，防止数据列错位
-                    df.to_csv(
-                        output_file, 
-                        sep='\t', 
-                        index=False, 
-                        header=False, 
-                        encoding='utf-8', 
-                        quoting=csv.QUOTE_NONE, 
-                        escapechar='\\' 
+                    df = pd.read_excel(
+                        file_path,
+                        header=None,
+                        keep_default_na=False,
                     )
+
+                    with open(output_file, 'w', encoding='utf-8', newline='') as f:
+                        for row in df.itertuples(index=False, name=None):
+                            f.write('\t'.join(format_cell(cell) for cell in row) + '\n')
                     
                     print(f"成功转换 -> {output_file}")
                     count += 1

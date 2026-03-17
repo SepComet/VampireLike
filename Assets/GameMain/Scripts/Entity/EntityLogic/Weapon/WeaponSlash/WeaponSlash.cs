@@ -13,8 +13,6 @@ namespace Entity.Weapon
     {
         #region Property
 
-        private const string SectorAngleParamKey = "SectorAngle";
-
         private WeaponSlashData _weaponData;
 
         private Quaternion _cachedRotation;
@@ -184,15 +182,8 @@ namespace Entity.Weapon
             _attackRadius = Mathf.Max(0.1f, _weaponData.AttackRange);
             _attackRadiusSqr = _attackRadius * _attackRadius;
 
-            _sectorAngle = 90f;
-            if (_weaponData.Params != null &&
-                _weaponData.Params.TryGetValue(SectorAngleParamKey.ToLower(), out string rawAngle))
-            {
-                if (float.TryParse(rawAngle, out float parsedAngle))
-                {
-                    _sectorAngle = Mathf.Clamp(parsedAngle, 1f, 360f);
-                }
-            }
+            float configuredSectorAngle = _weaponData.ParamsData != null ? _weaponData.ParamsData.SectorAngle : 0f;
+            _sectorAngle = configuredSectorAngle > 0f ? Mathf.Clamp(configuredSectorAngle, 1f, 360f) : 90f;
 
             int capacity = Mathf.Max(1, _maxHitColliders);
             if (_hitResults == null || _hitResults.Length != capacity)
