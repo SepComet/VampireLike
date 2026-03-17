@@ -85,3 +85,5 @@ crashlytics-build.properties
 /数据表/__pycache__/
 
 ~$*.xlsx
+Assets/GameMain/Configs/ResourceBuilder.xml
+/.dotnet
