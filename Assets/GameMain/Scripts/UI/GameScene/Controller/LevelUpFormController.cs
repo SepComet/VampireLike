@@ -150,7 +150,7 @@ namespace UI
 
         private void OnRefresh(object sender, GameEventArgs e)
         {
-            if (sender != Form)
+            if ((LevelUpForm)sender != Form)
             {
                 return;
             }
@@ -165,7 +165,7 @@ namespace UI
 
         private void OnLevelUpPropSelected(object sender, GameEventArgs e)
         {
-            if (sender != Form)
+            if ((LevelUpForm)sender != Form)
             {
                 return;
             }

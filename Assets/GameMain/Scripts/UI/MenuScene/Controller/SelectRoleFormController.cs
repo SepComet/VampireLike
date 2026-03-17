@@ -137,7 +137,7 @@ namespace UI
 
         private void OnMenuSelectRoleReturn(object sender, GameEventArgs e)
         {
-            if (sender != Form || !(e is MenuSelectRoleReturnEventArgs))
+            if ((SelectRoleForm)sender != Form || !(e is MenuSelectRoleReturnEventArgs))
             {
                 return;
             }

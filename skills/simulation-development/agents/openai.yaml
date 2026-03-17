@@ -1,4 +1,4 @@
 interface:
   display_name: "Simulation Development"
-  short_description: "Maintain and extend VampireLike Simulation architecture"
-  default_prompt: "Use $simulation-development to implement and validate a Simulation layer change with rollback safety."
+  short_description: "Extend VampireLike SimulationWorld safely"
+  default_prompt: "Use $simulation-development to implement, review, or extend a SimulationWorld change while preserving architecture invariants."
