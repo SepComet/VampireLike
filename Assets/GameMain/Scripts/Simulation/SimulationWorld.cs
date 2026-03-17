@@ -14,7 +14,12 @@ namespace Simulation
         // - SimulationWorld.TargetSelectionSpatialIndex.cs:    最近敌空间索引查询。
         // - Presentation/SimulationWorld.TransformSync.cs:     late-update transform 同步桥。
         // - Presentation/SimulationWorld.HitPresentation.cs:   投射物命中事件表现桥。
-        // - DataChannel/SimulationWorld.JobDataChannel.cs:     本地 通道/缓冲区 持有者和数据的相互转换。
+        // - DataChannel/SimulationWorld.JobDataChannel.cs:     Job 通道共享字段、常量和运行时状态。
+        // - DataChannel/SimulationWorld.JobDataLifecycle.cs:   Native 通道初始化、清理和 clear。
+        // - DataChannel/SimulationWorld.JobDataConversion.cs:  sim/job 数据转换与输入输出缓冲准备。
+        // - DataChannel/SimulationWorld.CollisionTransient.cs: 碰撞临时通道和运行时统计。
+        // - DataChannel/SimulationWorld.EnemySeparationTemporal.cs: 敌人分离的帧间临时状态。
+        // - DataChannel/SimulationWorld.JobOutputCommit.cs:    Job 输出回写主容器。
         // - Jobs/SimulationWorld.EnemyJobs.cs:                 模拟通道 编排 + 敌人移动/分离 顺序执行
         // - Jobs/SimulationWorld.ProjectileJobs.cs:            投射物移动与回收
         // - Jobs/SimulationWorld.CollisionPipeline.cs:         碰撞管线共享配置和状态
