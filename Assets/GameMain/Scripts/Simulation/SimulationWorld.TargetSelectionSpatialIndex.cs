@@ -6,11 +6,6 @@ namespace Simulation
 {
     public sealed partial class SimulationWorld
     {
-        private NativeParallelMultiHashMap<long, int> _enemyTargetBuckets;
-        private bool _enemyTargetBucketsDirty = true;
-
-        [SerializeField] private float _targetSelectionCellSize = 2f;
-
         public bool TryGetNearestEnemyEntityId(Vector3 origin, float maxSqrRange, out int enemyEntityId)
         {
             enemyEntityId = 0;

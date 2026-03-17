@@ -9,7 +9,9 @@ namespace Simulation
     {
         // Partial layout:
         // - SimulationWorld.cs:                                核心状态、常量和 Unity 生命周期入口点。
+        // - SimulationWorld.RuntimeModules.cs:                运行时域对象、配置和状态代理。
         // - SimulationWorld.SimEntityState.cs:                 模拟状态的增删改查和生命周期注册。
+        // - SimulationWorld.EntityToSimData.cs:               Unity 实体到 sim data 的初始化适配。
         // - SimulationWorld.EntitySync.cs:                     GameFramework 实体 show/hide 事件桥。
         // - SimulationWorld.TargetSelectionSpatialIndex.cs:    最近敌空间索引查询。
         // - Presentation/SimulationWorld.TransformSync.cs:     late-update transform 同步桥。
@@ -41,16 +43,6 @@ namespace Simulation
         private EntitySync _entitySync;
         private TransformSync _transformSync;
         private HitPresentation _hitPresentation;
-
-        private readonly List<EnemySimData> _enemies = new List<EnemySimData>();
-        private readonly List<ProjectileSimData> _projectiles = new List<ProjectileSimData>();
-        private readonly List<PickupSimData> _pickups = new List<PickupSimData>();
-        private readonly List<int> _projectileRecycleEntityIds = new List<int>();
-        private readonly HashSet<int> _projectileResolvedEntityIds = new HashSet<int>();
-
-        private EntityBinding EnemyBinding { get; } = new EntityBinding();
-        private EntityBinding ProjectileBinding { get; } = new EntityBinding();
-        private EntityBinding PickupBinding { get; } = new EntityBinding();
 
         public IReadOnlyList<EnemySimData> Enemies => _enemies;
         public IReadOnlyList<ProjectileSimData> Projectiles => _projectiles;
