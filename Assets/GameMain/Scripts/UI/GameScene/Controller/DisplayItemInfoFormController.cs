@@ -1,6 +1,7 @@
 using CustomEvent;
 using Definition.Enum;
 using GameFramework.Event;
+using UnityEngine;
 using UnityGameFramework.Runtime;
 
 namespace UI
@@ -38,6 +39,7 @@ namespace UI
         {
             if (rawData == null)
             {
+                Log.Error("DisplayItemInfoFormController.BuildContext() rawData is null.");
                 return null;
             }
 
@@ -92,20 +94,75 @@ namespace UI
             }
         }
 
+        private bool IsCurrentFormSender(object sender)
+        {
+            if (sender is DisplayItemInfoForm displayItemInfoForm)
+            {
+                return displayItemInfoForm == Form;
+            }
+
+            if (sender is Component component && Form != null)
+            {
+                return component.transform.IsChildOf(Form.transform);
+            }
+
+            return false;
+        }
+
         #region Event Handlers
 
         private void DisplayItemInfoLock(object sender, GameEventArgs e)
         {
-            if (!(e is DisplayItemInfoLockEventArgs)) return;
+            if (!(e is DisplayItemInfoLockEventArgs))
+            {
+                return;
+            }
+
+            if (Context == null)
+            {
+                Log.Error("DisplayItemInfoFormController.DisplayItemInfoLock() Context is null.");
+                return;
+            }
+
+            if (Form == null)
+            {
+                Log.Error("DisplayItemInfoFormController.DisplayItemInfoLock() Form is null.");
+                return;
+            }
 
             _locked = true;
         }
 
         private void DisplayItemInfoHide(object sender, GameEventArgs e)
         {
-            if (!(e is DisplayItemInfoHideEventArgs args)) return;
+            if (!(e is DisplayItemInfoHideEventArgs args))
+            {
+                return;
+            }
 
-            if (!args.Force && _locked && sender is not DisplayItemInfoForm) return;
+            if (Context == null)
+            {
+                Log.Error("DisplayItemInfoFormController.DisplayItemInfoHide() Context is null.");
+                return;
+            }
+
+            if (Form == null)
+            {
+                Log.Error("DisplayItemInfoFormController.DisplayItemInfoHide() Form is null.");
+                return;
+            }
+
+            if (args.Force)
+            {
+                GameEntry.UIRouter.CloseUI(UIFormType.DisplayItemInfoForm);
+                _locked = false;
+                return;
+            }
+
+            if (_locked && !IsCurrentFormSender(sender) && sender is not DisplayItem)
+            {
+                return;
+            }
 
             GameEntry.UIRouter.CloseUI(UIFormType.DisplayItemInfoForm);
             _locked = false;

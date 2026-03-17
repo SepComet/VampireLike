@@ -1,6 +1,7 @@
 using CustomEvent;
 using Definition.Enum;
 using GameFramework.Event;
+using UnityEngine;
 using UnityGameFramework.Runtime;
 
 namespace UI
@@ -34,6 +35,7 @@ namespace UI
         {
             if (rawData == null)
             {
+                Log.Error("SelectRoleFormController.BuildContext() rawData is null.");
                 return null;
             }
 
@@ -107,17 +109,35 @@ namespace UI
 
         public void UpdateShowRole(RolePropertyAreaContext rolePropertyAreaContext)
         {
-            if (Context != null)
+            if (Context == null)
             {
-                Context.RolePropertyAreaContext = rolePropertyAreaContext;
+                Log.Error("SelectRoleFormController.UpdateShowRole() Context is null.");
+                return;
             }
+
+            Context.RolePropertyAreaContext = rolePropertyAreaContext;
 
             Form?.UpdateShowRole(rolePropertyAreaContext);
         }
 
+        private bool IsCurrentFormEventSender(object sender)
+        {
+            if (sender is SelectRoleForm selectRoleForm)
+            {
+                return selectRoleForm == Form;
+            }
+
+            if (sender is Component component && Form != null)
+            {
+                return component.transform.IsChildOf(Form.transform);
+            }
+
+            return false;
+        }
+
         private void OnMenuSelectRoleReturn(object sender, GameEventArgs e)
         {
-            if (!(sender is SelectRoleForm) || !(e is MenuSelectRoleReturnEventArgs))
+            if (sender != Form || !(e is MenuSelectRoleReturnEventArgs))
             {
                 return;
             }
@@ -132,10 +152,22 @@ namespace UI
                 return;
             }
 
-            SelectRoleFormRawData rawData = _useCase != null ? _useCase.SelectRole(args.RoleId) : null;
+            if (!IsCurrentFormEventSender(sender))
+            {
+                return;
+            }
+
+            if (_useCase == null)
+            {
+                Log.Error("SelectRoleFormController.OnMenuSelectRoleSelected() useCase is null.");
+                return;
+            }
+
+            SelectRoleFormRawData rawData = _useCase.SelectRole(args.RoleId);
             SelectRoleFormContext context = BuildContext(rawData);
             if (context == null)
             {
+                Log.Error("SelectRoleFormController.OnMenuSelectRoleSelected() context build failed.");
                 return;
             }
 
@@ -150,7 +182,18 @@ namespace UI
                 return;
             }
 
-            _useCase?.ConfirmSelectedRole();
+            if (!IsCurrentFormEventSender(sender))
+            {
+                return;
+            }
+
+            if (_useCase == null)
+            {
+                Log.Error("SelectRoleFormController.OnMenuSelectRoleConfirm() useCase is null.");
+                return;
+            }
+
+            _useCase.ConfirmSelectedRole();
         }
     }
 }
