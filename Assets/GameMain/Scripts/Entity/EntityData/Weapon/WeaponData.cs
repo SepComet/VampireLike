@@ -37,7 +37,7 @@ namespace Entity.EntityData
                 return false;
             }
 
-            return Params.TryGetValue(key.ToLower(), out value);
+            return Params.TryGetValue(key, out value);
         }
 
         protected TParams ParseParams<TParams>() where TParams : new()

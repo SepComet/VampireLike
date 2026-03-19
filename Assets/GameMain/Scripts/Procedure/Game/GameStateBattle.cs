@@ -92,20 +92,30 @@ namespace Procedure
                 GameEntry.Entity.HideEntity(entity.Id);
             }
 
-            var enemyProjectiles = GameEntry.Entity.GetEntityGroup("EnemyProjectile")?.GetAllEntities();
-            if (enemyProjectiles != null)
-            {
-                foreach (var projectile in enemyProjectiles)
-                {
-                    GameEntry.Entity.HideEntity(projectile.Id);
-                }
-            }
+            HideEntityGroup("Bullet");
+            HideEntityGroup("Projectile");
+            HideEntityGroup("EnemyProjectile");
         }
 
         public override void OnDestroy(IFsm<IProcedureManager> procedureOwner)
         {
             _enemyManager = null;
             _procedureGame = null;
+        }
+
+        private static void HideEntityGroup(string groupName)
+        {
+            var entityGroup = GameEntry.Entity.GetEntityGroup(groupName);
+            var entities = entityGroup?.GetAllEntities();
+            if (entities == null)
+            {
+                return;
+            }
+
+            foreach (var entity in entities)
+            {
+                GameEntry.Entity.HideEntity(entity.Id);
+            }
         }
 
         #endregion

@@ -4,16 +4,23 @@ using DataTable;
 using Definition.DataStruct;
 using Entity.EntityData;
 using Entity.Weapon;
+using System;
 using UnityGameFramework.Runtime;
 
 namespace CustomUtility
 {
     public static class ItemDescUtility
     {
-        private static readonly Dictionary<string, string> _paramsDict = new()
+        private static readonly Dictionary<string, string> _paramsDict = new(StringComparer.OrdinalIgnoreCase)
         {
-            {"hitradius", "伤害范围"},
-            {"sectorangle", "攻击角度"}
+            {"hitRadius", "伤害范围"},
+            {"sectorAngle", "攻击角度"},
+            {"pierceLength", "前戳距离"},
+            {"thrustDistance", "枪尖长度"},
+            {"forwardOffset", "前置偏移"},
+            {"rotateSpeed", "转向速度"},
+            {"attackDuration", "突刺时长"},
+            {"returnDuration", "收枪时长"}
         };
         
         public static string CreatePropDescription(StatModifier[] modifiers)
@@ -87,6 +94,11 @@ namespace CustomUtility
             if (!string.IsNullOrEmpty(modifiersDesc))
             {
                 sb.Append(modifiersDesc);
+            }
+
+            if (@params == null || @params.Count == 0)
+            {
+                return sb.ToString();
             }
 
             foreach (var kvp in @params)

@@ -139,19 +139,7 @@ namespace UI
             {
                 return;
             }
-
-            if (Context == null)
-            {
-                Log.Error("DisplayItemInfoFormController.DisplayItemInfoHide() Context is null.");
-                return;
-            }
-
-            if (Form == null)
-            {
-                Log.Error("DisplayItemInfoFormController.DisplayItemInfoHide() Form is null.");
-                return;
-            }
-
+            
             if (args.Force)
             {
                 GameEntry.UIRouter.CloseUI(UIFormType.DisplayItemInfoForm);
@@ -159,11 +147,8 @@ namespace UI
                 return;
             }
 
-            if (_locked && !IsCurrentFormSender(sender) && sender is not DisplayItem)
-            {
-                return;
-            }
-
+            if (_locked && !args.Force) return;
+            
             GameEntry.UIRouter.CloseUI(UIFormType.DisplayItemInfoForm);
             _locked = false;
         }

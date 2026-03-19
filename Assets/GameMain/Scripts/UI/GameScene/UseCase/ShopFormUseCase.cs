@@ -397,6 +397,8 @@ namespace UI
                     return new WeaponSlashData(entityId, ownerId, ownerCamp);
                 case WeaponType.WeaponLightning:
                     return new WeaponLightningData(entityId, ownerId, ownerCamp);
+                case WeaponType.WeaponLance:
+                    return new WeaponLanceData(entityId, ownerId, ownerCamp);
                 default:
                     return null;
             }

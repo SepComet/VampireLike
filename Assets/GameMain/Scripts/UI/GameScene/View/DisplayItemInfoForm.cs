@@ -199,7 +199,7 @@ namespace UI
 
         public void OnCancelButtonClick()
         {
-            GameEntry.Event.Fire(this, DisplayItemInfoHideEventArgs.Create());
+            GameEntry.Event.Fire(this, DisplayItemInfoHideEventArgs.Create(true));
         }
     }
 }

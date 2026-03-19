@@ -37,7 +37,7 @@ namespace Entity.Weapon
         protected ITargetSelector TargetSelector { get; set; }
 
         protected Dictionary<WeaponStateType, WeaponStateBase> _states;
-        
+
         protected WeaponStateBase _currentState;
 
         protected EntityBase _target;
@@ -50,7 +50,7 @@ namespace Entity.Weapon
 
         private StatComponent _attackStatComponent;
         private System.Action<StatModifier, bool> _attackStatCallback;
-        
+
         private static readonly List<EntityBase> s_EmptyCandidates = new();
 
         #region Lifecycle
@@ -304,11 +304,4 @@ namespace Entity.Weapon
         public abstract void OnLeave();
         public override string ToString() => State.ToString();
     }
-
-
-
-
- 
 }
-
-

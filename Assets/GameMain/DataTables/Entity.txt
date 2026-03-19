@@ -10,5 +10,6 @@
 	202	武器手枪	WeaponHandgun
 	203	武器斧头	WeaponSlash
 	204	武器闪电	WeaponLightning
+	205	武器长枪	WeaponLance
 	10001	金币实体	CoinEntity
 	10002	经验实体	ExpEntity

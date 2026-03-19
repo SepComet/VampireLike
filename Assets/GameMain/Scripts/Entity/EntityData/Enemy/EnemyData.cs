@@ -59,7 +59,7 @@ namespace Entity.EntityData
                 return false;
             }
 
-            return _drEnemy.Params.TryGetValue(key.ToLower(), out value);
+            return _drEnemy.Params.TryGetValue(key, out value);
         }
     }
 }

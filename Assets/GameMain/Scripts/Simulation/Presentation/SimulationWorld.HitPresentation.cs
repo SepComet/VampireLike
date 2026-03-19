@@ -104,18 +104,8 @@ namespace Simulation
 
             private void PlayHitMarker(ProjectileHitPresentationEventArgs args)
             {
-                EntityBase targetEntity = TryGetEntityById(args.TargetEntityId);
-                if (targetEntity == null || !targetEntity.Available)
-                {
-                    return;
-                }
-
-                _projectileHitMarkerEffect ??= new HandgunHitMarkerAttackEffect(
-                    Mathf.Max(0.01f, _world._projectileHitMarkerSize),
-                    _world._projectileHitMarkerYOffset,
-                    Mathf.Max(0.01f, _world._projectileHitMarkerDuration),
-                    _world._projectileHitMarkerColor);
-                _projectileHitMarkerEffect.Play(null, args.HitPosition, targetEntity, 0f);
+                // Projectile hit markers were reusing the handgun marker effect and were
+                // visually indistinguishable from handgun lock/hit feedback.
             }
 
             private void PlayHitEffect(ProjectileHitPresentationEventArgs args)

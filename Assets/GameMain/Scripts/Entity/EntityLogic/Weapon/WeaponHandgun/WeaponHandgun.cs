@@ -46,22 +46,15 @@ namespace Entity.Weapon
         {
             FaceTargetImmediately();
 
-            Vector3 fireOrigin = CachedTransform.TransformPoint(_fireOriginOffset);
-            Vector3 fireDirection = CachedTransform.forward;
-            float maxDistance = Mathf.Max(0.1f, _weaponData.AttackRange);
-
-            if (Physics.Raycast(fireOrigin, fireDirection, out RaycastHit hit, maxDistance, _hitMask,
-                    QueryTriggerInteraction.Collide))
+            if (!TryResolveAttackTarget(out TargetableObject targetable, out Vector3 hitPosition))
             {
-                TargetableObject targetable = hit.collider.GetComponentInParent<TargetableObject>();
-                if (targetable != null && targetable.Available && !targetable.IsDead)
-                {
-                    _attackEffect?.Play(this, hit.point, targetable, 0f);
-                    _isAttacking = true;
-                    AIUtility.PerformCollision(targetable, this);
-                    _isAttacking = false;
-                }
+                return;
             }
+
+            _attackEffect?.Play(this, hitPosition, targetable, 0f);
+            _isAttacking = true;
+            AIUtility.PerformCollision(targetable, this);
+            _isAttacking = false;
         }
 
         protected override void Check()
@@ -93,6 +86,40 @@ namespace Entity.Weapon
             if (directionToTarget.sqrMagnitude <= Mathf.Epsilon) return;
 
             CachedTransform.rotation = Quaternion.LookRotation(directionToTarget.normalized, Vector3.up);
+        }
+
+        private bool TryResolveAttackTarget(out TargetableObject targetable, out Vector3 hitPosition)
+        {
+            targetable = _target as TargetableObject;
+            hitPosition = CachedTransform.position;
+            if (targetable == null || !targetable.Available || targetable.IsDead)
+            {
+                return false;
+            }
+
+            Transform targetTransform = targetable.CachedTransform;
+            if (targetTransform == null)
+            {
+                return false;
+            }
+
+            hitPosition = targetTransform.position;
+
+            Vector3 fireOrigin = CachedTransform.TransformPoint(_fireOriginOffset);
+            Vector3 directionToTarget = targetTransform.position - fireOrigin;
+            float maxDistance = Mathf.Max(0.1f, _weaponData.AttackRange);
+            if (directionToTarget.sqrMagnitude > Mathf.Epsilon &&
+                Physics.Raycast(fireOrigin, directionToTarget.normalized, out RaycastHit hit, maxDistance, _hitMask,
+                    QueryTriggerInteraction.Collide))
+            {
+                TargetableObject raycastTarget = hit.collider.GetComponentInParent<TargetableObject>();
+                if (raycastTarget == targetable)
+                {
+                    hitPosition = hit.point;
+                }
+            }
+
+            return true;
         }
 
         #region Lifecycle

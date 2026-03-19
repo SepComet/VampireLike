@@ -122,7 +122,7 @@ namespace DataTable
         /// <returns></returns>
         private Dictionary<string, string> DeserializeParams(string rawParams)
         {
-            var dict = new Dictionary<string, string>();
+            var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             if (string.IsNullOrWhiteSpace(rawParams))
             {
                 return dict;
@@ -143,7 +143,7 @@ namespace DataTable
                         continue;
                     }
 
-                    dict[pair.Key.ToLower()] = pair.Value.ToString();
+                    dict[pair.Key] = pair.Value.ToString();
                 }
             }
             catch (Exception exception)

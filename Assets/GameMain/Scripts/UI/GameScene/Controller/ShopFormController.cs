@@ -199,6 +199,12 @@ namespace UI
 
         #region UI Methods
 
+        public override void CloseUI()
+        {
+            base.CloseUI();
+            GameEntry.Event.Fire(this, DisplayItemInfoHideEventArgs.Create(true));
+        }
+
         public int? OpenUI(ShopFormRawData rawData)
         {
             ShopFormContext context = BuildContext(rawData);
