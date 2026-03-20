@@ -17,6 +17,8 @@ namespace Simulation
             public int ShapeType;
             public float3 Direction;
             public float HalfAngleDeg;
+            public float HalfWidth;
+            public float HalfLength;
         }
     }
 }

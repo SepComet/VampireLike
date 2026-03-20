@@ -10,6 +10,7 @@ namespace Simulation
         private const int CollisionSourceTypeArea = 2;
         private const int CollisionShapeCircle = 0;
         private const int CollisionShapeSector = 1;
+        private const int CollisionShapeRectangle = 2;
 
         // Kept as top-level fields because current regression tests reflect them directly.
         private NativeList<CollisionQueryData> _collisionQueryInputs;

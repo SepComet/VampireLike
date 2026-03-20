@@ -65,13 +65,15 @@ namespace Simulation
                 MaxTargets = math.max(1, maxTargets),
                 ShapeType = CollisionShapeCircle,
                 Direction = new float3(0f, 0f, 1f),
-                HalfAngleDeg = 180f
+                HalfAngleDeg = 180f,
+                HalfWidth = 0f,
+                HalfLength = 0f
             });
         }
 
         private void AddAreaCollisionQuery(int queryId, int sourceEntityId, int sourceOwnerEntityId,
             bool sourceWasActiveAtQueryTime, in Vector3 center, float radius, int maxTargets, int shapeType,
-            in Vector3 direction, float halfAngleDeg)
+            in Vector3 direction, float halfAngleDeg, float halfWidth, float halfLength)
         {
             if (!_collisionQueryInputs.IsCreated || radius <= 0f)
             {
@@ -101,7 +103,9 @@ namespace Simulation
                 MaxTargets = math.max(1, maxTargets),
                 ShapeType = shapeType,
                 Direction = new float3(normalizedDirection.x, normalizedDirection.y, normalizedDirection.z),
-                HalfAngleDeg = Mathf.Clamp(halfAngleDeg, 0f, 180f)
+                HalfAngleDeg = Mathf.Clamp(halfAngleDeg, 0f, 180f),
+                HalfWidth = Mathf.Max(0f, halfWidth),
+                HalfLength = Mathf.Max(0f, halfLength)
             });
         }
 

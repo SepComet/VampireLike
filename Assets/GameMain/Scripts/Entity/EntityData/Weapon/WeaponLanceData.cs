@@ -7,19 +7,34 @@ namespace Entity.EntityData
     public sealed class WeaponLanceParamsData
     {
         /// <summary>
-        /// 枪尖命中半径。
+        /// 横向半宽，表示前戳矩形判定的一半宽度。
+        /// </summary>
+        public float HitHalfWidth { get; set; }
+
+        /// <summary>
+        /// 旧字段兼容，未配置 HitHalfWidth 时回退使用。
         /// </summary>
         public float HitRadius { get; set; }
 
         /// <summary>
-        /// 武器模型前刺的位移距离。
+        /// 前戳判定盒体的总高度。
         /// </summary>
-        public float ThrustDistance { get; set; }
+        public float HitHeight { get; set; }
 
         /// <summary>
-        /// 实际判定的前刺长度。
+        /// 判定盒体中心相对战斗平面的高度偏移。
+        /// </summary>
+        public float HitCenterYOffset { get; set; }
+
+        /// <summary>
+        /// 前刺距离，同时驱动武器位移和命中长度。
         /// </summary>
         public float PierceLength { get; set; }
+
+        /// <summary>
+        /// 旧字段兼容，未配置 PierceLength 时回退使用。
+        /// </summary>
+        public float ThrustDistance { get; set; }
 
         /// <summary>
         /// 判定起点相对武器当前位置的前置偏移。

@@ -5,4 +5,4 @@
 	2		202	手枪	Almighty_Icon	White	130	0.05	120	1	15	10000	{}	[]
 	3		203	斧头	Almighty_Icon	White	100	0.1	150	2	5	10000	{"sectorAngle":120}	[]
 	4		204	闪电	Almighty_Icon	White	150	0.08	80	3	12	10000	{"hitRadius":3}	[]
-	5		205	长枪	Almighty_Icon	White	100	0.1	100	1.5	7	10000	{"hitRadius":0.3,"thrustDistance":1.2,"pierceLength":0.3}	
+	5		205	长枪	Almighty_Icon	White	100	0.1	100	1.5	5	10000	{"hitHalfWidth":0.7,"pierceLength":4.5,"hitHeight":0.5,"hitCenterYOffset":0}	

@@ -23,7 +23,6 @@ namespace Simulation
             public void Execute(int index)
             {
                 CollisionQueryData query = Queries[index];
-                float radiusSqr = query.Radius * query.Radius;
                 int centerCellX = (int)math.floor(query.Position.x / CellSize);
                 int centerCellZ = (int)math.floor(query.Position.z / CellSize);
                 int queryRange = math.max(1, (int)math.ceil(query.Radius / CellSize));
@@ -34,10 +33,14 @@ namespace Simulation
                     query.SourceOwnerEntityId != PlayerTargetEntityId)
                 {
                     float3 playerPosition = PlayerPosition;
-                    playerPosition.y = query.Position.y;
+                    if (query.SourceType == CollisionSourceTypeArea)
+                    {
+                        playerPosition.y = query.Position.y;
+                    }
                     float3 playerDelta = playerPosition - query.Position;
                     float playerSqrDistance = math.lengthsq(playerDelta);
-                    if (playerSqrDistance <= radiusSqr)
+                    float playerRadiusSqr = query.Radius * query.Radius;
+                    if (playerSqrDistance <= playerRadiusSqr)
                     {
                         Candidates.AddNoResize(new CollisionCandidateData
                         {
@@ -86,12 +89,19 @@ namespace Simulation
                                 continue;
                             }
 
+                            float deltaY = query.SourceType == CollisionSourceTypeArea
+                                ? 0f
+                                : enemy.Position.y - query.Position.y;
                             float3 delta = new float3(
                                 enemy.Position.x - query.Position.x,
-                                enemy.Position.y - query.Position.y,
+                                deltaY,
                                 enemy.Position.z - query.Position.z);
                             float sqrDistance = math.lengthsq(delta);
-                            if (sqrDistance > radiusSqr)
+                            float targetRadius = query.SourceType == CollisionSourceTypeArea
+                                ? math.max(0f, enemy.EnemyBodyRadius)
+                                : 0f;
+                            float effectiveRadius = query.Radius + targetRadius;
+                            if (sqrDistance > effectiveRadius * effectiveRadius)
                             {
                                 continue;
                             }

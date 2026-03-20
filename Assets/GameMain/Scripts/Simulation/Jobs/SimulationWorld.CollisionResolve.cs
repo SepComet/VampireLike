@@ -1,3 +1,4 @@
+using Components;
 using CustomDebugger;
 using CustomUtility;
 using Definition.DataStruct;
@@ -188,7 +189,8 @@ namespace Simulation
                     continue;
                 }
 
-                if (!IsAreaTargetInsidePreciseShape(in query, target))
+                float targetRadius = ResolveAreaTargetRadius(target);
+                if (!IsAreaTargetInsidePreciseShape(in query, target, targetRadius))
                 {
                     continue;
                 }
@@ -230,7 +232,24 @@ namespace Simulation
             return false;
         }
 
-        private static bool IsAreaTargetInsidePreciseShape(in CollisionQueryData query, TargetableObject target)
+        private float ResolveAreaTargetRadius(TargetableObject target)
+        {
+            if (target == null)
+            {
+                return 0f;
+            }
+
+            if (target is EnemyBase && TryGetEnemyData(target.Id, out EnemySimData enemyData))
+            {
+                return Mathf.Max(0f, enemyData.EnemyBodyRadius);
+            }
+
+            MovementComponent movementComponent = target.GetComponent<MovementComponent>();
+            return movementComponent != null ? Mathf.Max(0f, movementComponent.EnemyBodyRadius) : 0f;
+        }
+
+        private static bool IsAreaTargetInsidePreciseShape(in CollisionQueryData query, TargetableObject target,
+            float targetRadius)
         {
             if (target == null || target.CachedTransform == null)
             {
@@ -241,12 +260,33 @@ namespace Simulation
             Vector3 toTarget = target.CachedTransform.position - center;
             toTarget.y = 0f;
 
-            float radius = Mathf.Max(0.01f, query.Radius);
+            float radius = Mathf.Max(0.01f, query.Radius + Mathf.Max(0f, targetRadius));
             float radiusSqr = radius * radius;
             float sqrDistance = toTarget.sqrMagnitude;
             if (sqrDistance > radiusSqr)
             {
                 return false;
+            }
+
+            if (query.ShapeType == CollisionShapeRectangle)
+            {
+                Vector3 forwardRect = new Vector3(query.Direction.x, query.Direction.y, query.Direction.z);
+                forwardRect.y = 0f;
+                if (forwardRect.sqrMagnitude <= Mathf.Epsilon)
+                {
+                    forwardRect = Vector3.forward;
+                }
+                else
+                {
+                    forwardRect.Normalize();
+                }
+
+                Vector3 rightRect = Vector3.Cross(Vector3.up, forwardRect);
+                float halfWidth = Mathf.Max(0.01f, query.HalfWidth + Mathf.Max(0f, targetRadius));
+                float halfLength = Mathf.Max(0.01f, query.HalfLength + Mathf.Max(0f, targetRadius));
+                float forwardDistance = Vector3.Dot(toTarget, forwardRect);
+                float lateralDistance = Vector3.Dot(toTarget, rightRect);
+                return Mathf.Abs(forwardDistance) <= halfLength && Mathf.Abs(lateralDistance) <= halfWidth;
             }
 
             if (query.ShapeType != CollisionShapeSector)

@@ -13,10 +13,13 @@ namespace CustomUtility
     {
         private static readonly Dictionary<string, string> _paramsDict = new(StringComparer.OrdinalIgnoreCase)
         {
-            {"hitRadius", "伤害范围"},
+            {"hitHalfWidth", "横向半宽"},
+            {"hitRadius", "攻击半宽"},
+            {"hitHeight", "判定高度"},
+            {"hitCenterYOffset", "判定高度偏移"},
             {"sectorAngle", "攻击角度"},
             {"pierceLength", "前戳距离"},
-            {"thrustDistance", "枪尖长度"},
+            {"thrustDistance", "前戳距离(旧)"},
             {"forwardOffset", "前置偏移"},
             {"rotateSpeed", "转向速度"},
             {"attackDuration", "突刺时长"},

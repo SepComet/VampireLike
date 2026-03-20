@@ -58,7 +58,8 @@ namespace Simulation
                     AreaCollisionRequestData request = _areaCollisionRequests[i];
                     AddAreaCollisionQuery(queryId, request.SourceEntityId, request.SourceOwnerEntityId,
                         request.SourceWasActiveAtQueryTime, in request.Center, request.Radius, request.MaxTargets,
-                        request.ShapeType, in request.Direction, request.HalfAngleDeg);
+                        request.ShapeType, in request.Direction, request.HalfAngleDeg, request.HalfWidth,
+                        request.HalfLength);
                     queryId++;
                     builtAreaQueryCount++;
                     if (request.Radius > maxQueryRadius)

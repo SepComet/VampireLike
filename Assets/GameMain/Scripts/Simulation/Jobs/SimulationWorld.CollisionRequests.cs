@@ -12,18 +12,29 @@ namespace Simulation
             float radius, int maxTargets = 16)
         {
             return TryRequestAreaCollisionInternal(sourceEntityId, sourceOwnerEntityId, in center, radius,
-                maxTargets, CollisionShapeCircle, Vector3.forward, 180f);
+                maxTargets, CollisionShapeCircle, Vector3.forward, 180f, 0f, 0f);
         }
 
         public bool TryRequestSectorCollision(int sourceEntityId, int sourceOwnerEntityId, in Vector3 center,
             float radius, in Vector3 direction, float halfAngleDeg, int maxTargets = 16)
         {
             return TryRequestAreaCollisionInternal(sourceEntityId, sourceOwnerEntityId, in center, radius,
-                maxTargets, CollisionShapeSector, direction, halfAngleDeg);
+                maxTargets, CollisionShapeSector, direction, halfAngleDeg, 0f, 0f);
+        }
+
+        public bool TryRequestRectangleCollision(int sourceEntityId, int sourceOwnerEntityId, in Vector3 center,
+            float halfWidth, float halfLength, in Vector3 direction, int maxTargets = 16)
+        {
+            float safeHalfWidth = Mathf.Max(0.01f, halfWidth);
+            float safeHalfLength = Mathf.Max(0.01f, halfLength);
+            float boundingRadius = Mathf.Sqrt(safeHalfWidth * safeHalfWidth + safeHalfLength * safeHalfLength);
+            return TryRequestAreaCollisionInternal(sourceEntityId, sourceOwnerEntityId, in center, boundingRadius,
+                maxTargets, CollisionShapeRectangle, direction, 0f, safeHalfWidth, safeHalfLength);
         }
 
         private bool TryRequestAreaCollisionInternal(int sourceEntityId, int sourceOwnerEntityId,
-            in Vector3 center, float radius, int maxTargets, int shapeType, in Vector3 direction, float halfAngleDeg)
+            in Vector3 center, float radius, int maxTargets, int shapeType, in Vector3 direction, float halfAngleDeg,
+            float halfWidth, float halfLength)
         {
             if (!_useSimulationMovement)
             {
@@ -58,7 +69,9 @@ namespace Simulation
                 MaxTargets = Mathf.Max(1, maxTargets),
                 ShapeType = shapeType,
                 Direction = normalizedDirection,
-                HalfAngleDeg = Mathf.Clamp(halfAngleDeg, 0f, 180f)
+                HalfAngleDeg = Mathf.Clamp(halfAngleDeg, 0f, 180f),
+                HalfWidth = Mathf.Max(0f, halfWidth),
+                HalfLength = Mathf.Max(0f, halfLength)
             });
 
             return true;

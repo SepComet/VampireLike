@@ -246,6 +246,20 @@ namespace Entity.Weapon
                 halfAngleDeg, maxTargets);
         }
 
+        protected bool TryQueueRectangleCollisionQuery(in Vector3 center, float halfWidth, float halfLength,
+            in Vector3 direction, int maxTargets = 16)
+        {
+            var simulationWorld = GameEntry.SimulationWorld;
+            if (simulationWorld == null)
+            {
+                return false;
+            }
+
+            int ownerEntityId = WeaponData != null ? WeaponData.OwnerId : Id;
+            return simulationWorld.TryRequestRectangleCollision(Id, ownerEntityId, in center, halfWidth, halfLength,
+                in direction, maxTargets);
+        }
+
         protected void SetTargetSelector(TargetSelectorType selectorType)
         {
             TargetSelector = CreateSelector(selectorType);
