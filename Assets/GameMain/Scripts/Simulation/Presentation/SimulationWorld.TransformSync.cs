@@ -16,7 +16,7 @@ namespace Simulation
 
             public void OnLateUpdate()
             {
-                if (_world == null || !_world.UseSimulationMovement)
+                if (_world == null)
                 {
                     return;
                 }

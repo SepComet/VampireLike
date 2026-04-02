@@ -10,9 +10,7 @@ namespace Entity
     {
         private EnemyProjectileData _projectileData;
         private Vector3 _direction = Vector3.forward;
-        private float _elapsedTime;
         private bool _isActive;
-        private bool _isSimulationDriven;
         private ImpactData _impactData;
         private Collider[] _cachedColliders;
 
@@ -33,7 +31,6 @@ namespace Entity
             }
 
             _isActive = true;
-            _elapsedTime = 0f;
             _impactData = new ImpactData(_projectileData.OwnerCamp, _projectileData.AttackDamage);
 
             _direction = _projectileData.Direction;
@@ -64,8 +61,7 @@ namespace Entity
                 gameObject.layer = LayerMask.NameToLayer("EnemyWeapon");
             }
 
-            _isSimulationDriven = IsDrivenBySimulationWorld();
-            SetColliderEnabled(!_isSimulationDriven);
+            SetColliderEnabled(false);
         }
 
         protected override void OnUpdate(float elapseSeconds, float realElapseSeconds)
@@ -73,34 +69,12 @@ namespace Entity
             base.OnUpdate(elapseSeconds, realElapseSeconds);
 
             if (!_isActive || _projectileData == null) return;
-
-            bool isSimulationDriven = IsDrivenBySimulationWorld();
-            if (isSimulationDriven != _isSimulationDriven)
-            {
-                _isSimulationDriven = isSimulationDriven;
-                SetColliderEnabled(!_isSimulationDriven);
-            }
-
-            if (_isSimulationDriven) return;
-
-            if (_projectileData.Speed > 0f)
-            {
-                CachedTransform.position += _direction * (_projectileData.Speed * elapseSeconds);
-            }
-
-            _elapsedTime += elapseSeconds;
-            if (_projectileData.LifeTime > 0f && _elapsedTime >= _projectileData.LifeTime)
-            {
-                Expire();
-            }
         }
 
         protected override void OnHide(bool isShutdown, object userData)
         {
             _isActive = false;
             _projectileData = null;
-            _elapsedTime = 0f;
-            _isSimulationDriven = false;
             _impactData = default;
             _direction = Vector3.forward;
 
@@ -112,12 +86,6 @@ namespace Entity
             if (!_isActive) return;
             _isActive = false;
             GameEntry.Entity.HideEntity(this);
-        }
-
-        private static bool IsDrivenBySimulationWorld()
-        {
-            var simulationWorld = GameEntry.SimulationWorld;
-            return simulationWorld != null && simulationWorld.UseSimulationMovement;
         }
 
         private void SetColliderEnabled(bool enabled)

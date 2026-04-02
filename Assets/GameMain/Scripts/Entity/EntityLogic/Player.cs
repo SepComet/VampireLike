@@ -212,7 +212,6 @@ namespace Entity
             _inputComponent.OnUpdate(elapseSeconds, realElapseSeconds);
 
             _movementComponent.SetDirection(_inputComponent.Direction);
-            _movementComponent.OnUpdate(elapseSeconds, realElapseSeconds);
             _absorbComponent.OnUpdate(elapseSeconds, realElapseSeconds);
         }
 

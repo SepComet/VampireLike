@@ -13,7 +13,6 @@ public abstract class EnemyBase : TargetableObject
 
     protected bool IsSimulationMovementEnabled()
     {
-        var simulationWorld = GameEntry.SimulationWorld;
-        return simulationWorld != null && simulationWorld.UseSimulationMovement;
+        return true;
     }
 }

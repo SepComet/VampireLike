@@ -6,7 +6,7 @@
 目标：
 - 固化压测口径（0.5k/1k/1.5k/2k）
 - 给出回归验证结论
-- 给出开关/回滚策略
+- 给出单一路径架构下的验证策略
 - 给出最终验收判定（通过/不通过）
 
 ## 2. 验收标准（对齐 TodoList）
@@ -23,21 +23,17 @@
 - Profiler 口径：以 CPU `ms` 为主，`fps` 仅作辅助（Android 端存在 60fps 上限）
 - Profiler 配置：`Call Stacks = Off`
 
-## 4. P2 开关与回滚策略
+## 4. P2 路线收敛说明
 
-### 4.1 运行开关
-- `UseSimulationMovement`
-- `UseJobSimulation`
-- `UseBurstJobs`
+### 4.1 当前运行时语义
+- `SimulationWorld.Tick(...)` 是战斗内唯一仿真执行入口。
+- 敌人移动、敌人分离、投射物推进、碰撞 broad-phase、最近敌查询统一走 Burst/Job 管线。
+- 文档中的 `UseJobSimulation`、`UseBurstJobs` 当前没有代码实现，不应再作为实际回滚方案描述。
 
-### 4.2 生效时机约束
-- `UseSimulationMovement` / `UseJobSimulation`：战斗内不支持热切换，需在 Battle 外修改后生效。
-- `UseBurstJobs`：可切换，但建议仅用于战斗外 A/B。
-
-### 4.3 回滚策略（建议）
-1. 切回非 Job 路径：`UseJobSimulation = false`
-2. 若仍异常，切回旧移动：`UseSimulationMovement = false`
-3. 保留 `UseBurstJobs` 仅在 Job 路径 A/B 对照
+### 4.2 验证重点
+1. 验证单一路径下的敌人移动、投射物生命周期、碰撞候选与 area hit 结果。
+2. 验证 `Battle -> LevelUp -> Shop -> Battle` 与清场流程不会留下脏的仿真状态。
+3. 验证 Debug/测试表面不再暴露旧 solver 或双路径开关语义。
 
 ## 5. 回归验证（Checkpoint 9）
 
@@ -57,7 +53,7 @@
 #### 用例 1：10 分钟连续战斗
 - 执行时间：待填
 - 场景/波次参数：待填
-- 运行开关：`UseSimulationMovement = true`，`UseJobSimulation = true`，`UseBurstJobs = true`
+- 运行路径：`SimulationWorld` Burst/Job 单一路径
 - 结果：待填
 - 日志/录屏：待填
 - 备注：待填
@@ -66,7 +62,7 @@
 - 执行时间：已执行，见 `Logs/editmode-test-results.xml`
 - 操作步骤：由 EditMode 测试 `ProcedureGame_TransitionsBattleToLevelUpShopAndBackToBattle` 覆盖
 - 执行方式：自动化测试
-- 运行开关：`UseSimulationMovement = true`，`UseJobSimulation = true`，`UseBurstJobs = true`
+- 运行路径：`SimulationWorld` Burst/Job 单一路径
 - 结果：通过
 - 日志/录屏：`Logs/editmode-test-results.xml`
 - 备注：验证 `ProcedureGame` 可从 `Battle` 正确切换到 `LevelUp`、再到 `Shop`，并最终返回 `Battle`
@@ -75,7 +71,7 @@
 - 执行时间：已执行，见 `Logs/editmode-test-results.xml`
 - 验证范围：掉落注册 / 更新 / 回收
 - 执行方式：自动化测试
-- 运行开关：`UseSimulationMovement = true`，`UseJobSimulation = true`，`UseBurstJobs = true`
+- 运行路径：`SimulationWorld` Burst/Job 单一路径
 - 结果：通过
 - 日志/录屏：`Logs/editmode-test-results.xml`
 - 备注：由 EditMode 测试 `PickupLifecycle_UpsertAndRemove_KeepsBindingsConsistent` 覆盖，验证掉落在 `SimulationWorld` 中的生命周期与 binding remap 正常

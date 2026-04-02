@@ -40,8 +40,8 @@
 - [x] Checkpoint 3：建立 Simulation 主更新入口并接入 Battle 状态
   - 在 `GameStateBattle.OnUpdate` 中增加 `SimulationWorld.Tick(...)` 调用。
   - 先只接“敌人移动/追踪”系统，其他逻辑保持原路径。
-  - 增加开关（建议 `UseSimulationMovement`）用于 A/B 对比与回滚。
-  - 完成标准：关闭开关与当前行为一致；开启开关后敌人仍能正常追踪玩家。
+  - 路线已收敛：不再维护 `UseSimulationMovement` 作为运行时 A/B 与回滚开关。
+  - 完成标准：`SimulationWorld.Tick(...)` 成为唯一执行入口，敌人仍能正常追踪玩家。
 
 - [x] Checkpoint 4：迁移敌人核心移动逻辑到 Simulation（去 MonoBehaviour 核心逻辑）
   - 将 `MeleeEnemy/RemoteEnemy` 的目标追踪、移动方向、攻击距离判定迁至 Simulation。
@@ -117,11 +117,9 @@
     - `com.unity.jobs`（已废弃并并入 `com.unity.collections`，Unity 2022.3 不再单独锁定包）
     - `com.unity.burst`
     - `com.unity.mathematics`
-  - 增加 P2 运行开关（建议）：
-    - `UseJobSimulation`
-    - `UseBurstJobs`
-  - 约束：默认可一键回退到 P1.5 路径，避免全量切换导致定位困难。
-  - 完成标准：Editor/Development Build 均可编译运行；关闭开关时行为与 P1.5 一致。
+  - 文档中的 `UseJobSimulation` / `UseBurstJobs` 当前未落代码实现，不再作为运行时方案前提。
+  - 约束：以当前 `SimulationWorld` Burst/Job 单一路径为唯一验收对象。
+  - 完成标准：Editor/Development Build 均可编译运行；单一路径行为稳定。
 
 - [x] Checkpoint 2：Simulation 与 Job 数据通道打通（仅建通道，不改行为）
   - 为敌人/投射物建立 Job 输入输出结构（纯数据，不含 `Transform`/托管引用）。

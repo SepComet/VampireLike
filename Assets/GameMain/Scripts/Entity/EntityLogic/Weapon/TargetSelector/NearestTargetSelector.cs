@@ -13,26 +13,7 @@ namespace Entity.Weapon
                 return null;
             }
 
-            if (TrySelectFromSpatialIndex(weapon, maxSqrRange, out EntityBase indexedTarget))
-            {
-                return indexedTarget;
-            }
-
-            EntityBase target = null;
-            float minSqrMagnitude = maxSqrRange > 0f ? maxSqrRange : float.MaxValue;
-
-            foreach (var candidate in candidates)
-            {
-                if (candidate == null || !candidate.Available) continue;
-
-                float sqrMagnitude = AIUtility.GetSqrMagnitudeXZ(weapon, candidate);
-                if (sqrMagnitude >= minSqrMagnitude) continue;
-
-                minSqrMagnitude = sqrMagnitude;
-                target = candidate;
-            }
-
-            return target;
+            return TrySelectFromSpatialIndex(weapon, maxSqrRange, out EntityBase indexedTarget) ? indexedTarget : null;
         }
 
         private static bool TrySelectFromSpatialIndex(WeaponBase weapon, float maxSqrRange, out EntityBase target)
@@ -44,7 +25,7 @@ namespace Entity.Weapon
             }
 
             var simulationWorld = GameEntry.SimulationWorld;
-            if (simulationWorld == null || !simulationWorld.UseSimulationMovement)
+            if (simulationWorld == null)
             {
                 return false;
             }

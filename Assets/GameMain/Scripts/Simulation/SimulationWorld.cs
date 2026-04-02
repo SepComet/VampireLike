@@ -37,9 +37,6 @@ namespace Simulation
         private const int ProjectileStateActive = 0;
         private const int ProjectileStateExpired = 1;
 
-        [Header("模拟世界全局设置")] [Tooltip("是否启用世界模拟")] [SerializeField]
-        private bool _useSimulationMovement = true;
-
         private EntitySync _entitySync;
         private TransformSync _transformSync;
         private HitPresentation _hitPresentation;
@@ -47,7 +44,7 @@ namespace Simulation
         public IReadOnlyList<EnemySimData> Enemies => _enemies;
         public IReadOnlyList<ProjectileSimData> Projectiles => _projectiles;
         public IReadOnlyList<PickupSimData> Pickups => _pickups;
-        public bool UseSimulationMovement => _useSimulationMovement;
+        public bool UseSimulationMovement => true;
 
         #region Lifecycle
 
@@ -68,14 +65,12 @@ namespace Simulation
 
         public void Tick(in SimulationTickContext context)
         {
-            if (!_useSimulationMovement)
-            {
-                return;
-            }
-
+            Vector3 playerPosition = ResolvePlayerPositionForTick(in context);
+            SimulationTickContext resolvedContext =
+                new SimulationTickContext(context.DeltaTime, context.RealDeltaTime, playerPosition);
             using (CustomProfilerMarker.TickEnemies.Auto())
             {
-                TickSimulationPipeline(in context);
+                TickSimulationPipeline(in resolvedContext);
             }
         }
 
