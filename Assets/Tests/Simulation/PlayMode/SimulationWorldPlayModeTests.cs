@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Reflection;
 using Entity;
 using Entity.EntityData;
@@ -99,7 +99,7 @@ namespace Simulation.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Tick_RespectsEnemyMovementSyncFromComponentShell()
+        public IEnumerator Tick_RespectsEnemyMovementSync()
         {
             _world.SyncEnemyMovementInput(4001, false, Vector3.left, 5f, true, 0.45f, 2);
 
@@ -133,3 +133,4 @@ namespace Simulation.Tests.PlayMode
         }
     }
 }
+

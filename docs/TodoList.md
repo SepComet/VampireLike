@@ -40,7 +40,7 @@
 - [x] Checkpoint 3：建立 Simulation 主更新入口并接入 Battle 状态
   - 在 `GameStateBattle.OnUpdate` 中增加 `SimulationWorld.Tick(...)` 调用。
   - 先只接“敌人移动/追踪”系统，其他逻辑保持原路径。
-  - 路线已收敛：不再维护 `UseSimulationMovement` 作为运行时 A/B 与回滚开关。
+  - 路线已收敛：`UseSimulationMovement` 兼容属性已移除，运行时不再保留 A/B 与回滚开关壳层。
   - 完成标准：`SimulationWorld.Tick(...)` 成为唯一执行入口，敌人仍能正常追踪玩家。
 
 - [x] Checkpoint 4：迁移敌人核心移动逻辑到 Simulation（去 MonoBehaviour 核心逻辑）
@@ -72,13 +72,13 @@
 ## 2.5 P1.5 Simulation 收尾（P2 前置）
 - [x] Checkpoint 1：清理 `TickEnemies` 侧 GC（优先级最高）
   - 目标：将 `TickEnemies GC` 从当前 `27~108 KB` 降到 `< 5 KB / frame`。
-  - 重点文件：`Assets/GameMain/Scripts/Utility/EnemySeperator/GridBucketEnemySeparationSolver.cs`。
+  - 历史热点已收口到 `SimulationWorld` 内部敌人分离管线，不再维护独立 legacy solver 文件。
   - 处理方式：桶容器与临时列表复用（包含 bucket list 复用池），避免每帧重建集合。
   - 完成标准：`2k` 敌人压测下 `TickEnemies GC` 稳定 `< 5 KB / frame`。
 
 - [x] Checkpoint 2：解耦 Simulation 核心与 `Transform` 运行时依赖
   - 目标：`SimulationWorld.TickEnemies` 不直接读取或写入 `Transform`。
-  - 重点文件：`Assets/GameMain/Scripts/Simulation/SimulationWorld.cs`、`Assets/GameMain/Scripts/Utility/EnemySeperator/IEnemySeparationSolver.cs`、`Assets/GameMain/Scripts/Utility/EnemySeperator/EnemySeparationSolverProvider.cs`。
+  - 当前重点文件：`Assets/GameMain/Scripts/Simulation/SimulationWorld.cs` 及其敌人分离/数据通道实现；legacy provider/interface 已删除。
   - 处理方式：互斥求解输入改为纯数据（位置/半径/索引），`Transform` 仅在 Presentation 阶段回写。
   - 完成标准：`TickEnemies` 热路径中不出现 `Transform` 访问。
 
@@ -241,3 +241,4 @@
 ## 测试命令
 - PlayMode: `& "C:\UnityProjects\Unity Editor\2022.3.62f3c1\Editor\Unity.exe" -batchmode -nographics -projectPath . -runTests -testPlatform PlayMode -testResults Logs/playmode-test-results.xml -logFile Logs/playmode-tests.log`
 - EditMode: `& "C:\UnityProjects\Unity Editor\2022.3.62f3c1\Editor\Unity.exe" -batchmode -nographics -projectPath . -runTests -testPlatform EditMode -testResults Logs/editmode-test-results.xml -logFile Logs/editmode-tests.log`
+

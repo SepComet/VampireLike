@@ -1,4 +1,4 @@
-using Definition.DataStruct;
+﻿using Definition.DataStruct;
 using Entity;
 using UnityEngine;
 
@@ -10,9 +10,5 @@ public abstract class EnemyBase : TargetableObject
     public virtual float AttackRange => 1f;
 
     public virtual void SetTarget(Transform target) => _target = target;
-
-    protected bool IsSimulationMovementEnabled()
-    {
-        return true;
-    }
 }
+

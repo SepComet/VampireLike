@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using Components;
 using NUnit.Framework;
 using UnityEngine;
@@ -88,7 +88,7 @@ namespace Simulation.Tests.Editor
         }
 
         [Test]
-        public void SyncEnemyMovementInput_DisablesEnemyMovementOnSimulationPath()
+        public void SyncEnemyMovementInput_DisablesEnemyMovement()
         {
             UpsertEnemy(new EnemySimData
             {
@@ -166,3 +166,4 @@ namespace Simulation.Tests.Editor
         }
     }
 }
+

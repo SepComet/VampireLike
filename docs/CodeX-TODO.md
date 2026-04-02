@@ -187,21 +187,21 @@
 ### 推荐实施顺序
 
 1. 先确认唯一执行路径
-- `SimulationWorld` Burst 管线作为唯一运行时执行路径
-- 实体和组件只保留输入、注册、表现职责
+   - `SimulationWorld` Burst 管线作为唯一运行时执行路径
+   - 实体和组件只保留输入、注册、表现职责
 
 2. 再处理战斗入口
-- 先改 `GameStateBattle` / `GameEntry` / `ProcedureGame`
-- 让运行时明确依赖当前 Burst 管线，不再保留双路径语义
+   - 先改 `GameStateBattle` / `GameEntry` / `ProcedureGame`
+   - 让运行时明确依赖当前 Burst 管线，不再保留双路径语义
 
 3. 再清理旧组件驱动路径
-- 先收敛 `MovementComponent`
-- 再删敌人/玩家/投射物实体里的自驱动移动
-- 再删旧 fallback 查询和旧互斥 solver
+   - 先收敛 `MovementComponent`
+   - 再删敌人/玩家/投射物实体里的自驱动移动
+   - 再删旧 fallback 查询和旧互斥 solver
 
 4. 最后重建测试和文档
-- 先让行为稳定
-- 再补新的回归测试和文档
+   - 先让行为稳定
+   - 再补新的回归测试和文档
 
 ### 当前建议
 
@@ -355,72 +355,72 @@
 优先顺序建议：
 
 1. 长枪 / 刺剑
-- 基于 `WeaponKnife`
-- 重点调：
-  - 前刺距离
-  - 命中半径
-  - 冷却
+   - 基于 `WeaponKnife`
+   - 重点调：
+     - 前刺距离
+     - 命中半径
+     - 冷却
 
 2. 大剑 / 半月斩
-- 基于 `WeaponSlash`
-- 重点调：
-  - `SectorAngle`
-  - 攻击范围
-  - 动画时长
+   - 基于 `WeaponSlash`
+   - 重点调：
+     - `SectorAngle`
+     - 攻击范围
+     - 动画时长
 
 3. 战锤 / 震地锤
-- 基于 `WeaponLightning` 或 `WeaponKnife`
-- 重点调：
-  - 落点半径
-  - 前摇
-  - 低频高伤
+   - 基于 `WeaponLightning` 或 `WeaponKnife`
+   - 重点调：
+     - 落点半径
+     - 前摇
+     - 低频高伤
 
 4. 霰弹枪
-- 基于参数化后的 `WeaponHandgun`
-- 重点调：
-  - 散射
-  - 多 pellet
-  - 近距离爆发
+   - 基于参数化后的 `WeaponHandgun`
+   - 重点调：
+     - 散射
+     - 多 pellet
+     - 近距离爆发
 
 5. 狙击枪
-- 基于参数化后的 `WeaponHandgun`
-- 重点调：
-  - 单发高伤
-  - 超远射程
-  - 慢冷却
+   - 基于参数化后的 `WeaponHandgun`
+   - 重点调：
+     - 单发高伤
+     - 超远射程
+     - 慢冷却
 
 6. 陨石杖 / 圣光柱
-- 基于 `WeaponLightning`
-- 重点调：
-  - `HoverHeight`
-  - 爆炸半径
-  - 冷却
+   - 基于 `WeaponLightning`
+   - 重点调：
+     - `HoverHeight`
+     - 爆炸半径
+     - 冷却
 
 ### P3: 中成本扩展
 
 1. 链式闪电
-- 在首目标命中后，继续寻找附近目标
-- 需要新增：
-  - 连锁次数
-  - 连锁半径
-  - 每跳衰减
+   - 在首目标命中后，继续寻找附近目标
+   - 需要新增：
+     - 连锁次数
+     - 连锁半径
+     - 每跳衰减
 
 2. 穿透弹 / 火球
-- 复用现有 projectile/simulation 基础
-- 需要明确：
-  - 穿透次数
-  - 命中后是否爆炸
+   - 复用现有 projectile/simulation 基础
+   - 需要明确：
+     - 穿透次数
+     - 命中后是否爆炸
 
 3. 地雷 / 陷阱
-- 本质是延时触发 area hit
-- 需要新增：
-  - 布置后触发时机
-  - 持续时间
-  - 触发半径
+   - 本质是延时触发 area hit
+   - 需要新增：
+     - 布置后触发时机
+     - 持续时间
+     - 触发半径
 
 4. 回旋镖
-- 需要双阶段投射物状态
-- 成本高于普通枪械/范围武器
+   - 需要双阶段投射物状态
+   - 成本高于普通枪械/范围武器
 
 ### P4: 暂缓项
 
@@ -439,29 +439,29 @@
 ## 新武器接入步骤模板
 
 1. 在 `Weapon.txt` 新增一行
-- 配好基础字段
-- `Params` 写 JSON 对象
+   - 配好基础字段
+   - `Params` 写 JSON 对象
 
 2. 新增 `WeaponType`
-- 在 `Assets/GameMain/Scripts/Definition/Enum/WeaponType.cs`
+   - 在 `Assets/GameMain/Scripts/Definition/Enum/WeaponType.cs`
 
 3. 新增武器数据子类
-- 新建 `WeaponXXXData`
-- 新建 `WeaponXXXParamsData`
-- 在构造里调用 `ParseParams<TParams>()`
+   - 新建 `WeaponXXXData`
+   - 新建 `WeaponXXXParamsData`
+   - 在构造里调用 `ParseParams<TParams>()`
 
 4. 新增武器逻辑类
-- 继承 `WeaponBase`
-- 接入状态机
-- 读取 `ParamsData`
+   - 继承 `WeaponBase`
+   - 接入状态机
+   - 读取 `ParamsData`
 
 5. 接入生成入口
-- 玩家初始武器
-- 商店购买武器
-- 其他掉落/奖励入口
+   - 玩家初始武器
+   - 商店购买武器
+   - 其他掉落/奖励入口
 
 6. 验证点
-- 武器生成正确
-- 参数生效正确
-- 描述文本正确
-- Simulation 模式和非 Simulation 模式都能命中
+   - 武器生成正确
+   - 参数生效正确
+   - 描述文本正确
+   - Simulation 模式和非 Simulation 模式都能命中
