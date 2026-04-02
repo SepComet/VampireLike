@@ -60,12 +60,6 @@
   - 先不迁移完整行为，只保证创建、回收、索引同步路径可用。
   - 完成标准：投射物/掉落物实体生命周期正常，无索引越界与回收遗漏。
 
-- [x] Checkpoint 7：P1 阶段回归与性能记录
-  - 回归用例：战斗 10 分钟、`Battle -> LevelUp -> Shop -> Battle` 循环、掉落吸附与拾取。
-  - Profiling 对比：记录 `0.5k / 1k / 1.5k / 2k` 敌人下 Main Thread、GC Alloc、敌人更新耗时。
-  - 输出文档：`P1 Simulation 分层设计 + 回滚开关说明 + 对比数据`。
-  - 完成标准：核心流程稳定，无新增 Error/Exception；可一键回滚到旧更新路径。
-
 **验收标准**
 - 敌人移动/追踪由 Simulation 统一调度，不再逐个 Enemy MonoBehaviour 执行核心逻辑。
 
@@ -165,13 +159,6 @@
   - 统一 `Schedule -> Dependency Combine -> Complete` 位置，防止隐式同步抖动。
   - 清理战斗帧中不必要的主线程循环（尤其逐实体逻辑）。
   - 完成标准：Profiler 可见主要计算在 Worker Threads；Main Thread 峰值更平滑。
-
-- [ ] Checkpoint 9：P2 回归、压测与结项文档
-  - 回归用例：10 分钟战斗、`Battle -> LevelUp -> Shop -> Battle` 循环、掉落拾取链路。
-  - 压测口径：`0.5k / 1k / 1.5k / 2k` 敌人，记录 Main Thread、Job Workers、GC Alloc、关键 Marker。
-  - 输出文档：`P2 Job/Burst 改造说明 + 开关/回滚策略 + 前后对比数据`。
-  - 完成标准：结论可复现，可作为 P3 GPU Instancing 的输入基线。
-  - 当前状态：`P2 TickEnemies` 在 `2k` 规模下相对 `P1.5` 已降至 `9.44 ms`（约 `-56.4%`），CPU 目标已满足；仍需补齐 `GC Alloc` 与三项回归证据后再勾选。
 
 **验收标准**
 - 在 2k 敌人规模下，CPU Main Thread 明显下降（目标 >= 30%）。
