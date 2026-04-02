@@ -13,7 +13,26 @@ namespace Entity.Weapon
                 return null;
             }
 
-            return TrySelectFromSpatialIndex(weapon, maxSqrRange, out EntityBase indexedTarget) ? indexedTarget : null;
+            if (TrySelectFromSpatialIndex(weapon, maxSqrRange, out EntityBase indexedTarget))
+            {
+                return indexedTarget;
+            }
+
+            EntityBase target = null;
+            float minSqrMagnitude = maxSqrRange > 0f ? maxSqrRange : float.MaxValue;
+
+            foreach (var candidate in candidates)
+            {
+                if (candidate == null || !candidate.Available) continue;
+
+                float sqrMagnitude = AIUtility.GetSqrMagnitudeXZ(weapon, candidate);
+                if (sqrMagnitude >= minSqrMagnitude) continue;
+
+                minSqrMagnitude = sqrMagnitude;
+                target = candidate;
+            }
+
+            return target;
         }
 
         private static bool TrySelectFromSpatialIndex(WeaponBase weapon, float maxSqrRange, out EntityBase target)
