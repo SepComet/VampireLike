@@ -32,8 +32,15 @@ namespace UI
 
         private static LevelUpFormContext BuildContext(LevelUpFormRawData rawData)
         {
-            if (rawData == null || rawData.Rewards == null)
+            if (rawData == null)
             {
+                Log.Error("LevelUpFormController.BuildContext() rawData is null.");
+                return null;
+            }
+
+            if (rawData.Rewards == null)
+            {
+                Log.Error("LevelUpFormController.BuildContext() rewards are null.");
                 return null;
             }
 
@@ -143,7 +150,7 @@ namespace UI
 
         private void OnRefresh(object sender, GameEventArgs e)
         {
-            if (!(sender is LevelUpForm))
+            if ((LevelUpForm)sender != Form)
             {
                 return;
             }
@@ -158,6 +165,11 @@ namespace UI
 
         private void OnLevelUpPropSelected(object sender, GameEventArgs e)
         {
+            if ((LevelUpForm)sender != Form)
+            {
+                return;
+            }
+
             if (!(e is LevelUpPropSelectedEventArgs args))
             {
                 return;

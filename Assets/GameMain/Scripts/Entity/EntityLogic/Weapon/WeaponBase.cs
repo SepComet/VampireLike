@@ -37,7 +37,7 @@ namespace Entity.Weapon
         protected ITargetSelector TargetSelector { get; set; }
 
         protected Dictionary<WeaponStateType, WeaponStateBase> _states;
-        
+
         protected WeaponStateBase _currentState;
 
         protected EntityBase _target;
@@ -50,7 +50,7 @@ namespace Entity.Weapon
 
         private StatComponent _attackStatComponent;
         private System.Action<StatModifier, bool> _attackStatCallback;
-        
+
         private static readonly List<EntityBase> s_EmptyCandidates = new();
 
         #region Lifecycle
@@ -220,6 +220,46 @@ namespace Entity.Weapon
             return AIUtility.GetSqrMagnitudeXZ(this, target) < sqrRange;
         }
 
+        protected bool TryQueueAreaCollisionQuery(in Vector3 center, float radius, int maxTargets = 16)
+        {
+            var simulationWorld = GameEntry.SimulationWorld;
+            if (simulationWorld == null)
+            {
+                return false;
+            }
+
+            int ownerEntityId = WeaponData != null ? WeaponData.OwnerId : Id;
+            return simulationWorld.TryRequestAreaCollision(Id, ownerEntityId, in center, radius, maxTargets);
+        }
+
+        protected bool TryQueueSectorCollisionQuery(in Vector3 center, float radius, in Vector3 direction,
+            float halfAngleDeg, int maxTargets = 16)
+        {
+            var simulationWorld = GameEntry.SimulationWorld;
+            if (simulationWorld == null)
+            {
+                return false;
+            }
+
+            int ownerEntityId = WeaponData != null ? WeaponData.OwnerId : Id;
+            return simulationWorld.TryRequestSectorCollision(Id, ownerEntityId, in center, radius, in direction,
+                halfAngleDeg, maxTargets);
+        }
+
+        protected bool TryQueueRectangleCollisionQuery(in Vector3 center, float halfWidth, float halfLength,
+            in Vector3 direction, int maxTargets = 16)
+        {
+            var simulationWorld = GameEntry.SimulationWorld;
+            if (simulationWorld == null)
+            {
+                return false;
+            }
+
+            int ownerEntityId = WeaponData != null ? WeaponData.OwnerId : Id;
+            return simulationWorld.TryRequestRectangleCollision(Id, ownerEntityId, in center, halfWidth, halfLength,
+                in direction, maxTargets);
+        }
+
         protected void SetTargetSelector(TargetSelectorType selectorType)
         {
             TargetSelector = CreateSelector(selectorType);
@@ -278,12 +318,4 @@ namespace Entity.Weapon
         public abstract void OnLeave();
         public override string ToString() => State.ToString();
     }
-
-
-
-
- 
 }
-
-
-

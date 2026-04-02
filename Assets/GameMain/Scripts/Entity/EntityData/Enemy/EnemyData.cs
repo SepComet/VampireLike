@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using DataTable;
 using Definition.Enum;
 using UnityEngine;
@@ -8,17 +9,7 @@ namespace Entity.EntityData
     [Serializable]
     public class EnemyData : TargetableObjectData
     {
-        [SerializeField] private EnemyType _enemyType;
-        
-        [SerializeField] private int _entityTypeId;
-
-        [SerializeField] private float _speedBase = 0;
-
-        [SerializeField] private int _dropCoin = 0;
-
-        [SerializeField] private int _dropExp = 0;
-
-        [SerializeField] private float _dropPercent = 0;
+        [SerializeField] private DREnemy _drEnemy;
 
         public EnemyData(int entityId, EnemyType enemyType, int level) : base(
             entityId, (int)enemyType, CampType.Enemy)
@@ -29,30 +20,46 @@ namespace Entity.EntityData
             {
                 throw new Exception($"Enemy data table row is missing, EnemyType='{enemyType}'.");
             }
+            else
+            {
+                _drEnemy = enemyRow;
+            }
 
             int effectiveLevel = Mathf.Max(1, level);
-
-            _enemyType = enemyType;
-            _entityTypeId = enemyRow.EntityTypeId;
             MaxHealthBase = enemyRow.MaxHealth + enemyRow.HpAddPerLevel * (effectiveLevel - 1);
-            _speedBase = enemyRow.Speed;
-            _dropCoin = enemyRow.DropCoin;
-            _dropExp = enemyRow.DropExp;
-            _dropPercent = enemyRow.DropPercent;
         }
 
-        public EnemyType EnemyType => _enemyType;
-        
-        public int EntityTypeId => _entityTypeId;
+        public EnemyType EnemyType => (EnemyType)_drEnemy.Id;
+
+        public int EntityTypeId => _drEnemy.EntityTypeId;
 
         public override int MaxHealthBase { get; }
 
-        public float SpeedBase => _speedBase;
+        public int AttackDamage => _drEnemy.AttackDamage;
 
-        public int DropCoin => _dropCoin;
+        public float AttackCooldown => _drEnemy.AttackCooldown;
 
-        public int DropExp => _dropExp;
+        public float AttackRange => _drEnemy.AttackRange;
 
-        public float DropPercent => _dropPercent;
+        public float SpeedBase => _drEnemy.Speed;
+
+        public int DropCoin => _drEnemy.DropCoin;
+
+        public int DropExp => _drEnemy.DropExp;
+
+        public float DropPercent => _drEnemy.DropPercent;
+
+        public IReadOnlyDictionary<string, string> Params => _drEnemy.Params;
+
+        public bool TryGetParam(string key, out string value)
+        {
+            value = null;
+            if (string.IsNullOrEmpty(key) || _drEnemy?.Params == null)
+            {
+                return false;
+            }
+
+            return _drEnemy.Params.TryGetValue(key, out value);
+        }
     }
 }

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using GameFramework.ObjectPool;
 using TMPro;
@@ -9,7 +10,7 @@ namespace CustomComponent
 {
     public class DamageTextComponent : GameFrameworkComponent
     {
-        [SerializeField] private int _instancePoolCapacity = 32;
+        [SerializeField] private int _instancePoolCapacity = 256;
 
         [SerializeField] private string _poolName = "DamageTextItem";
 
@@ -43,14 +44,20 @@ namespace CustomComponent
 
         private DamageTextItem CreateDamageTextItem()
         {
+            if (_activeDamageTextItems.Count == _instancePoolCapacity)
+            {
+                _instancePoolCapacity = Mathf.Min(_instancePoolCapacity * 2, 1024);
+                _damageTextItemPool.Capacity = _instancePoolCapacity;
+            }
+
             DamageTextItemObject itemObject = _damageTextItemPool.Spawn();
             if (itemObject != null)
             {
                 return (DamageTextItem)itemObject.Target;
             }
-            
+
             GameObject itemGo = Instantiate(_damageTextItemPrefab, _instanceRoot, false);
-            
+
             DamageTextItem item = itemGo.GetComponent<DamageTextItem>();
             _damageTextItemPool.Register(DamageTextItemObject.Create(item), true);
             return item;
@@ -62,6 +69,13 @@ namespace CustomComponent
             item.ResetItem();
             _activeDamageTextItems.Remove(item);
             _damageTextItemPool.Unspawn(item);
+        }
+
+        private void OnDestroy()
+        {
+            _activeDamageTextItems.Clear();
+            _damageTextItemPool.Release();
+            _damageTextItemPool = null;
         }
     }
 }

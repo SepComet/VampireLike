@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using Definition.DataStruct;
 using Definition.Enum;
 using GameFramework;
 using CustomUtility;
+using Newtonsoft.Json.Linq;
 using UnityEngine;
 using UnityGameFramework.Runtime;
 
@@ -75,6 +75,11 @@ namespace DataTable
         public Dictionary<string, string> Pramas { get; private set; }
 
         /// <summary>
+        /// 获取武器额外参数 Json。
+        /// </summary>
+        public string ParamsJson { get; private set; }
+
+        /// <summary>
         /// 获取武器额外属性。
         /// </summary>
         public StatModifier[] Modifiers { get; private set; }
@@ -97,7 +102,8 @@ namespace DataTable
             Cooldown = float.Parse(columnStrings[index++]);
             AttackRange = float.Parse(columnStrings[index++]);
             AttackSoundId = int.Parse(columnStrings[index++]);
-            Pramas = DeserializeParams(columnStrings[index++]);
+            ParamsJson = columnStrings[index++];
+            Pramas = DeserializeParams(ParamsJson);
             Modifiers = Utility.Json.ToObject<StatModifier[]>(columnStrings[index++]);
 
             GeneratePropertyArray();
@@ -109,26 +115,40 @@ namespace DataTable
         {
         }
         
+        /// <summary>
+        /// 解参数
+        /// </summary>
+        /// <param name="rawParams"></param>
+        /// <returns></returns>
         private Dictionary<string, string> DeserializeParams(string rawParams)
         {
-            if (!rawParams.StartsWith('[') || !rawParams.EndsWith(']'))
+            var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            if (string.IsNullOrWhiteSpace(rawParams))
             {
-                throw new ArgumentException("Input must be enclosed in square brackets.");
+                return dict;
             }
-            
-            var dict = new Dictionary<string, string>();
-            
-            if (string.IsNullOrEmpty(rawParams)) return dict;
 
-            string[] items = rawParams.Substring(1, rawParams.Length - 2).Split(";");
-            foreach (var item in items)
+            try
             {
-                string entry = item.Trim();
-                if (string.IsNullOrEmpty(entry)) continue;
+                JObject paramObject = Utility.Json.ToObject<JObject>(rawParams);
+                if (paramObject == null)
+                {
+                    return dict;
+                }
 
-                string[] pair = entry.Split(':' , StringSplitOptions.RemoveEmptyEntries);
-                if (pair.Length != 2) continue;
-                dict.Add(pair[0].ToLower(), pair[1]);
+                foreach (var pair in paramObject)
+                {
+                    if (string.IsNullOrWhiteSpace(pair.Key) || pair.Value == null)
+                    {
+                        continue;
+                    }
+
+                    dict[pair.Key] = pair.Value.ToString();
+                }
+            }
+            catch (Exception exception)
+            {
+                Log.Warning("Failed to parse weapon params json '{0}'. Error: {1}", rawParams, exception.Message);
             }
 
             return dict;

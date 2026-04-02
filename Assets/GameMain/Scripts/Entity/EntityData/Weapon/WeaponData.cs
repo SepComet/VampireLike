@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using DataTable;
 using Definition.DataStruct;
 using Definition.Enum;
+using GameFramework;
 
 namespace Entity.EntityData
 {
@@ -28,14 +29,35 @@ namespace Entity.EntityData
 
         public WeaponType WeaponType => (WeaponType)_drWeapon.Id;
 
-        public string GetParamsString(string paramsName)
+        public bool TryGetParam(string key, out string value)
         {
-            if (!Params.TryGetValue(paramsName.ToLower(), out var value))
+            value = null;
+            if (string.IsNullOrEmpty(key) || Params == null)
             {
-                throw new Exception($"Parameter '{paramsName}' not found.");
+                return false;
             }
 
-            return value;
+            return Params.TryGetValue(key, out value);
+        }
+
+        protected TParams ParseParams<TParams>() where TParams : new()
+        {
+            if (string.IsNullOrWhiteSpace(_drWeapon.ParamsJson))
+            {
+                return new TParams();
+            }
+
+            try
+            {
+                TParams parsed = Utility.Json.ToObject<TParams>(_drWeapon.ParamsJson);
+                return parsed ?? new TParams();
+            }
+            catch (Exception exception)
+            {
+                throw new Exception(
+                    $"Failed to parse weapon params, WeaponType='{WeaponType}', Json='{_drWeapon.ParamsJson}'.",
+                    exception);
+            }
         }
 
         /// <summary>
@@ -78,6 +100,8 @@ namespace Entity.EntityData
         /// 额外参数。
         /// </summary>
         public Dictionary<string, string> Params => _drWeapon.Pramas;
+
+        public string ParamsJson => _drWeapon.ParamsJson;
 
         /// <summary>
         /// 额外属性。

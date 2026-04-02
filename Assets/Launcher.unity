@@ -390,7 +390,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 11405216, guid: adb3eb1c35fcff14f89fba7b05c9d71c, type: 3}
       propertyPath: m_AvailableProcedureTypeNames.Array.size
-      value: 12
+      value: 13
       objectReference: {fileID: 0}
     - target: {fileID: 11405216, guid: adb3eb1c35fcff14f89fba7b05c9d71c, type: 3}
       propertyPath: m_AvailableProcedureTypeNames.Array.data[0]
@@ -430,15 +430,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 11405216, guid: adb3eb1c35fcff14f89fba7b05c9d71c, type: 3}
       propertyPath: m_AvailableProcedureTypeNames.Array.data[9]
-      value: Procedure.ProcedureUpdateResources
+      value: Procedure.ProcedureStressTest
       objectReference: {fileID: 0}
     - target: {fileID: 11405216, guid: adb3eb1c35fcff14f89fba7b05c9d71c, type: 3}
       propertyPath: m_AvailableProcedureTypeNames.Array.data[10]
-      value: Procedure.ProcedureUpdateVersion
+      value: Procedure.ProcedureUpdateResources
       objectReference: {fileID: 0}
     - target: {fileID: 11405216, guid: adb3eb1c35fcff14f89fba7b05c9d71c, type: 3}
       propertyPath: m_AvailableProcedureTypeNames.Array.data[11]
-      value: Procedure.ProcedureVerifyResources
+      value: Procedure.ProcedureUpdateVersion
       objectReference: {fileID: 0}
     - target: {fileID: 11405216, guid: adb3eb1c35fcff14f89fba7b05c9d71c, type: 3}
       propertyPath: m_AvailableProcedureTypeNames.Array.data[12]
@@ -607,7 +607,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 11494652, guid: adb3eb1c35fcff14f89fba7b05c9d71c, type: 3}
       propertyPath: m_EntityGroups.Array.data[0].m_InstanceCapacity
-      value: 16
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 11494652, guid: adb3eb1c35fcff14f89fba7b05c9d71c, type: 3}
       propertyPath: m_EntityGroups.Array.data[1].m_InstanceCapacity
@@ -623,7 +623,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 11494652, guid: adb3eb1c35fcff14f89fba7b05c9d71c, type: 3}
       propertyPath: m_EntityGroups.Array.data[4].m_InstanceCapacity
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 11494652, guid: adb3eb1c35fcff14f89fba7b05c9d71c, type: 3}
       propertyPath: m_EntityGroups.Array.data[5].m_InstanceCapacity
@@ -719,7 +719,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 11499388, guid: adb3eb1c35fcff14f89fba7b05c9d71c, type: 3}
       propertyPath: m_FrameRate
-      value: 60
+      value: 240
       objectReference: {fileID: 0}
     - target: {fileID: 11499388, guid: adb3eb1c35fcff14f89fba7b05c9d71c, type: 3}
       propertyPath: m_EditorLanguage
@@ -848,6 +848,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1d8ada5157a04921a6e543a040e57960, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _showBuffSection: 0
+  _showBattleOverview: 0
+  _showCollisionStats: 0
+  _showSpawnControls: 1
+  _showBattleDurationControls: 1
+  _showSeparationSolverControls: 0
+  _showPlayerWeaponControls: 1
+  _showPlayerHealthControls: 1
+  _showTips: 0
 --- !u!1 &513208572
 GameObject:
   m_ObjectHideFlags: 0
@@ -1426,7 +1435,32 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8a558ebbc9cb4d94946ac9f4f27914d8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _enemySeparationCellSize: 0
+  _enemySeparationPushDamping: 0.5
+  _enemySeparationMaxStepScale: 0.5
+  _enemySeparationUseTangentialInAttackRange: 1
+  _enemySeparationPushSmoothing: 0.55
+  _projectileMaxDistanceFromPlayer: 120
+  _projectileMaxVerticalOffsetFromPlayer: 30
+  _projectileHitPresentationEnabled: 1
+  _projectileHitMarkerEnabled: 1
+  _projectileHitMarkerSize: 0.2
+  _projectileHitMarkerYOffset: 1.2
+  _projectileHitMarkerDuration: 0.15
+  _projectileHitMarkerColor: {r: 1, g: 0, b: 0, a: 0.95}
+  _projectileHitEffectEnabled: 0
+  _projectileHitEffectTypeId: 0
   _useSimulationMovement: 1
+  _collisionPipelineSettings:
+    ProjectileCollisionQueryRadius: 0.35
+    ProjectileMaxCandidatesPerQuery: 1
+    ProjectileCollisionCellSize: 0
+    DispatchProjectileHitPresentationEvent: 1
+    DispatchProjectileHitMarkerEvent: 1
+    DispatchProjectileHitEffectEvent: 1
+    ProjectileHitPresentationEffectTypeId: 0
+  _targetSelectionSettings:
+    CellSize: 2
 --- !u!1 &1852670052
 GameObject:
   m_ObjectHideFlags: 0

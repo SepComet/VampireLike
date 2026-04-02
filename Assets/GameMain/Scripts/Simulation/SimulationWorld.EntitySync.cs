@@ -4,14 +4,16 @@ using UnityGameFramework.Runtime;
 
 namespace Simulation
 {
-    public partial class SimulationWorld
+    public sealed partial class SimulationWorld
     {
+        // Bridges entity show/hide events into simulation state registration.
         public sealed class EntitySync
         {
             private const string EnemyGroupName = "Enemy";
             private const string DropGroupName = "Drop";
             private const string BulletGroupName = "Bullet";
             private const string ProjectileGroupName = "Projectile";
+            private const string EnemyProjectileGroupName = "EnemyProjectile";
 
             private readonly SimulationWorld _world;
 
@@ -53,10 +55,11 @@ namespace Simulation
                     return;
                 }
 
-                if ((groupName == BulletGroupName || groupName == ProjectileGroupName) &&
+                if ((groupName == BulletGroupName || groupName == ProjectileGroupName ||
+                     groupName == EnemyProjectileGroupName) &&
                     args.Entity.Logic is EntityBase projectileEntity)
                 {
-                    _world.RegisterProjectileLifecycle(projectileEntity);
+                    _world.RegisterProjectileLifecycle(projectileEntity, args.UserData);
                 }
             }
 
@@ -79,7 +82,8 @@ namespace Simulation
                     return;
                 }
 
-                if (groupName == BulletGroupName || groupName == ProjectileGroupName)
+                if (groupName == BulletGroupName || groupName == ProjectileGroupName ||
+                    groupName == EnemyProjectileGroupName)
                 {
                     _world.UnregisterProjectileLifecycle(args.EntityId);
                 }

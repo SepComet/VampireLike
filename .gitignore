@@ -75,15 +75,15 @@ crashlytics-build.properties
 # Packed Addressables
 /[Aa]ssets/[Aa]ddressable[Aa]ssets[Dd]ata/*/*.bin*
 
-# Temporary auto-generated Android Assets
-/[Aa]ssets/[Ss]treamingAssets/aa.meta
-/[Aa]ssets/[Ss]treamingAssets/aa/*
-
+/Assets/StreamingAssets
+/Assets/StreamingAssets.meta
 /UI参考
-/AGENTS.md
 /bin
 /docs/screenshot
 *.xmind
 /数据表/__pycache__/
+/类吸血鬼项目.md
 
 ~$*.xlsx
+Assets/GameMain/Configs/ResourceBuilder.xml
+/.dotnet

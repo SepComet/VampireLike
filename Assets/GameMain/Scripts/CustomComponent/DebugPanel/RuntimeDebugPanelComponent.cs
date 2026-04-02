@@ -1,6 +1,8 @@
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
 using System;
 using System.Linq;
+using Components;
+using CustomEvent;
 using DataTable;
 using Definition.DataStruct;
 using Entity;
@@ -19,8 +21,20 @@ namespace CustomComponent
         private const float MinSpawnRate = 0.1f;
         private const float CornerTapWindow = 0.6f;
         private const int RequiredCornerTapCount = 3;
+        private const int DebugHealAmount = 200;
 
-        private Rect _windowRect = new Rect(20f, 60f, 460f, 620f);
+        [Header("Window Content")]
+        [SerializeField] private bool _showBuffSection = true;
+        [SerializeField] private bool _showBattleOverview = true;
+        [SerializeField] private bool _showCollisionStats = true;
+        [SerializeField] private bool _showSpawnControls = true;
+        [SerializeField] private bool _showBattleDurationControls = true;
+        [SerializeField] private bool _showSeparationSolverControls = true;
+        [SerializeField] private bool _showPlayerWeaponControls = true;
+        [SerializeField] private bool _showPlayerHealthControls = true;
+        [SerializeField] private bool _showTips = true;
+
+        private Rect _windowRect = new Rect(20f, 60f, 460f, 800f);
         private bool _isPanelVisible;
         private int _windowId;
 
@@ -38,6 +52,7 @@ namespace CustomComponent
 
         private int _cornerTapCount;
         private float _lastCornerTapTime = -10f;
+        private bool _lockPlayerHealthToMax;
 
         protected override void Awake()
         {
@@ -54,6 +69,10 @@ namespace CustomComponent
             }
 
             HandleCornerTapGesture();
+            if (_lockPlayerHealthToMax)
+            {
+                KeepPlayerHealthAtMax();
+            }
         }
 
         private void OnGUI()
@@ -77,20 +96,42 @@ namespace CustomComponent
 
         private void DrawWindow(int windowId)
         {
-            EnsurePropList();
+            if (_showBuffSection)
+            {
+                EnsurePropList();
+            }
 
             GUILayout.BeginVertical();
 
-            DrawBuffSection();
+            bool hasPreviousSection = false;
+            if (_showBuffSection)
+            {
+                DrawBuffSection();
+                hasPreviousSection = true;
+            }
 
-            GUILayout.Space(8f);
-            GUILayout.Label(string.Empty, GUI.skin.horizontalSlider);
-            GUILayout.Space(8f);
+            if (HasVisibleBattleSection())
+            {
+                if (hasPreviousSection)
+                {
+                    GUILayout.Space(8f);
+                    GUILayout.Label(string.Empty, GUI.skin.horizontalSlider);
+                    GUILayout.Space(8f);
+                }
 
-            DrawBattleSection();
+                DrawBattleSection();
+                hasPreviousSection = true;
+            }
 
-            GUILayout.Space(8f);
-            GUILayout.Label("Tips: press `F8` or tap top-left corner 3 times to toggle.", GUILayout.Height(20f));
+            if (_showTips)
+            {
+                if (hasPreviousSection)
+                {
+                    GUILayout.Space(8f);
+                }
+
+                GUILayout.Label("Tips: press `F8` or tap top-left corner 3 times to toggle.", GUILayout.Height(20f));
+            }
 
             GUILayout.EndVertical();
             GUI.DragWindow(new Rect(0, 0, 10000, 22));
@@ -147,6 +188,7 @@ namespace CustomComponent
             ProcedureGame procedure = GameEntry.Procedure.CurrentProcedure as ProcedureGame;
             EnemyManagerComponent enemyManager = GameEntry.EnemyManager;
             Player player = FindPlayer();
+            HealthComponent playerHealth = player != null ? player.GetComponent<HealthComponent>() : null;
 
             if (enemyManager == null)
             {
@@ -160,86 +202,160 @@ namespace CustomComponent
                 return;
             }
 
-            GUILayout.Label($"Spawn Rate: {enemyManager.SpawnRateScale:F2}");
-            GUILayout.Label($"Battle Time: {enemyManager.ElapsedBattleTime:F1}s / {enemyManager.BattleDuration:F1}s");
-            GUILayout.Label($"Enemy Count: {enemyManager.CurrentEnemyCount}");
-
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Rate", GUILayout.Width(52f));
-            string rateText = GUILayout.TextField(_spawnRateScaleInput.ToString("F2"), GUILayout.Width(60f));
-            if (float.TryParse(rateText, out float parsedRate))
+            if (_showBattleOverview)
             {
-                _spawnRateScaleInput = Mathf.Clamp(parsedRate, MinSpawnRate, 50f);
+                GUILayout.Label($"Spawn Rate: {enemyManager.SpawnRateScale:F2}");
+                GUILayout.Label($"Battle Time: {enemyManager.ElapsedBattleTime:F1}s / {enemyManager.BattleDuration:F1}s");
+                GUILayout.Label($"Enemy Count: {enemyManager.CurrentEnemyCount}");
             }
 
-            if (GUILayout.Button("Apply", GUILayout.Width(70f)))
+            Simulation.SimulationWorld simulationWorld = GameEntry.SimulationWorld;
+            if (_showCollisionStats && simulationWorld != null)
             {
-                enemyManager.SetSpawnRateScale(_spawnRateScaleInput);
-            }
-
-            if (GUILayout.Button("x0.5", GUILayout.Width(60f)))
-            {
-                _spawnRateScaleInput = Mathf.Max(MinSpawnRate, enemyManager.SpawnRateScale * 0.5f);
-                enemyManager.SetSpawnRateScale(_spawnRateScaleInput);
-            }
-
-            if (GUILayout.Button("x2", GUILayout.Width(60f)))
-            {
-                _spawnRateScaleInput = enemyManager.SpawnRateScale * 2f;
-                enemyManager.SetSpawnRateScale(_spawnRateScaleInput);
-            }
-
-            GUILayout.EndHorizontal();
-
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Add Sec", GUILayout.Width(52f));
-            string durationText = GUILayout.TextField(_extendDurationSeconds.ToString("F0"), GUILayout.Width(60f));
-            if (float.TryParse(durationText, out float parsedDuration))
-            {
-                _extendDurationSeconds = Mathf.Clamp(parsedDuration, 1f, 3600f);
-            }
-
-            if (GUILayout.Button("Extend Battle", GUILayout.Height(24f)))
-            {
-                if (procedure.CurrentGameState is GameStateBattle gameState)
+                GUILayout.Space(4f);
+                GUILayout.Label(
+                    $"Collision Queries: total {simulationWorld.LastCollisionQueryCount} (Projectile {simulationWorld.LastProjectileCollisionQueryCount} / Area {simulationWorld.LastAreaCollisionQueryCount})");
+                GUILayout.Label(
+                    $"Collision Candidates: total {simulationWorld.LastCollisionCandidateCount} (Projectile {simulationWorld.LastProjectileCollisionCandidateCount} / Area {simulationWorld.LastAreaCollisionCandidateCount})");
+                GUILayout.Label(
+                    $"Area Resolve: hits {simulationWorld.LastResolvedAreaHitCount}");
+                GUILayout.Label(
+                    $"Broad Phase: cell {simulationWorld.LastCollisionCellSize:F2}, hasEnemyTargets {(simulationWorld.LastCollisionHasEnemyTargets ? "Yes" : "No")}");
+                if (simulationWorld.LastCollisionCandidateCount != 0)
                 {
-                    gameState.AddBattleDuration(_extendDurationSeconds);
+                    Log.Info($"LastCollisionCandidateCount:{simulationWorld.LastCollisionCandidateCount}");
+                }
+
+                if (simulationWorld.LastResolvedAreaHitCount != 0)
+                {
+                    Log.Info($"LastResolvedAreaHitCount:{simulationWorld.LastResolvedAreaHitCount}");
                 }
             }
 
-            GUILayout.EndHorizontal();
-
-            GUILayout.Space(4f);
-            GUILayout.Label($"Enemy Separation Solver: {EnemySeparationSolverProvider.CurrentSolverName}");
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Use Naive O(N^2)", GUILayout.Height(24f)))
+            if (_showSpawnControls)
             {
-                EnemySeparationSolverProvider.UseNaiveSolver();
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("Rate", GUILayout.Width(52f));
+                string rateText = GUILayout.TextField(_spawnRateScaleInput.ToString("F2"), GUILayout.Width(60f));
+                if (float.TryParse(rateText, out float parsedRate))
+                {
+                    _spawnRateScaleInput = Mathf.Clamp(parsedRate, MinSpawnRate, 50f);
+                }
+
+                if (GUILayout.Button("Apply", GUILayout.Width(70f)))
+                {
+                    enemyManager.SetSpawnRateScale(_spawnRateScaleInput);
+                }
+
+                if (GUILayout.Button("x0.5", GUILayout.Width(60f)))
+                {
+                    _spawnRateScaleInput = Mathf.Max(MinSpawnRate, enemyManager.SpawnRateScale * 0.5f);
+                    enemyManager.SetSpawnRateScale(_spawnRateScaleInput);
+                }
+
+                if (GUILayout.Button("x2", GUILayout.Width(60f)))
+                {
+                    _spawnRateScaleInput = enemyManager.SpawnRateScale * 2f;
+                    enemyManager.SetSpawnRateScale(_spawnRateScaleInput);
+                }
+
+                GUILayout.EndHorizontal();
             }
 
-            if (GUILayout.Button("Use Grid Bucket", GUILayout.Height(24f)))
+            if (_showBattleDurationControls)
             {
-                EnemySeparationSolverProvider.UseGridBucketSolver();
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("Add Sec", GUILayout.Width(52f));
+                string durationText = GUILayout.TextField(_extendDurationSeconds.ToString("F0"), GUILayout.Width(60f));
+                if (float.TryParse(durationText, out float parsedDuration))
+                {
+                    _extendDurationSeconds = Mathf.Clamp(parsedDuration, 1f, 3600f);
+                }
+
+                if (GUILayout.Button("Extend Battle", GUILayout.Height(24f)))
+                {
+                    if (procedure.CurrentGameState is GameStateBattle gameState)
+                    {
+                        gameState.AddBattleDuration(_extendDurationSeconds);
+                    }
+                }
+
+                GUILayout.EndHorizontal();
             }
 
-            GUILayout.EndHorizontal();
-
-            GUILayout.Label(
-                $"Player Weapon: {(player == null ? "Player not found" : (player.WeaponEnabled ? "Enabled" : "Disabled"))}");
-            GUILayout.BeginHorizontal();
-            GUI.enabled = player != null;
-            if (GUILayout.Button("Disable Weapons", GUILayout.Height(24f)))
+            if (_showSeparationSolverControls)
             {
-                player.SetWeaponEnabled(false);
+                GUILayout.Space(4f);
+                GUILayout.Label($"Enemy Separation Solver: {EnemySeparationSolverProvider.CurrentSolverName}");
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button("Use Naive O(N^2)", GUILayout.Height(24f)))
+                {
+                    EnemySeparationSolverProvider.UseNaiveSolver();
+                }
+
+                if (GUILayout.Button("Use Grid Bucket", GUILayout.Height(24f)))
+                {
+                    EnemySeparationSolverProvider.UseGridBucketSolver();
+                }
+
+                GUILayout.EndHorizontal();
             }
 
-            if (GUILayout.Button("Enable Weapons", GUILayout.Height(24f)))
+            if (_showPlayerWeaponControls)
             {
-                player.SetWeaponEnabled(true);
+                GUILayout.Label(
+                    $"Player Weapon: {(player == null ? "Player not found" : (player.WeaponEnabled ? "Enabled" : "Disabled"))}");
+                GUILayout.BeginHorizontal();
+                GUI.enabled = player != null;
+                if (GUILayout.Button("Disable Weapons", GUILayout.Height(24f)))
+                {
+                    player.SetWeaponEnabled(false);
+                }
+
+                if (GUILayout.Button("Enable Weapons", GUILayout.Height(24f)))
+                {
+                    player.SetWeaponEnabled(true);
+                }
+
+                GUI.enabled = true;
+                GUILayout.EndHorizontal();
             }
 
-            GUI.enabled = true;
-            GUILayout.EndHorizontal();
+            if (_showPlayerHealthControls)
+            {
+                GUILayout.Space(4f);
+                GUILayout.Label(
+                    $"Player HP: {(playerHealth == null ? "Unavailable" : $"{playerHealth.CurrentHealth}/{playerHealth.MaxHealth}")}");
+                GUILayout.BeginHorizontal();
+                GUI.enabled = playerHealth != null;
+                if (GUILayout.Button($"+{DebugHealAmount} HP", GUILayout.Height(24f)))
+                {
+                    AddPlayerHealth(playerHealth, DebugHealAmount);
+                }
+
+                if (GUILayout.Button(_lockPlayerHealthToMax ? "GodMode: ON" : "GodMode: OFF", GUILayout.Height(24f)))
+                {
+                    _lockPlayerHealthToMax = !_lockPlayerHealthToMax;
+                    if (_lockPlayerHealthToMax)
+                    {
+                        RestorePlayerHealthToMax(playerHealth);
+                    }
+                }
+
+                GUI.enabled = true;
+                GUILayout.EndHorizontal();
+            }
+        }
+
+        private bool HasVisibleBattleSection()
+        {
+            return _showBattleOverview ||
+                   _showCollisionStats ||
+                   _showSpawnControls ||
+                   _showBattleDurationControls ||
+                   _showSeparationSolverControls ||
+                   _showPlayerWeaponControls ||
+                   _showPlayerHealthControls;
         }
 
         private void EnsurePropList(bool force = false)
@@ -297,6 +413,52 @@ namespace CustomComponent
         private static Player FindPlayer()
         {
             return UnityEngine.Object.FindObjectOfType<Player>();
+        }
+
+        private void KeepPlayerHealthAtMax()
+        {
+            Player player = FindPlayer();
+            if (player == null) return;
+
+            HealthComponent playerHealth = player.GetComponent<HealthComponent>();
+            if (playerHealth == null) return;
+
+            RestorePlayerHealthToMax(playerHealth);
+        }
+
+        private static void AddPlayerHealth(HealthComponent playerHealth, int amount)
+        {
+            if (playerHealth == null || amount <= 0) return;
+            if (playerHealth.CurrentHealth <= 0) return;
+
+            int maxHealth = playerHealth.MaxHealth;
+            if (maxHealth <= 0) return;
+
+            int nextHealth = Mathf.Clamp(playerHealth.CurrentHealth + amount, 0, maxHealth);
+            if (nextHealth == playerHealth.CurrentHealth) return;
+
+            playerHealth.CurrentHealth = nextHealth;
+            PublishPlayerHealthChanged(playerHealth);
+        }
+
+        private static void RestorePlayerHealthToMax(HealthComponent playerHealth)
+        {
+            if (playerHealth == null) return;
+            if (playerHealth.CurrentHealth <= 0) return;
+
+            int maxHealth = playerHealth.MaxHealth;
+            if (maxHealth <= 0 || playerHealth.CurrentHealth >= maxHealth) return;
+
+            playerHealth.CurrentHealth = maxHealth;
+            PublishPlayerHealthChanged(playerHealth);
+        }
+
+        private static void PublishPlayerHealthChanged(HealthComponent playerHealth)
+        {
+            if (playerHealth == null || GameEntry.Event == null) return;
+
+            GameEntry.Event.Fire(null,
+                PlayerHealthChangeEventArgs.Create(0, playerHealth.CurrentHealth, playerHealth.MaxHealth));
         }
 
         private static void AddSelectedBuffToPlayer(DRProp prop, int count)

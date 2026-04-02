@@ -1,5 +1,4 @@
-#	商品表			
-#	Id		GoodsType	GoodsTypeId
+#	Id	列1	GoodsType	GoodsTypeId
 #	int		GoodsType	int
 #	商品编号	策划备注	商品类型	商品对应物品Id
 	101	道具：药	Prop	101
@@ -25,3 +24,5 @@
 	121		Prop	119
 	122		Prop	120
 	123		Weapon	3
+	124		Weapon	4
+	125		Weapon	5

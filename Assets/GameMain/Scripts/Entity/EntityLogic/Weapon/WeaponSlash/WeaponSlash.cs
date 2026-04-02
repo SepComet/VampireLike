@@ -13,8 +13,6 @@ namespace Entity.Weapon
     {
         #region Property
 
-        private const string SectorAngleParamKey = "SectorAngle";
-
         private WeaponSlashData _weaponData;
 
         private Quaternion _cachedRotation;
@@ -93,12 +91,8 @@ namespace Entity.Weapon
 
         private void ApplySectorDamage()
         {
-            if (_attackRadius <= 0f || _hitResults == null || _hitResults.Length == 0) return;
+            if (_attackRadius <= 0f) return;
 
-            int hitCount = Physics.OverlapSphereNonAlloc(_attackCenter, _attackRadius, _hitResults, _hitMask,
-                QueryTriggerInteraction.Collide);
-
-            _hitEntityIds.Clear();
             Vector3 forward = CachedTransform.forward;
             forward.y = 0f;
             if (forward.sqrMagnitude <= Mathf.Epsilon)
@@ -107,8 +101,20 @@ namespace Entity.Weapon
             }
 
             forward.Normalize();
-
             float halfAngle = _sectorAngle * 0.5f;
+            if (TryQueueSectorCollisionQuery(_attackCenter, _attackRadius, in forward, halfAngle,
+                    Mathf.Max(1, _maxHitColliders)))
+            {
+                _hitEntityIds.Clear();
+                return;
+            }
+
+            if (_hitResults == null || _hitResults.Length == 0) return;
+
+            int hitCount = Physics.OverlapSphereNonAlloc(_attackCenter, _attackRadius, _hitResults, _hitMask,
+                QueryTriggerInteraction.Collide);
+
+            _hitEntityIds.Clear();
             for (int i = 0; i < hitCount; i++)
             {
                 Collider collider = _hitResults[i];
@@ -176,15 +182,8 @@ namespace Entity.Weapon
             _attackRadius = Mathf.Max(0.1f, _weaponData.AttackRange);
             _attackRadiusSqr = _attackRadius * _attackRadius;
 
-            _sectorAngle = 90f;
-            if (_weaponData.Params != null &&
-                _weaponData.Params.TryGetValue(SectorAngleParamKey.ToLower(), out string rawAngle))
-            {
-                if (float.TryParse(rawAngle, out float parsedAngle))
-                {
-                    _sectorAngle = Mathf.Clamp(parsedAngle, 1f, 360f);
-                }
-            }
+            float configuredSectorAngle = _weaponData.ParamsData != null ? _weaponData.ParamsData.SectorAngle : 0f;
+            _sectorAngle = configuredSectorAngle > 0f ? Mathf.Clamp(configuredSectorAngle, 1f, 360f) : 90f;
 
             int capacity = Mathf.Max(1, _maxHitColliders);
             if (_hitResults == null || _hitResults.Length != capacity)

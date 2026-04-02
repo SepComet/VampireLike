@@ -6,5 +6,7 @@ namespace Definition.Enum
         WeaponKnife = 1,
         WeaponHandgun = 2,
         WeaponSlash = 3,
+        WeaponLightning = 4,
+        WeaponLance = 5,
     }
 }

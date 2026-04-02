@@ -160,6 +160,11 @@ namespace CustomUtility
 
         public static void PerformCollision(TargetableObject entity, EntityBase other)
         {
+            PerformCollision(entity, other, false);
+        }
+
+        public static void PerformCollision(TargetableObject entity, EntityBase other, bool ignoreRuntimeState)
+        {
             if (entity == null || other == null)
             {
                 return;
@@ -201,10 +206,30 @@ namespace CustomUtility
             //     return;
             // }
 
+            EnemyProjectile enemyProjectile = other as EnemyProjectile;
+            if (enemyProjectile != null)
+            {
+                if (!ignoreRuntimeState && !enemyProjectile.IsActive) return;
+
+                ImpactData entityImpactData = entity.GetImpactData();
+                ImpactData projectileImpactData = enemyProjectile.GetImpactData();
+                if (GetRelation(entityImpactData.Camp, projectileImpactData.Camp) == RelationType.Friendly)
+                {
+                    return;
+                }
+
+                int entityDamageHP = CalcDamageHP(projectileImpactData.AttackBase, projectileImpactData.AttackStat,
+                    entityImpactData.DefenseStat, entityImpactData.DodgeStat);
+
+                entity.ApplyDamage(enemyProjectile, entityDamageHP);
+                enemyProjectile.Expire();
+                return;
+            }
+
             WeaponBase weapon = other as WeaponBase;
             if (weapon != null)
             {
-                if (!weapon.IsAttacking) return;
+                if (!ignoreRuntimeState && !weapon.IsAttacking) return;
                 ImpactData entityImpactData = entity.GetImpactData();
                 ImpactData weaponImpactData = weapon.GetImpactData();
                 if (GetRelation(entityImpactData.Camp, weaponImpactData.Camp) == RelationType.Friendly)
@@ -220,13 +245,13 @@ namespace CustomUtility
             }
         }
 
-        private static int CalcDamageHP(int attack, StatProperty attackStat, StatProperty defenseStat,
+        public static int CalcDamageHP(int attack, StatProperty attackStat, StatProperty defenseStat,
             StatProperty dodgeStat)
         {
             // 1. 处理闪避（闪避率取值 (0, 0.9)，不允许拉满闪避）
             if (dodgeStat != null)
             {
-                if (Random.value < Mathf.Clamp(dodgeStat.Percent, 0, 0.9f)) return 0;    
+                if (Random.value < Mathf.Clamp(dodgeStat.Value, 0, 0.9f)) return 0;    
             }
             
             // 2. 处理攻击加成 最终伤害 = (基础伤害 + 伤害提升固定值) * 伤害提升率

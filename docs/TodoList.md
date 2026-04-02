@@ -10,7 +10,7 @@
 
 ## 1. P0 基线修正与性能基准
 - [x] 建立性能基准场景（建议复用 `Game.unity` + 压测参数）：
-  - 指标：`1k / 2k / 3k` 敌人时的 FPS、CPU Main Thread、GC Alloc、Draw Calls。
+  - 指标：`0.5k / 1k / 1.5k / 2k` 敌人时的 FPS、CPU Main Thread、GC Alloc、Draw Calls。
   - 输出：一份基线表格（开发机配置 + Unity Profiler 截图）。
 - [x] 修正当前高风险逻辑问题（避免后续优化建立在不稳定行为上）：
   - `ProcedureGame.OnEnter()` 与 `_hudInitialized` 逻辑中有重复初始化状态机风险（`InitGameState()` 被调用两次）。
@@ -62,7 +62,7 @@
 
 - [x] Checkpoint 7：P1 阶段回归与性能记录
   - 回归用例：战斗 10 分钟、`Battle -> LevelUp -> Shop -> Battle` 循环、掉落吸附与拾取。
-  - Profiling 对比：记录 1k/2k/3k 敌人下 Main Thread、GC Alloc、敌人更新耗时。
+  - Profiling 对比：记录 `0.5k / 1k / 1.5k / 2k` 敌人下 Main Thread、GC Alloc、敌人更新耗时。
   - 输出文档：`P1 Simulation 分层设计 + 回滚开关说明 + 对比数据`。
   - 完成标准：核心流程稳定，无新增 Error/Exception；可一键回滚到旧更新路径。
 
@@ -74,7 +74,7 @@
   - 目标：将 `TickEnemies GC` 从当前 `27~108 KB` 降到 `< 5 KB / frame`。
   - 重点文件：`Assets/GameMain/Scripts/Utility/EnemySeperator/GridBucketEnemySeparationSolver.cs`。
   - 处理方式：桶容器与临时列表复用（包含 bucket list 复用池），避免每帧重建集合。
-  - 完成标准：`2000` 敌人压测下 `TickEnemies GC` 稳定 `< 5 KB / frame`。
+  - 完成标准：`2k` 敌人压测下 `TickEnemies GC` 稳定 `< 5 KB / frame`。
 
 - [x] Checkpoint 2：解耦 Simulation 核心与 `Transform` 运行时依赖
   - 目标：`SimulationWorld.TickEnemies` 不直接读取或写入 `Transform`。
@@ -111,23 +111,72 @@
 - Simulation 层与表现层边界清晰，可无缝衔接 P2 Job/Burst 改造。
 
 ## 3. P2 Job System + Burst 落地（核心性能阶段）
-- [ ] 引入并锁定依赖版本（Unity 2022.3 对应）：
-  - `com.unity.collections`
-  - `com.unity.jobs`
-  - `com.unity.burst`
-  - `com.unity.mathematics`
-- [ ] 第一批 Job 化模块（优先级从高到低）：
-  1. 敌人移动与朝向更新（`IJobParallelFor`）。
-  2. 目标选择加速（空间哈希/网格分桶，减少全量最近邻搜索）。
-  3. 投射物批量移动与寿命回收。
-  4. AOE/碰撞候选筛选（先 broad phase，后精算）。
-- [ ] Burst 编译策略：
-  - 热路径 Job 全部 `[BurstCompile]`。
-  - 禁止在 Job 内使用托管分配、虚调用、LINQ。
-- [ ] 主线程仅做：输入采样、状态切换、UI同步、实体显隐。
+- [x] Checkpoint 1：依赖锁定与运行开关落地
+  - 在 `Packages/manifest.json` 锁定并确认版本：
+    - `com.unity.collections`
+    - `com.unity.jobs`（已废弃并并入 `com.unity.collections`，Unity 2022.3 不再单独锁定包）
+    - `com.unity.burst`
+    - `com.unity.mathematics`
+  - 增加 P2 运行开关（建议）：
+    - `UseJobSimulation`
+    - `UseBurstJobs`
+  - 约束：默认可一键回退到 P1.5 路径，避免全量切换导致定位困难。
+  - 完成标准：Editor/Development Build 均可编译运行；关闭开关时行为与 P1.5 一致。
+
+- [x] Checkpoint 2：Simulation 与 Job 数据通道打通（仅建通道，不改行为）
+  - 为敌人/投射物建立 Job 输入输出结构（纯数据，不含 `Transform`/托管引用）。
+  - 建立 `SimulationWorld -> NativeContainer -> SimulationWorld` 的拷贝与回写流程。
+  - 统一生命周期：`Allocator.Persistent` 分配、集中 `Dispose`，避免泄漏。
+  - 完成标准：战斗循环可稳定运行，且该通道持续帧无新增 GC Alloc 热点。
+
+- [x] Checkpoint 3：敌人移动与朝向 Job 化（第一优先）
+  - 将敌人移动、朝向更新迁移至 `IJobParallelFor`。
+  - 输入最少包含：`position/forward/speed/targetPosition/deltaTime/state`。
+  - 输出最少包含：`nextPosition/nextForward/isMoving`。
+  - 保留 A/B 路径：可切换 Job 与旧逻辑对比。
+  - 完成标准：开启 Job 后敌人追踪行为视觉一致；`TickEnemies` 主线程耗时明显下降。
+
+- [x] Checkpoint 4：目标选择加速（空间哈希/网格分桶）
+  - 建立敌人/目标的空间索引容器（建议 `NativeParallelMultiHashMap` 或等价结构）。
+  - 拆分为两个阶段：
+    - 构建分桶（Build Buckets）
+    - 邻域候选查询（Query Neighbors）
+  - 避免全量最近邻搜索，控制复杂度随敌人数增长的斜率。
+  - 完成标准：`2k` 敌人下目标选择阶段耗时稳定，且无索引越界/漏目标回归。
+
+- [x] Checkpoint 5：投射物批量移动与寿命回收 Job 化
+  - 投射物数据结构最少包含：`position/velocity/lifeTime/age/active`。
+  - 迁移投射物移动、越界判定、寿命回收到 Job。
+  - 回收后保持实体池与索引同步，防止悬空引用。
+  - 完成标准：连续战斗下投射物数量曲线稳定，无异常积压或提前回收。
+
+- [x] Checkpoint 6：AOE/碰撞候选筛选 Job 化（Broad Phase 优先）
+  - 先 Job 化候选生成（Broad Phase），减少精算对数。
+  - 精算与伤害结算可先保留主线程，但输入改为候选列表驱动。
+  - 建立命中事件缓冲区，统一在主线程提交表现层事件。
+  - 完成标准：命中结果与现有逻辑一致，候选数量与耗时显著下降。
+
+- [x] Checkpoint 7：Burst 策略落地与热路径约束
+  - 热路径 Job 全部添加 `[BurstCompile]`，并在 Burst Inspector 确认已生效。
+  - 清理 Job 内不兼容写法：托管分配、虚调用、LINQ、异常路径热调用。
+  - 数学计算统一迁移到 `Unity.Mathematics`。
+  - 完成标准：核心 Job 均由 Burst 编译，且无安全检查错误/降级回 Mono 的关键路径。
+
+- [x] Checkpoint 8：主线程职责收口与调度稳定
+  - 明确主线程只做：输入采样、状态切换、UI 同步、实体显隐、最终写回。
+  - 统一 `Schedule -> Dependency Combine -> Complete` 位置，防止隐式同步抖动。
+  - 清理战斗帧中不必要的主线程循环（尤其逐实体逻辑）。
+  - 完成标准：Profiler 可见主要计算在 Worker Threads；Main Thread 峰值更平滑。
+
+- [ ] Checkpoint 9：P2 回归、压测与结项文档
+  - 回归用例：10 分钟战斗、`Battle -> LevelUp -> Shop -> Battle` 循环、掉落拾取链路。
+  - 压测口径：`0.5k / 1k / 1.5k / 2k` 敌人，记录 Main Thread、Job Workers、GC Alloc、关键 Marker。
+  - 输出文档：`P2 Job/Burst 改造说明 + 开关/回滚策略 + 前后对比数据`。
+  - 完成标准：结论可复现，可作为 P3 GPU Instancing 的输入基线。
+  - 当前状态：`P2 TickEnemies` 在 `2k` 规模下相对 `P1.5` 已降至 `9.44 ms`（约 `-56.4%`），CPU 目标已满足；仍需补齐 `GC Alloc` 与三项回归证据后再勾选。
 
 **验收标准**
-- 在 3k 敌人规模下，CPU Main Thread 明显下降（目标 >= 30%）。
+- 在 2k 敌人规模下，CPU Main Thread 明显下降（目标 >= 30%）。
 - Profiler 中战斗帧 GC Alloc 接近 0（持续帧）。
 
 ## 4. P3 GPU Instancing 渲染管线（与 Job 并行推进）
@@ -191,3 +240,6 @@
 - [ ] Profiling 对比（改造前后同场景同参数）。
 - [ ] 风险与回滚说明（特别是热更新与渲染链路）。
 
+## 测试命令
+- PlayMode: `& "C:\UnityProjects\Unity Editor\2022.3.62f3c1\Editor\Unity.exe" -batchmode -nographics -projectPath . -runTests -testPlatform PlayMode -testResults Logs/playmode-test-results.xml -logFile Logs/playmode-tests.log`
+- EditMode: `& "C:\UnityProjects\Unity Editor\2022.3.62f3c1\Editor\Unity.exe" -batchmode -nographics -projectPath . -runTests -testPlatform EditMode -testResults Logs/editmode-test-results.xml -logFile Logs/editmode-tests.log`

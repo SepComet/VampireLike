@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using CustomEvent;
 using Definition.DataStruct;
 using Definition.Enum;
-using Entity;
 using CustomUtility;
 using Entity.Weapon;
 using GameFramework.Event;
@@ -47,6 +46,7 @@ namespace UI
         {
             if (rawData == null)
             {
+                Log.Error("ShopFormController.BuildContext() rawData is null.");
                 return null;
             }
 
@@ -171,8 +171,15 @@ namespace UI
 
         private static void AppendDisplayItemContext(DisplayListAreaContext listContext, DisplayItemContext newItem)
         {
-            if (listContext == null || newItem == null)
+            if (listContext == null)
             {
+                Log.Error("ShopFormController.AppendDisplayItemContext() listContext is null.");
+                return;
+            }
+
+            if (newItem == null)
+            {
+                Log.Warning("ShopFormController.AppendDisplayItemContext() newItem is null.");
                 return;
             }
 
@@ -191,6 +198,12 @@ namespace UI
         #endregion
 
         #region UI Methods
+
+        public override void CloseUI()
+        {
+            base.CloseUI();
+            GameEntry.Event.Fire(this, DisplayItemInfoHideEventArgs.Create(true));
+        }
 
         public int? OpenUI(ShopFormRawData rawData)
         {
@@ -243,8 +256,15 @@ namespace UI
 
         private void RefreshGoodsItems(ShopRefreshResult result)
         {
-            if (Context == null || result == null)
+            if (result == null)
             {
+                Log.Error("ShopFormController.RefreshGoodsItems() result is null.");
+                return;
+            }
+
+            if (Context == null)
+            {
+                Log.Error("ShopFormController.RefreshGoodsItems() Context is null.");
                 return;
             }
 
@@ -253,6 +273,7 @@ namespace UI
 
             if (Form == null)
             {
+                Log.Error("ShopFormController.RefreshGoodsItems() Form is null.");
                 return;
             }
 
@@ -262,8 +283,15 @@ namespace UI
 
         private void ApplyGoodsPurchased(ShopPurchaseResult result)
         {
-            if (Context == null || result == null)
+            if (result == null)
             {
+                Log.Error("ShopFormController.ApplyGoodsPurchased() result is null.");
+                return;
+            }
+
+            if (Context == null)
+            {
+                Log.Error("ShopFormController.ApplyGoodsPurchased() Context is null.");
                 return;
             }
 
@@ -285,6 +313,104 @@ namespace UI
             }
 
             Form?.ApplyGoodsPurchased(result.GoodsIndex, result.DisplayItem);
+        }
+
+        private bool IsCurrentFormEventSender(object sender)
+        {
+            if (sender is ShopForm shopForm)
+            {
+                return shopForm == Form;
+            }
+
+            if (sender is Component component && Form != null)
+            {
+                return component.transform.IsChildOf(Form.transform);
+            }
+
+            return false;
+        }
+
+        private bool TryGetWeaponInfoRawData(int index, Vector3 targetPos, out DisplayItemInfoFormRawData rawData)
+        {
+            rawData = null;
+
+            if (_rawData?.WeaponItems == null)
+            {
+                Log.Error("ShopFormController.TryGetWeaponInfoRawData() WeaponItems is null.");
+                return false;
+            }
+
+            if (Context == null)
+            {
+                Log.Error("ShopFormController.TryGetWeaponInfoRawData() Context is null.");
+                return false;
+            }
+
+            if (index < 0 || index >= _rawData.WeaponItems.Count)
+            {
+                Log.Error($"ShopFormController.TryGetWeaponInfoRawData() invalid weapon index: {index}.");
+                return false;
+            }
+
+            WeaponBase weapon = _rawData.WeaponItems[index];
+            if (weapon?.WeaponData == null)
+            {
+                Log.Error($"ShopFormController.TryGetWeaponInfoRawData() weapon data is null at index {index}.");
+                return false;
+            }
+
+            var weaponData = weapon.WeaponData;
+            rawData = new DisplayItemInfoFormRawData
+            {
+                TargetPos = targetPos,
+                Index = index,
+                IconAssetName = weaponData.IconAssetName,
+                Title = weaponData.Title,
+                Rarity = weaponData.Rarity,
+                TypeText = "武器",
+                Description = ItemDescUtility.CreateWeaponDescription(weaponData),
+                Price = Mathf.FloorToInt(weaponData.Price * Context.WeaponRecycleRate),
+                IsWeapon = true
+            };
+            return true;
+        }
+
+        private bool TryGetPropInfoRawData(int index, Vector3 targetPos, out DisplayItemInfoFormRawData rawData)
+        {
+            rawData = null;
+
+            if (_rawData?.PropItems == null)
+            {
+                Log.Error("ShopFormController.TryGetPropInfoRawData() PropItems is null.");
+                return false;
+            }
+
+            if (index < 0 || index >= _rawData.PropItems.Count)
+            {
+                Log.Error($"ShopFormController.TryGetPropInfoRawData() invalid prop index: {index}.");
+                return false;
+            }
+
+            PropItem propItem = _rawData.PropItems[index];
+            if (propItem == null)
+            {
+                Log.Error($"ShopFormController.TryGetPropInfoRawData() prop item is null at index {index}.");
+                return false;
+            }
+
+            rawData = new DisplayItemInfoFormRawData
+            {
+                TargetPos = targetPos,
+                Index = index,
+                IconAssetName = propItem.IconAssetName,
+                Title = propItem.Title,
+                Rarity = propItem.Rarity,
+                TypeText = "道具",
+                Description = ItemDescUtility.CreatePropDescription(propItem),
+                Price = 0,
+                IsWeapon = false
+            };
+            return true;
         }
 
         #endregion
@@ -350,32 +476,30 @@ namespace UI
 
         private void DisplayItemShow(object sender, GameEventArgs e)
         {
-            if (!(e is DisplayItemShowEventArgs args) || _rawData == null) return;
-
-            DisplayItemInfoFormRawData rawData = new();
-            rawData.TargetPos = args.TargetPos;
-            rawData.Index = args.Index;
-            if (args.IsWeapon)
+            if (!(e is DisplayItemShowEventArgs args))
             {
-                var weaponData = _rawData.WeaponItems[args.Index].WeaponData;
-                rawData.IconAssetName = weaponData.IconAssetName;
-                rawData.Title = weaponData.Title;
-                rawData.Rarity = weaponData.Rarity;
-                rawData.TypeText = "武器";
-                rawData.Description = ItemDescUtility.CreateWeaponDescription(weaponData);
-                rawData.Price = Mathf.FloorToInt(weaponData.Price * Context.WeaponRecycleRate);
-                rawData.IsWeapon = true;
+                return;
             }
-            else
+
+            if (!IsCurrentFormEventSender(sender))
             {
-                var propItem = _rawData.PropItems[args.Index];
-                rawData.IconAssetName = propItem.IconAssetName;
-                rawData.Title = propItem.Title;
-                rawData.Rarity = propItem.Rarity;
-                rawData.TypeText = "道具";
-                rawData.Description = ItemDescUtility.CreatePropDescription(propItem);
-                rawData.Price = 0;
-                rawData.IsWeapon = false;
+                return;
+            }
+
+            if (_rawData == null)
+            {
+                Log.Error("ShopFormController.DisplayItemShow() _rawData is null.");
+                return;
+            }
+
+            DisplayItemInfoFormRawData rawData;
+            bool success = args.IsWeapon
+                ? TryGetWeaponInfoRawData(args.Index, args.TargetPos, out rawData)
+                : TryGetPropInfoRawData(args.Index, args.TargetPos, out rawData);
+
+            if (!success)
+            {
+                return;
             }
 
             GameEntry.UIRouter.OpenUI(UIFormType.DisplayItemInfoForm, rawData);
@@ -383,10 +507,19 @@ namespace UI
 
         private void WeaponRecycle(object sender, GameEventArgs e)
         {
-            if (!(e is ShopWeaponRecycleEventArgs args)) return;
+            if (!(e is ShopWeaponRecycleEventArgs args))
+            {
+                return;
+            }
+
+            if (sender is not DisplayItemInfoForm)
+            {
+                return;
+            }
 
             if (_useCase == null || Context == null)
             {
+                Log.Error("ShopFormController.WeaponRecycle() controller state is invalid.");
                 return;
             }
 

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using CustomUtility;
+using CustomComponent;
 
 namespace Entity.Weapon
 {
@@ -10,6 +11,11 @@ namespace Entity.Weapon
             if (weapon == null || candidates == null)
             {
                 return null;
+            }
+
+            if (TrySelectFromSpatialIndex(weapon, maxSqrRange, out EntityBase indexedTarget))
+            {
+                return indexedTarget;
             }
 
             EntityBase target = null;
@@ -27,6 +33,36 @@ namespace Entity.Weapon
             }
 
             return target;
+        }
+
+        private static bool TrySelectFromSpatialIndex(WeaponBase weapon, float maxSqrRange, out EntityBase target)
+        {
+            target = null;
+            if (weapon == null || maxSqrRange <= 0f || weapon.CachedTransform == null)
+            {
+                return false;
+            }
+
+            var simulationWorld = GameEntry.SimulationWorld;
+            if (simulationWorld == null || !simulationWorld.UseSimulationMovement)
+            {
+                return false;
+            }
+
+            if (!simulationWorld.TryGetNearestEnemyEntityId(weapon.CachedTransform.position, maxSqrRange,
+                    out int entityId))
+            {
+                return false;
+            }
+
+            EnemyManagerComponent enemyManager = GameEntry.EnemyManager;
+            if (enemyManager == null || !enemyManager.TryGetEnemy(entityId, out EntityBase enemy))
+            {
+                return false;
+            }
+
+            target = enemy;
+            return true;
         }
     }
 }
