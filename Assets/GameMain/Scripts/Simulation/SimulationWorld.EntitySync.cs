@@ -16,6 +16,7 @@ namespace Simulation
             private const string EnemyProjectileGroupName = "EnemyProjectile";
 
             private readonly SimulationWorld _world;
+            private bool _isEventSubscribed;
 
             public EntitySync(SimulationWorld world)
             {
@@ -24,14 +25,32 @@ namespace Simulation
 
             public void OnStart()
             {
-                GameEntry.Event.Subscribe(ShowEntitySuccessEventArgs.EventId, OnShowEntitySuccess);
-                GameEntry.Event.Subscribe(HideEntityCompleteEventArgs.EventId, OnHideEntityComplete);
+                var eventComponent = GameEntry.Event;
+                if (eventComponent == null)
+                {
+                    return;
+                }
+
+                eventComponent.Subscribe(ShowEntitySuccessEventArgs.EventId, OnShowEntitySuccess);
+                eventComponent.Subscribe(HideEntityCompleteEventArgs.EventId, OnHideEntityComplete);
+                _isEventSubscribed = true;
             }
 
             public void OnDestroy()
             {
-                GameEntry.Event.Unsubscribe(ShowEntitySuccessEventArgs.EventId, OnShowEntitySuccess);
-                GameEntry.Event.Unsubscribe(HideEntityCompleteEventArgs.EventId, OnHideEntityComplete);
+                if (!_isEventSubscribed)
+                {
+                    return;
+                }
+
+                var eventComponent = GameEntry.Event;
+                if (eventComponent != null)
+                {
+                    eventComponent.Unsubscribe(ShowEntitySuccessEventArgs.EventId, OnShowEntitySuccess);
+                    eventComponent.Unsubscribe(HideEntityCompleteEventArgs.EventId, OnHideEntityComplete);
+                }
+
+                _isEventSubscribed = false;
             }
 
             private void OnShowEntitySuccess(object sender, GameEventArgs e)

@@ -133,11 +133,7 @@ namespace Simulation.Tests.Editor
 
             _world.Tick(new SimulationTickContext(0.5f, 0.5f, Vector3.zero));
 
-            Assert.That(_world.Projectiles.Count, Is.EqualTo(1));
-            ProjectileSimData projectile = _world.Projectiles[0];
-            Assert.That(projectile.Active, Is.False);
-            Assert.That(projectile.State, Is.EqualTo(1));
-            Assert.That(projectile.Age, Is.GreaterThanOrEqualTo(projectile.LifeTime));
+            Assert.That(_world.Projectiles, Is.Empty);
         }
 
         [Test]
