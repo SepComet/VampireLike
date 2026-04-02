@@ -82,13 +82,6 @@ namespace Entity
             base.OnUpdate(elapseSeconds, realElapseSeconds);
 
             UpdateAttackState(elapseSeconds);
-
-            if (IsSimulationMovementEnabled())
-            {
-                return;
-            }
-
-            _movementComponent.OnUpdate(elapseSeconds, realElapseSeconds);
         }
 
         protected override void OnDead(EntityBase attacker)

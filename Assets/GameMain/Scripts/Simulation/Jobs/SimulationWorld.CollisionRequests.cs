@@ -36,11 +36,6 @@ namespace Simulation
             in Vector3 center, float radius, int maxTargets, int shapeType, in Vector3 direction, float halfAngleDeg,
             float halfWidth, float halfLength)
         {
-            if (!_useSimulationMovement)
-            {
-                return false;
-            }
-
             if (sourceEntityId == 0 || radius <= 0f || maxTargets <= 0)
             {
                 return false;

@@ -16,31 +16,29 @@ namespace Simulation
 
             public void OnLateUpdate()
             {
-                if (_world == null || !_world.UseSimulationMovement)
+                if (_world == null)
                 {
                     return;
                 }
 
                 var enemyManager = GameEntry.EnemyManager;
-                if (enemyManager == null || enemyManager.Enemies == null)
+                if (enemyManager != null && enemyManager.Enemies != null)
                 {
-                    return;
-                }
-
-                var enemies = enemyManager.Enemies;
-                foreach (var enemy in enemies)
-                {
-                    if (enemy is not EnemyBase enemyEntity || !enemyEntity.Available)
+                    var enemies = enemyManager.Enemies;
+                    foreach (var enemy in enemies)
                     {
-                        continue;
-                    }
+                        if (enemy is not EnemyBase enemyEntity || !enemyEntity.Available)
+                        {
+                            continue;
+                        }
 
-                    if (!_world.TryGetEnemyData(enemyEntity.Id, out EnemySimData enemyData))
-                    {
-                        continue;
-                    }
+                        if (!_world.TryGetEnemyData(enemyEntity.Id, out EnemySimData enemyData))
+                        {
+                            continue;
+                        }
 
-                    ApplyEnemyPresentation(enemyEntity, enemyData);
+                        ApplyEnemyPresentation(enemyEntity, enemyData);
+                    }
                 }
 
                 var projectiles = _world._projectiles;

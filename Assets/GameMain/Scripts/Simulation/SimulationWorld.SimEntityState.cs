@@ -22,6 +22,7 @@ namespace Simulation
             EnemyBinding.Clear();
             ProjectileBinding.Clear();
             PickupBinding.Clear();
+            ClearPlayerMovementState();
         }
 
         #endregion
@@ -99,6 +100,31 @@ namespace Simulation
 
             enemyData = _enemies[simulationIndex];
             return true;
+        }
+
+        public void SyncEnemyMovementInput(int entityId, bool isMoving, in UnityEngine.Vector3 direction, float speed,
+            bool avoidEnemyOverlap, float enemyBodyRadius, int separationIterations)
+        {
+            if (!EnemyBinding.TryGetSimulationIndex(entityId, out int simulationIndex) || simulationIndex < 0 ||
+                simulationIndex >= _enemies.Count)
+            {
+                return;
+            }
+
+            EnemySimData enemyData = _enemies[simulationIndex];
+            enemyData.Speed = isMoving ? UnityEngine.Mathf.Max(0f, speed) : 0f;
+            enemyData.AvoidEnemyOverlap = avoidEnemyOverlap;
+            enemyData.EnemyBodyRadius = UnityEngine.Mathf.Max(0.01f, enemyBodyRadius);
+            enemyData.SeparationIterations = UnityEngine.Mathf.Max(1, separationIterations);
+
+            UnityEngine.Vector3 planarDirection = direction;
+            planarDirection.y = 0f;
+            if (planarDirection.sqrMagnitude > UnityEngine.Mathf.Epsilon)
+            {
+                enemyData.Forward = planarDirection.normalized;
+            }
+
+            _enemies[simulationIndex] = enemyData;
         }
 
         #endregion

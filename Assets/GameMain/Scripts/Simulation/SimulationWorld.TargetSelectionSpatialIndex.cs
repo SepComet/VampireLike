@@ -14,11 +14,6 @@ namespace Simulation
                 return false;
             }
 
-            if (!_useSimulationMovement)
-            {
-                return false;
-            }
-
             BuildEnemyTargetSpatialIndexIfNeeded();
 
             float cellSize = GetTargetSelectionCellSize();

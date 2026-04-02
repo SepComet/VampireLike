@@ -2,6 +2,8 @@ using System;
 using CustomUtility;
 using Definition.DataStruct;
 using Definition.Enum;
+using Entity;
+using Simulation;
 using UnityEngine;
 using CustomDebugger;
 
@@ -20,6 +22,9 @@ namespace Components
         public bool AvoidEnemyOverlap => _avoidEnemyOverlap;
         public float EnemyBodyRadius => _enemyBodyRadius;
         public int SeparationIterations => _separationIterations;
+        public bool IsMoving => _isMoving;
+        public Vector3 Direction => _direction;
+        public Transform CachedTransform => _cachedTransform;
         [SerializeField] private float _speedBase;
 
         private StatComponent _statComponent;
@@ -42,7 +47,10 @@ namespace Components
             {
                 _movementStat = _statComponent.GetStat(StatType.MovementSpeed);
                 _movementStatCallback = (modifier, isApply) =>
+                {
                     _statComponent.UpdateStat(_movementStat, modifier, isApply);
+                    SyncToSimulationWorld();
+                };
                 _statComponent.Subscribe(StatType.MovementSpeed, _movementStatCallback);
             }
             else
@@ -50,15 +58,12 @@ namespace Components
                 _movementStat = new StatProperty();
             }
 
-            RefreshEnemyRegistration();
+            SyncToSimulationWorld();
         }
 
         public void OnUpdate(float elapseSeconds, float realElapseSeconds)
         {
-            if (_isMoving && _cachedTransform != null)
-            {
-                Move(elapseSeconds);
-            }
+            SyncToSimulationWorld();
         }
 
         public void OnReset()
@@ -81,43 +86,59 @@ namespace Components
 
             _statComponent = null;
 
-            UnregisterEnemyMover(transformToUnregister);
-        }
-
-        private void Move(float deltaTime = 0)
-        {
-            using (CustomProfilerMarker.Movement_Update.Auto())
+            if (transformToUnregister != null)
             {
-                if (_cachedTransform == null) return;
-
-                Vector3 displacement = Speed * deltaTime * _direction;
-                Vector3 nextPosition = _cachedTransform.position + displacement;
-                if (_avoidEnemyOverlap)
-                {
-                    nextPosition = EnemySeparationSolverProvider.Resolve(
-                        _cachedTransform,
-                        nextPosition,
-                        _direction,
-                        _separationIterations);
-                }
-
-                _cachedTransform.position = nextPosition;
+                var simulationWorld = GameEntry.SimulationWorld;
+                simulationWorld?.UnregisterPlayerMovement(transformToUnregister);
             }
         }
 
-        public void SetMove(bool isMoving) => _isMoving = isMoving;
-        public void SetDirection(Vector3 direction) => _direction = direction;
-
-        private void RefreshEnemyRegistration()
+        public void SetMove(bool isMoving)
         {
-            UnregisterEnemyMover();
-            if (!_avoidEnemyOverlap) return;
-            EnemySeparationSolverProvider.Register(_cachedTransform, _enemyBodyRadius);
+            _isMoving = isMoving;
+            SyncToSimulationWorld();
         }
 
-        private void UnregisterEnemyMover(Transform transform = null)
+        public void SetDirection(Vector3 direction)
         {
-            EnemySeparationSolverProvider.Unregister(transform ?? _cachedTransform);
+            _direction = direction;
+            SyncToSimulationWorld();
+        }
+
+        private void SyncToSimulationWorld()
+        {
+            using (CustomProfilerMarker.Movement_Update.Auto())
+            {
+                if (_cachedTransform == null)
+                {
+                    return;
+                }
+
+                SimulationWorld simulationWorld = GameEntry.SimulationWorld;
+                if (simulationWorld == null)
+                {
+                    return;
+                }
+
+                Vector3 direction = _direction;
+                direction.y = 0f;
+                if (direction.sqrMagnitude > Mathf.Epsilon)
+                {
+                    direction.Normalize();
+                }
+
+                if (TryGetComponent(out Player _))
+                {
+                    simulationWorld.SyncPlayerMovementInput(_cachedTransform, _isMoving, direction, Speed);
+                    return;
+                }
+
+                if (TryGetComponent(out EnemyBase enemy))
+                {
+                    simulationWorld.SyncEnemyMovementInput(enemy.Id, _isMoving, direction, Speed,
+                        _avoidEnemyOverlap, _enemyBodyRadius, _separationIterations);
+                }
+            }
         }
     }
 }

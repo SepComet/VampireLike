@@ -95,11 +95,6 @@ namespace Entity
             if (_target == null)
             {
                 _movementComponent.SetMove(false);
-                if (!IsSimulationMovementEnabled())
-                {
-                    _movementComponent.OnUpdate(elapseSeconds, realElapseSeconds);
-                }
-
                 return;
             }
 
@@ -115,11 +110,6 @@ namespace Entity
             {
                 _movementComponent.SetMove(true);
                 _movementComponent.SetDirection(GetTargetDirection());
-            }
-
-            if (!IsSimulationMovementEnabled())
-            {
-                _movementComponent.OnUpdate(elapseSeconds, realElapseSeconds);
             }
         }
 

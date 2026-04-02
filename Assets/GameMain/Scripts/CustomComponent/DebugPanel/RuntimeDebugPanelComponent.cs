@@ -29,7 +29,6 @@ namespace CustomComponent
         [SerializeField] private bool _showCollisionStats = true;
         [SerializeField] private bool _showSpawnControls = true;
         [SerializeField] private bool _showBattleDurationControls = true;
-        [SerializeField] private bool _showSeparationSolverControls = true;
         [SerializeField] private bool _showPlayerWeaponControls = true;
         [SerializeField] private bool _showPlayerHealthControls = true;
         [SerializeField] private bool _showTips = true;
@@ -283,24 +282,6 @@ namespace CustomComponent
                 GUILayout.EndHorizontal();
             }
 
-            if (_showSeparationSolverControls)
-            {
-                GUILayout.Space(4f);
-                GUILayout.Label($"Enemy Separation Solver: {EnemySeparationSolverProvider.CurrentSolverName}");
-                GUILayout.BeginHorizontal();
-                if (GUILayout.Button("Use Naive O(N^2)", GUILayout.Height(24f)))
-                {
-                    EnemySeparationSolverProvider.UseNaiveSolver();
-                }
-
-                if (GUILayout.Button("Use Grid Bucket", GUILayout.Height(24f)))
-                {
-                    EnemySeparationSolverProvider.UseGridBucketSolver();
-                }
-
-                GUILayout.EndHorizontal();
-            }
-
             if (_showPlayerWeaponControls)
             {
                 GUILayout.Label(
@@ -353,7 +334,6 @@ namespace CustomComponent
                    _showCollisionStats ||
                    _showSpawnControls ||
                    _showBattleDurationControls ||
-                   _showSeparationSolverControls ||
                    _showPlayerWeaponControls ||
                    _showPlayerHealthControls;
         }

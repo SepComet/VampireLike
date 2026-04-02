@@ -31,3 +31,6 @@ Always keep `.meta` files when adding or moving Unity assets to preserve GUID re
 Recent history favors concise, descriptive commit messages (often Chinese), e.g. `Feature: add launcher scene and update project settings`. Keep commits focused and include module context (`UI`, `Procedure`, `Entity`) when useful.
 
 PRs should include: change summary, affected scenes/modules, test evidence (Test Runner or CLI logs), linked issue/task, and screenshots or short video for UI/visual updates.
+
+## Encoding
+Use UTF8 with BOM
