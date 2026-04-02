@@ -17,6 +17,7 @@
       <Resource Name="Music/Menu" FileSystem="Resources" LoadType="0" Packed="True" ResourceGroups="Music" />
       <Resource Name="Scenes" FileSystem="Resources" LoadType="0" Packed="True" />
       <Resource Name="SceneSettings" LoadType="0" Packed="False" />
+      <Resource Name="Scripts" LoadType="0" Packed="False" />
       <Resource Name="Sounds" FileSystem="Resources" LoadType="0" Packed="True" />
       <Resource Name="Textures" FileSystem="Resources" LoadType="0" Packed="True" />
       <Resource Name="UI/UIForms" FileSystem="UI" LoadType="0" Packed="True" />
@@ -42,6 +43,7 @@
       <Asset Guid="0f995b3145e0e7247a42da6cef1dbf23" ResourceName="Materials" />
       <Asset Guid="1046dcb12e547564d8b54bd15419a787" ResourceName="Entities" />
       <Asset Guid="1053b0070685be347ab58587156842dc" ResourceName="Localization/Dictionaries" ResourceVariant="zh-tw" />
+      <Asset Guid="11143001bcbdc864b8d8fe2083142e5a" ResourceName="Entities" />
       <Asset Guid="1478894bc9a1ed241b05b0862a7b8bce" ResourceName="Textures" />
       <Asset Guid="14869ac0d4433f04db1704e39d03412e" ResourceName="Localization/Dictionaries" ResourceVariant="en-us" />
       <Asset Guid="156d241f796508c4da4fc354a7fbf5a8" ResourceName="UI/UISprites/Common" />
@@ -83,6 +85,7 @@
       <Asset Guid="4473d81b14ddb0143addf0e6050d8491" ResourceName="Scenes" />
       <Asset Guid="44c8db52241385c45bbb14a1718f17bf" ResourceName="Configs" />
       <Asset Guid="44cfa1c448225554c961ad6eb667d80b" ResourceName="DataTables" />
+      <Asset Guid="47a82ffa13c291447ab895cd0bc251cd" ResourceName="Scripts" />
       <Asset Guid="4c3865b2ac420cd46a9cde6ab468d016" ResourceName="Materials" />
       <Asset Guid="4ca22ae3bc068c84eb7858d5b9bdf3e2" ResourceName="Fonts" />
       <Asset Guid="4f688097e85071841a2c3ba165000c20" ResourceName="Textures" />
@@ -94,6 +97,7 @@
       <Asset Guid="5b5a6a737c460eb4abc105d6583d405e" ResourceName="Fonts" />
       <Asset Guid="5dcd89912e222bf4c87f76db4044bc5e" ResourceName="Localization/Dictionaries" ResourceVariant="ko-kr" />
       <Asset Guid="5ebb46af6f16ae94e87f64a7dc0a49cb" ResourceName="Entities" />
+      <Asset Guid="602d791ab1251f74ca2470c53bf382a3" ResourceName="Scripts" />
       <Asset Guid="62af9e5c8f39cfa49af9e10ccf42f1da" ResourceName="UI/UISprites/Common" />
       <Asset Guid="638ff8ae4a0d15047839cd265d3bc296" ResourceName="Music/Background" />
       <Asset Guid="63fe6ff9ab9e1433f8db4ebd940f2442" ResourceName="Materials" />

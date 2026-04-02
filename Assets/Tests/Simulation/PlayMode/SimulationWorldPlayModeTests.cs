@@ -11,7 +11,7 @@ namespace Simulation.Tests.PlayMode
 {
     public class SimulationWorldPlayModeTests
     {
-        private const string GameAssemblyName = "Assembly-CSharp";
+        private const string GameAssemblyName = "VampireLike";
         private const string RuntimeAssemblyName = "UnityGameFramework.Runtime";
         private const BindingFlags PublicStatic = BindingFlags.Public | BindingFlags.Static;
         private const BindingFlags PublicInstance = BindingFlags.Public | BindingFlags.Instance;

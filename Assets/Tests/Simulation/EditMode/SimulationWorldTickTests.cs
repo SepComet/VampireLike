@@ -3,13 +3,16 @@ using System.Collections.Generic;
 using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
+using Procedure;
+using GameFramework.Fsm;
+using GameFramework.Procedure;
 using Object = UnityEngine.Object;
 
 namespace Simulation.Tests.Editor
 {
     public class SimulationWorldTickTests
     {
-        private const string GameAssemblyName = "Assembly-CSharp";
+        private const string GameAssemblyName = "VampireLike";
         private const string RuntimeAssemblyName = "UnityGameFramework.Runtime";
         private const BindingFlags PublicStatic = BindingFlags.Public | BindingFlags.Static;
         private const BindingFlags PublicInstance = BindingFlags.Public | BindingFlags.Instance;
@@ -27,6 +30,9 @@ namespace Simulation.Tests.Editor
 
         private static readonly System.Type ProjectileSimDataType =
             System.Type.GetType($"Simulation.ProjectileSimData, {GameAssemblyName}");
+
+        private static readonly System.Type PickupSimDataType =
+            System.Type.GetType($"Simulation.PickupSimData, {GameAssemblyName}");
 
         private static readonly System.Type EnemyProjectileType =
             System.Type.GetType($"Entity.EnemyProjectile, {GameAssemblyName}");
@@ -88,6 +94,12 @@ namespace Simulation.Tests.Editor
         private static readonly MethodInfo RemoveProjectileByEntityIdMethod =
             SimulationWorldType?.GetMethod("RemoveProjectileByEntityId", NonPublicInstance);
 
+        private static readonly MethodInfo UpsertPickupMethod =
+            SimulationWorldType?.GetMethod("UpsertPickup", NonPublicInstance);
+
+        private static readonly MethodInfo RemovePickupByEntityIdMethod =
+            SimulationWorldType?.GetMethod("RemovePickupByEntityId", NonPublicInstance);
+
         private static readonly MethodInfo TryGetEnemyDataMethod =
             SimulationWorldType?.GetMethod("TryGetEnemyData", NonPublicInstance);
 
@@ -123,6 +135,9 @@ namespace Simulation.Tests.Editor
 
         private static readonly PropertyInfo ProjectilesProperty =
             SimulationWorldType?.GetProperty("Projectiles", PublicInstance);
+
+        private static readonly PropertyInfo PickupsProperty =
+            SimulationWorldType?.GetProperty("Pickups", PublicInstance);
 
         private static readonly PropertyInfo CollisionCandidateCountProperty =
             SimulationWorldType?.GetProperty("CollisionCandidateCount", PublicInstance);
@@ -197,6 +212,7 @@ namespace Simulation.Tests.Editor
             Assert.NotNull(SimulationTickContextType, "SimulationTickContext type lookup failed.");
             Assert.NotNull(EnemySimDataType, "EnemySimData type lookup failed.");
             Assert.NotNull(ProjectileSimDataType, "ProjectileSimData type lookup failed.");
+            Assert.NotNull(PickupSimDataType, "PickupSimData type lookup failed.");
             Assert.NotNull(EnemyProjectileType, "EnemyProjectile type lookup failed.");
             Assert.NotNull(EnemyProjectileDataType, "EnemyProjectileData type lookup failed.");
             Assert.NotNull(CampTypeType, "CampType type lookup failed.");
@@ -217,6 +233,8 @@ namespace Simulation.Tests.Editor
             Assert.NotNull(RemoveEnemyByEntityIdMethod, "RemoveEnemyByEntityId reflection lookup failed.");
             Assert.NotNull(UpsertProjectileMethod, "UpsertProjectile reflection lookup failed.");
             Assert.NotNull(RemoveProjectileByEntityIdMethod, "RemoveProjectileByEntityId reflection lookup failed.");
+            Assert.NotNull(UpsertPickupMethod, "UpsertPickup reflection lookup failed.");
+            Assert.NotNull(RemovePickupByEntityIdMethod, "RemovePickupByEntityId reflection lookup failed.");
             Assert.NotNull(TryGetEnemyDataMethod, "TryGetEnemyData reflection lookup failed.");
             Assert.NotNull(TickMethod, "Tick reflection lookup failed.");
             Assert.NotNull(TryGetNearestEnemyEntityIdMethod, "TryGetNearestEnemyEntityId reflection lookup failed.");
@@ -225,6 +243,7 @@ namespace Simulation.Tests.Editor
             Assert.NotNull(UseGridBucketSolverMethod, "UseGridBucketSolver reflection lookup failed.");
             Assert.NotNull(EnemiesProperty, "Enemies property reflection lookup failed.");
             Assert.NotNull(ProjectilesProperty, "Projectiles property reflection lookup failed.");
+            Assert.NotNull(PickupsProperty, "Pickups property reflection lookup failed.");
             Assert.NotNull(CollisionCandidateCountProperty, "CollisionCandidateCount property reflection lookup failed.");
             Assert.NotNull(UseSimulationMovementProperty, "UseSimulationMovement property reflection lookup failed.");
             Assert.NotNull(UseSimulationMovementField, "_useSimulationMovement field reflection lookup failed.");
@@ -710,6 +729,80 @@ namespace Simulation.Tests.Editor
             Assert.That(GetLastResolvedAreaHitCount(), Is.EqualTo(0));
         }
 
+        [Test]
+        public void ProcedureGame_TransitionsBattleToLevelUpShopAndBackToBattle()
+        {
+            var procedureGame = (ProcedureGame)Activator.CreateInstance(ProcedureGameType);
+            GameObject playerObject = new GameObject("ProcedureGameTransitionPlayer");
+            try
+            {
+                var player = playerObject.AddComponent(PlayerType);
+                Assert.NotNull(player);
+                PlayerType.GetProperty("PendingLevelPoints", PublicInstance)?.SetValue(player, 1);
+                ProcedureGameType.GetField("Player", PublicInstance)?.SetValue(procedureGame, player);
+
+                var battleState = new TrackingGameState(GameStateType.Battle);
+                var levelUpState = new TrackingGameState(GameStateType.LevelUp);
+                var shopState = new TrackingGameState(GameStateType.Shop);
+                var gameStates = new Dictionary<GameStateType, GameStateBase>
+                {
+                    { GameStateType.Battle, battleState },
+                    { GameStateType.LevelUp, levelUpState },
+                    { GameStateType.Shop, shopState },
+                };
+
+                SetPrivateField(procedureGame, "_gameStates", gameStates);
+                SetPrivateField(procedureGame, "_currentGameState", GameStateType.Battle);
+                SetPrivateField(procedureGame, "_procedureOwner", null);
+
+                procedureGame.BattleToShopOrLevelUp();
+                Assert.That(procedureGame.CurrentLevel, Is.EqualTo(2));
+                Assert.That(procedureGame.CurrentGameStateType, Is.EqualTo(GameStateType.LevelUp));
+                Assert.That(battleState.LeaveCount, Is.EqualTo(1));
+                Assert.That(levelUpState.EnterCount, Is.EqualTo(1));
+
+                PlayerType.GetProperty("PendingLevelPoints", PublicInstance)?.SetValue(player, 0);
+                procedureGame.LevelUpToShop();
+                Assert.That(procedureGame.CurrentGameStateType, Is.EqualTo(GameStateType.Shop));
+                Assert.That(levelUpState.LeaveCount, Is.EqualTo(1));
+                Assert.That(shopState.EnterCount, Is.EqualTo(1));
+
+                procedureGame.ShopToBattle();
+                Assert.That(procedureGame.CurrentGameStateType, Is.EqualTo(GameStateType.Battle));
+                Assert.That(shopState.LeaveCount, Is.EqualTo(1));
+                Assert.That(battleState.EnterCount, Is.EqualTo(1));
+            }
+            finally
+            {
+                Object.DestroyImmediate(playerObject);
+            }
+        }
+
+        [Test]
+        public void PickupLifecycle_UpsertAndRemove_KeepsBindingsConsistent()
+        {
+            UpsertPickup(CreatePickup(entityId: 6101, position: new Vector3(1f, 0f, 0f), pickupRadius: 0.35f, state: 0));
+            UpsertPickup(CreatePickup(entityId: 6102, position: new Vector3(2f, 0f, 0f), pickupRadius: 0.35f, state: 0));
+            UpsertPickup(CreatePickup(entityId: 6103, position: new Vector3(3f, 0f, 0f), pickupRadius: 0.35f, state: 0));
+
+            Assert.That(GetPickupsCount(), Is.EqualTo(3));
+
+            UpsertPickup(CreatePickup(entityId: 6101, position: new Vector3(10f, 0f, 0f), pickupRadius: 0.5f, state: 1));
+            Assert.That(GetPickupsCount(), Is.EqualTo(3));
+            object updatedPickup = GetPickupAt(0);
+            Assert.That((int)GetField(updatedPickup, "EntityId"), Is.EqualTo(6101));
+            Assert.That(((Vector3)GetField(updatedPickup, "Position")).x, Is.EqualTo(10f).Within(0.0001f));
+            Assert.That((float)GetField(updatedPickup, "PickupRadius"), Is.EqualTo(0.5f).Within(0.0001f));
+
+            bool removedMiddle = RemovePickupByEntityId(6102);
+            bool removedMoved = RemovePickupByEntityId(6103);
+
+            Assert.IsTrue(removedMiddle);
+            Assert.That(GetPickupsCount(), Is.EqualTo(1));
+            Assert.IsTrue(removedMoved);
+            Assert.That((int)GetField(GetPickupAt(0), "EntityId"), Is.EqualTo(6101));
+        }
+
         private object CreateEnemy(int entityId, Vector3 position, float speed, float attackRange,
             bool avoidEnemyOverlap = false, float enemyBodyRadius = 0.45f, int separationIterations = 1)
         {
@@ -746,6 +839,16 @@ namespace Simulation.Tests.Editor
             return projectile;
         }
 
+        private object CreatePickup(int entityId, Vector3 position, float pickupRadius, int state)
+        {
+            object pickup = Activator.CreateInstance(PickupSimDataType);
+            SetField(ref pickup, "EntityId", entityId);
+            SetField(ref pickup, "Position", position);
+            SetField(ref pickup, "PickupRadius", pickupRadius);
+            SetField(ref pickup, "State", state);
+            return pickup;
+        }
+
         private void InvokeTick(float deltaTime, float realDeltaTime, Vector3 playerPosition)
         {
             object tickContext = System.Activator.CreateInstance(
@@ -773,6 +876,11 @@ namespace Simulation.Tests.Editor
             UpsertProjectileMethod.Invoke(_worldComponent, new[] { projectile });
         }
 
+        private void UpsertPickup(object pickup)
+        {
+            UpsertPickupMethod.Invoke(_worldComponent, new[] { pickup });
+        }
+
         private bool RemoveEnemyByEntityId(int entityId)
         {
             return (bool)RemoveEnemyByEntityIdMethod.Invoke(_worldComponent, new object[] { entityId });
@@ -781,6 +889,11 @@ namespace Simulation.Tests.Editor
         private bool RemoveProjectileByEntityId(int entityId)
         {
             return (bool)RemoveProjectileByEntityIdMethod.Invoke(_worldComponent, new object[] { entityId });
+        }
+
+        private bool RemovePickupByEntityId(int entityId)
+        {
+            return (bool)RemovePickupByEntityIdMethod.Invoke(_worldComponent, new object[] { entityId });
         }
 
         private static object GetGameEntrySimulationWorld()
@@ -856,6 +969,20 @@ namespace Simulation.Tests.Editor
             return (int)countProperty.GetValue(projectiles);
         }
 
+        private object GetPickupAt(int index)
+        {
+            object pickups = PickupsProperty.GetValue(_worldComponent);
+            PropertyInfo itemProperty = pickups.GetType().GetProperty("Item", PublicInstance);
+            return itemProperty.GetValue(pickups, new object[] { index });
+        }
+
+        private int GetPickupsCount()
+        {
+            object pickups = PickupsProperty.GetValue(_worldComponent);
+            PropertyInfo countProperty = pickups.GetType().GetProperty("Count", PublicInstance);
+            return (int)countProperty.GetValue(pickups);
+        }
+
         private int GetCollisionCandidateCount()
         {
             return (int)CollisionCandidateCountProperty.GetValue(_worldComponent);
@@ -894,6 +1021,43 @@ namespace Simulation.Tests.Editor
             }
 
             Assert.Fail($"Field '{fieldName}' was not found on type '{target.GetType().FullName}'.");
+        }
+
+        private sealed class TrackingGameState : GameStateBase
+        {
+            public TrackingGameState(GameStateType gameStateType)
+            {
+                GameStateType = gameStateType;
+            }
+
+            public override GameStateType GameStateType { get; }
+
+            public int EnterCount { get; private set; }
+
+            public int LeaveCount { get; private set; }
+
+            public override void OnInit(ProcedureGame master)
+            {
+            }
+
+            public override void OnEnter(IFsm<IProcedureManager> procedureOwner)
+            {
+                EnterCount++;
+            }
+
+            public override void OnUpdate(IFsm<IProcedureManager> procedureOwner, float elapseSeconds,
+                float realElapseSeconds)
+            {
+            }
+
+            public override void OnLeave(IFsm<IProcedureManager> procedureOwner)
+            {
+                LeaveCount++;
+            }
+
+            public override void OnDestroy(IFsm<IProcedureManager> procedureOwner)
+            {
+            }
         }
     }
 }

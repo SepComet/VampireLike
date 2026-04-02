@@ -173,6 +173,7 @@
   - 压测口径：`0.5k / 1k / 1.5k / 2k` 敌人，记录 Main Thread、Job Workers、GC Alloc、关键 Marker。
   - 输出文档：`P2 Job/Burst 改造说明 + 开关/回滚策略 + 前后对比数据`。
   - 完成标准：结论可复现，可作为 P3 GPU Instancing 的输入基线。
+  - 当前状态：`P2 TickEnemies` 在 `2k` 规模下相对 `P1.5` 已降至 `9.44 ms`（约 `-56.4%`），CPU 目标已满足；仍需补齐 `GC Alloc` 与三项回归证据后再勾选。
 
 **验收标准**
 - 在 2k 敌人规模下，CPU Main Thread 明显下降（目标 >= 30%）。

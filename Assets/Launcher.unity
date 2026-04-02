@@ -390,7 +390,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 11405216, guid: adb3eb1c35fcff14f89fba7b05c9d71c, type: 3}
       propertyPath: m_AvailableProcedureTypeNames.Array.size
-      value: 12
+      value: 13
       objectReference: {fileID: 0}
     - target: {fileID: 11405216, guid: adb3eb1c35fcff14f89fba7b05c9d71c, type: 3}
       propertyPath: m_AvailableProcedureTypeNames.Array.data[0]
@@ -430,15 +430,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 11405216, guid: adb3eb1c35fcff14f89fba7b05c9d71c, type: 3}
       propertyPath: m_AvailableProcedureTypeNames.Array.data[9]
-      value: Procedure.ProcedureUpdateResources
+      value: Procedure.ProcedureStressTest
       objectReference: {fileID: 0}
     - target: {fileID: 11405216, guid: adb3eb1c35fcff14f89fba7b05c9d71c, type: 3}
       propertyPath: m_AvailableProcedureTypeNames.Array.data[10]
-      value: Procedure.ProcedureUpdateVersion
+      value: Procedure.ProcedureUpdateResources
       objectReference: {fileID: 0}
     - target: {fileID: 11405216, guid: adb3eb1c35fcff14f89fba7b05c9d71c, type: 3}
       propertyPath: m_AvailableProcedureTypeNames.Array.data[11]
-      value: Procedure.ProcedureVerifyResources
+      value: Procedure.ProcedureUpdateVersion
       objectReference: {fileID: 0}
     - target: {fileID: 11405216, guid: adb3eb1c35fcff14f89fba7b05c9d71c, type: 3}
       propertyPath: m_AvailableProcedureTypeNames.Array.data[12]
@@ -848,6 +848,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1d8ada5157a04921a6e543a040e57960, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _showBuffSection: 0
+  _showBattleOverview: 0
+  _showCollisionStats: 0
+  _showSpawnControls: 1
+  _showBattleDurationControls: 1
+  _showSeparationSolverControls: 0
+  _showPlayerWeaponControls: 1
+  _showPlayerHealthControls: 1
+  _showTips: 0
 --- !u!1 &513208572
 GameObject:
   m_ObjectHideFlags: 0

@@ -78,11 +78,11 @@ crashlytics-build.properties
 /Assets/StreamingAssets
 /Assets/StreamingAssets.meta
 /UI参考
-/AGENTS.md
 /bin
 /docs/screenshot
 *.xmind
 /数据表/__pycache__/
+/类吸血鬼项目.md
 
 ~$*.xlsx
 Assets/GameMain/Configs/ResourceBuilder.xml
