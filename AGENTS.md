@@ -1,36 +1,23 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-This repository is a Unity `2022.3 LTS` project. Core gameplay code lives in `Assets/GameMain/Scripts` (for example UI, entity, procedure, events, and data-table related logic). Shared runtime/framework code is in `Assets/GameFramework`. Third-party plugins are under `Assets/Plugins` (such as DOTween). Main scenes are in `Assets/GameMain/Scenes` (`Menu.unity`, `Main.unity`, `Game.unity`), and the local launcher flow starts from `Assets/Launcher.unity`.
-
-Data content and tooling are split across `Assets/GameMain/DataTables`, the localized data-table folder at project root, and `Tools/`.
-
-Do not commit generated folders: `Library/`, `Temp/`, `Logs/`, `obj/`.
+`Assets/GameMain/Scripts` holds gameplay code, organized by domain such as `Components`, `Entity`, `Procedure`, `Simulation`, `UI`, and `Editor`. Scenes live in `Assets/GameMain/Scenes`, and `Assets/Launcher.unity` is the normal local entry point. Shared framework code is under `Assets/GameFramework`; third-party code and packages live in `Assets/Plugins` and `Packages/`. Automated tests are in `Assets/Tests/Simulation/{EditMode,PlayMode}`. Design notes and change proposals are tracked in `docs/` and `openspec/`. GameFramework build and resource configs live in `Assets/GameMain/Configs`.
 
 ## Build, Test, and Development Commands
-- `Unity -projectPath .`  
-  Opens the project in Unity Editor.
-- `VampireLike.sln`  
-  Open the C# solution in Rider/Visual Studio for code changes.
-- Unity Editor: open `Assets/Launcher.unity` and press Play  
-  Runs the local game flow end-to-end.
-- Unity Editor: `Window > General > Test Runner`  
-  Run EditMode/PlayMode tests interactively.
-- `Unity -batchmode -projectPath . -runTests -testPlatform editmode -quit -logFile Logs/editmode-tests.log`  
-  Executes EditMode tests via CLI and writes logs for CI/local verification.
+- `Unity.exe -projectPath .` opens the project in Unity `2022.3.62f3c1`.
+- Open `VampireLike.sln` in Rider or Visual Studio for C# editing.
+- Open `Assets/Launcher.unity` and press Play to run the main loop locally.
+- `Unity.exe -batchmode -nographics -projectPath . -runTests -testPlatform EditMode -testResults Logs/editmode-test-results.xml -logFile Logs/editmode-tests.log -quit` runs EditMode tests.
+- `Unity.exe -batchmode -nographics -projectPath . -runTests -testPlatform PlayMode -testResults Logs/playmode-test-results.xml -logFile Logs/playmode-tests.log -quit` runs PlayMode tests.
 
 ## Coding Style & Naming Conventions
-Use C# with 4-space indentation and K&R braces. Keep one main type per file, and match file name to type name. Use `PascalCase` for public types/members and `camelCase` for locals/parameters. For Inspector exposure, prefer `[SerializeField] private` fields instead of `public` fields.
-
-Always keep `.meta` files when adding or moving Unity assets to preserve GUID references.
+Use C# with 4-space indentation and K&R braces. Keep one main type per file, and match file names to type names. Use `PascalCase` for public types and members, `camelCase` for locals and parameters, and `[SerializeField] private` for Inspector-facing fields. Match nearby namespaces and folder boundaries (`Simulation`, `Entity`, `UI`, etc.). Read and edit text files using `UTF-8`, and use `LF` line endings. No repo-local linter or `.editorconfig` is committed, so use Rider/VS formatting and follow surrounding code. When adding or moving Unity assets, always commit the paired `.meta` files.
 
 ## Testing Guidelines
-`com.unity.test-framework` is included (NUnit style). Place tests in `Assets/Tests/` or module-local `Tests/` folders. Name test files `*Tests.cs`. Use EditMode tests for pure logic and PlayMode tests for runtime/scene behavior. Update or add tests for gameplay logic and UI controller/use-case changes.
+Tests use Unity Test Framework with NUnit. Name files `*Tests.cs`. Put pure logic coverage in EditMode tests and runtime or scene behavior in PlayMode tests. There is no fixed coverage percentage, but changes to simulation, combat, procedures, or UI flow should ship with new or updated tests in `Assets/Tests`.
 
 ## Commit & Pull Request Guidelines
-Recent history favors concise, descriptive commit messages (often Chinese), e.g. `Feature: add launcher scene and update project settings`. Keep commits focused and include module context (`UI`, `Procedure`, `Entity`) when useful.
+Recent history favors short, imperative commit subjects such as `fix test sample`, `Update NearestTargetSelector.cs`, and `Cleanup 1`. Keep commits focused and add module context when helpful, for example `Simulation: tighten collision query pruning`. PRs should include a behavior summary, linked task or issue, tests run, and screenshots or video for UI or scene changes.
 
-PRs should include: change summary, affected scenes/modules, test evidence (Test Runner or CLI logs), linked issue/task, and screenshots or short video for UI/visual updates.
-
-## Encoding
-Use UTF8 with BOM
+## Repository Hygiene
+Do not commit generated Unity output such as `Library/`, `Temp/`, `Logs/`, `obj/`, generated `.csproj`, or `.sln` files. Review changes to `Assets/GameMain/Configs/*.xml` and `Assets/StreamingAssets` carefully because they affect packaging and runtime resources.
